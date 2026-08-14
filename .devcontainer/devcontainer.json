@@ -1,0 +1,44 @@
+{
+  "name": "dsh-bridges-dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "remoteUser": "root",
+  "containerEnv": {
+    "SHELL": "/usr/bin/zsh"
+  },
+  // Persist the dsh user-data root (~/.dsh: profiles, storages, model config,
+  // sessions, workspaces) in a named volume so it survives container rebuilds.
+  "mounts": [
+    {
+      "source": "dsh-bridges-dsh-home",
+      "target": "/root/.dsh",
+      "type": "volume"
+    }
+  ],
+  // Start dsh in the workspace folder every time the container starts.
+  // This is a devcontainer-spec lifecycle hook: it runs inside the container
+  // with the workspace folder as cwd, and is honored by any spec-compliant
+  // tool (VS Code, JetBrains IDEs, devcontainer CLI, Codespaces, ...).
+  "postStartCommand": "if [ -f /tmp/dsh-web.pid ] && kill -0 \"$(cat /tmp/dsh-web.pid)\" 2>/dev/null; then exit 0; fi; setsid dsh web >/tmp/dsh-web.log 2>&1 < /dev/null & echo $! > /tmp/dsh-web.pid",
+  // dsh web serves the DeepSeek Harness Web UI on 127.0.0.1:3080
+  "forwardPorts": [3080],
+  "portsAttributes": {
+    "3080": {
+      "label": "DSH Web UI",
+      "onAutoForward": "notify"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": {
+            "path": "/usr/bin/zsh"
+          }
+        }
+      }
+    }
+  }
+}
