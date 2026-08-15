@@ -9,9 +9,10 @@
  * - `<cwd>/.claude/commands/<name>.md`
  *
  * Precedence mirrors Claude Code: personal (user) assets override project
- * assets, and a skill overrides a same-name command at the same level. Ranks
- * live below the DSH runtime-skill rank (250), so embedded runtime skills keep
- * winning over Claude assets.
+ * assets, and a skill overrides a same-name command at the same level. The
+ * provider registers on the global skills layer, so DSH-native skills from
+ * nearer preset layers (`.dsh/skills`, `.agents/skills`, runtime skills)
+ * shadow Claude assets on name conflicts.
  * @module dsh-bridges/agents/claude-code/skills/provider
  */
 import { join, dirname } from 'node:path'
