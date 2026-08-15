@@ -4,11 +4,46 @@ English | [中文](README_CN.md)
 
 > This project is implemented by DeepSeek Harness.
 
-A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin that bridges DeepSeek Harness into projects already configured for other coding agents, so a project set up for Claude Code, Codex, opencode, or CodeBuddy keeps working when you run DeepSeek Harness on it.
-
-The whole project **is one plugin** — a single bundle row (`id: bridges`) hosting one bridge subsystem per agent tool. Installing `dsh-bridges` once covers every supported tool; each tool's bridge can be toggled independently through config.
+A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin that bridges projects already configured for Claude Code, CodeBuddy Code, opencode, or Codex into DeepSeek Harness — your skills, commands, memory, and hooks keep working with zero migration.
 
 > 🚧 **Under construction.** Phase 1: Claude Code. Phase 2: CodeBuddy Code. Phase 3 (current): opencode. Phase 4 (current): Codex.
+
+## Quick start
+
+```sh
+# 1. install once into a DeepSeek Harness profile
+dsh plugin --profile <name> add dsh-bridges
+
+# 2. run DeepSeek Harness in a project already set up for another agent — that's it
+cd my-claude-project        # has .claude/ assets
+dsh --profile <name> "list the skills available in your catalog"
+# → every .claude skill & command becomes a /name skill, CLAUDE.md is injected,
+#   and the project's settings.json hooks run unchanged. No migration.
+```
+
+From a checkout of this repository, install with `pnpm install && pnpm build && dsh plugin --profile <name> add .`
+
+Every bridge is on by default; tune or disable any of them from a patch layer:
+
+```yaml
+- id: bridges
+  config:
+    claudeCode:
+      enabled: true     # master switch for this bridge
+      skills: true      # .claude skills & commands
+      memory: true      # CLAUDE.md memory
+      hooks: true       # settings.json hooks
+```
+
+Full per-bridge configuration and behavior: [`docs/usage/`](docs/usage/README.md)
+
+## What it bridges
+
+| Your project already has | Works in DeepSeek Harness as |
+| :--- | :--- |
+| `.claude/` `.codebuddy/` `.opencode/` `.agents/` skills & commands | model skill catalog + `/name` invocation |
+| `CLAUDE.md`, `CODEBUDDY.md`, `AGENTS.md` chains & rules | session-start memory injection |
+| `settings.json`, `hooks.json`, `config.toml` hooks | the same hooks at DeepSeek Harness lifecycles |
 
 ## Supported agents
 
@@ -19,311 +54,8 @@ The whole project **is one plugin** — a single bundle row (`id: bridges`) host
 | opencode | ✅ phase 3 | `.opencode/skills`, `.opencode/commands` (+ `~/.config/opencode`), `command.*` in `opencode.json` | `AGENTS.md` (+ `CLAUDE.md` fallback), `instructions` files | — (opencode has no hooks config; its plugin API is out of scope) |
 | Codex | ✅ phase 4 | `.agents/skills` (cwd → repo root), `~/.agents/skills`, `/etc/codex/skills` | `~/.codex/AGENTS.md` + per-directory `AGENTS.md` chain | `hooks.json` / `config.toml` hooks (SessionStart, SubagentStart, UserPromptSubmit, Pre/PostToolUse, Stop, SubagentStop, SessionEnd) |
 
-## Install
-
-Plugins install into a DeepSeek Harness profile with the profile plugin manager (pnpm):
-
-```sh
-# from a checkout of this repository (compile src/ → lib/ first):
-pnpm install && pnpm build
-dsh plugin --profile <name> add .
-
-# or, once published, from the registry package:
-dsh plugin --profile <name> add dsh-bridges
-```
-
-The plugin manager appends the package to the profile's `dsh.profile.bundles`, and its `cordis.patch.yml` inserts one `bridges` row into the composed tree. Verify with:
-
-```sh
-dsh --profile <name> --dump-config   # the row "dsh-bridges" should appear
-```
-
-Then start DeepSeek Harness in a project that has agent assets (`.claude/`, `~/.claude/`, `.codebuddy/`, `~/.codebuddy/`); assets are discovered per session workspace.
-
-## Config
-
-Every tool bridge owns a config section under the `bridges` row; a later patch layer (the profile's `cordis.patch.yml`, a `--patch` overlay) can override any field:
-
-```yaml
-- id: bridges
-  config:
-    claudeCode:
-      enabled: true               # master switch for the Claude Code bridge
-      skills: true                # discover .claude / ~/.claude skills and commands
-      memory: true                # inject ~/.claude/CLAUDE.md and .claude/CLAUDE.md
-      hooks: true                 # run Claude Code hooks from settings.json
-      userClaudeDir: '~/.claude'  # user-level Claude Code directory
-      watch: true                 # watch skill roots and republish on change
-      hookTimeoutMs: 600000
-      userPromptHookTimeoutMs: 30000
-      maxHookOutputChars: 10000
-      memoryMaxBytes: 32768
-    codebuddyCode:
-      enabled: true                   # master switch for the CodeBuddy Code bridge
-      skills: true                    # discover .codebuddy / ~/.codebuddy skills and commands
-      memory: true                    # inject CODEBUDDY.md memory and always-apply rules
-      hooks: true                     # run CodeBuddy Code hooks from settings.json
-      userCodebuddyDir: '~/.codebuddy'  # user-level CodeBuddy Code directory
-      watch: true                     # watch skill roots and settings files
-      hookTimeoutMs: 60000            # CodeBuddy Code's 60-second hook limit
-      maxHookOutputChars: 10000
-      memoryMaxBytes: 32768
-    opencode:
-      enabled: true                   # master switch for the opencode bridge
-      skills: true                    # discover .opencode / ~/.config/opencode skills and commands (+ JSON commands)
-      memory: true                    # inject AGENTS.md rules (with CLAUDE.md fallback) and instructions files
-      userOpencodeDir: '~/.config/opencode'  # user-level opencode directory
-      userClaudeDir: '~/.claude'      # user-level Claude Code directory for the CLAUDE.md fallback
-      claudeCompat: true              # honor opencode's Claude Code compatibility fallbacks
-      watch: true                     # watch asset roots and config files
-      memoryMaxBytes: 32768
-    codex:
-      enabled: true                   # master switch for the Codex bridge
-      skills: true                    # discover .agents/skills (cwd → repo root), ~/.agents/skills, /etc/codex/skills
-      memory: true                    # inject the AGENTS.md instruction chain
-      hooks: true                     # run Codex hooks from hooks.json / config.toml
-      userCodexDir: '~/.codex'        # user-level Codex directory (CODEX_HOME wins when set)
-      userSkillsDir: '~/.agents/skills'  # user-level skills directory
-      watch: true                     # watch skill roots and settings files
-      hookTimeoutMs: 600000           # Codex's 600-second hook default
-      maxHookOutputChars: 10000
-      memoryMaxBytes: 32768
-```
-
-## The Claude Code bridge (phase 1)
-
-### Skills and commands
-
-Reads the Claude Code skill locations and registers them on the DeepSeek Harness skill registry (provider `claude-code`), so they appear in the model-facing skill catalog, load through the `skill` tool, and are invocable with `/name`:
-
-| Claude Code location | Registered as |
-| :--- | :--- |
-| `~/.claude/skills/<name>/SKILL.md` (also flat `<name>.md`) | user-level skill |
-| `~/.claude/commands/<name>.md` | user-level command (a skill) |
-| `.claude/skills/<name>/SKILL.md` (also flat `<name>.md`) | project-level skill |
-| `.claude/commands/<name>.md` | project-level command (a skill) |
-
-Mapping rules:
-
-- The DeepSeek Harness skill name is the directory / file name (must be kebab-case; non-kebab names are skipped with a warning).
-- `description` + `when_to_use` become the skill description (combined and capped at Claude Code's 1,536-character listing limit; falls back to the first body paragraph when `description` is absent).
-- `disable-model-invocation` → the skill leaves the model catalog but stays user-invocable (`/name`).
-- `user-invocable: false` → hidden from human invocation, model-only.
-- `metadata` is carried through; other frontmatter fields (see limitations) are currently ignored.
-- Precedence mirrors Claude Code: personal assets override project assets; a skill overrides a same-name command at the same level. Native DeepSeek Harness skills (`.dsh/skills`, `.agents/skills`, runtime skills) still win over Claude assets on name conflicts — the bridge registers on the global skills layer, which nearer preset layers shadow.
-- Skill bundles keep their directory as the resource base, so supporting files (`scripts/`, `references/`, …) referenced by `SKILL.md` resolve on demand.
-- Existing skill roots are watched; edits appear in the session without a restart.
-
-### CLAUDE.md memory
-
-DeepSeek Harness already loads root-level `CLAUDE.md`. The bridge additionally injects `~/.claude/CLAUDE.md` (user) and `.claude/CLAUDE.md` (project) at session start, in the same system-reminder framing DeepSeek Harness uses for workspace instructions, with a 32 KiB budget (the broader user-level file is dropped first; the project file is then truncated if still over budget).
-
-### Hooks
-
-Loads the merged `hooks` field from `~/.claude/settings.json` → `.claude/settings.json` → `.claude/settings.local.json` (groups merge additively, identical handlers deduplicate, `disableAllHooks` comes from the most specific source that sets it) and runs handlers at the DeepSeek Harness lifecycles below:
-
-| Claude Code event | DeepSeek Harness seam | Decision mapping |
-| :--- | :--- | :--- |
-| `SessionStart` | `agent/session-start` | `additionalContext` (and exit-0 plain stdout) injected before the first prompt |
-| `UserPromptSubmit` | `agent/pre-step` | `decision: "block"` / exit 2 / `continue: false` erase the prompt and show the reason; context is appended to the step |
-| `PreToolUse` | `tools/pre-execute` | `permissionDecision` `deny` → deny, `ask` → approval, `allow` → allow, `defer` → deny (not supported); exit 2 → deny with stderr |
-| `PostToolUse` | `tools/post-execute` | `additionalContext`/`decision: "block"` reason/exit-2 stderr → context next to the result; `updatedToolOutput` replaces the rendered content |
-| `PostToolUseFailure` | `tools/post-execute` (error results) | same as PostToolUse |
-| `Stop` | `agent/turn-stopping` | `decision: "block"` / exit 2 / `additionalContext` steer a continuation, capped at Claude Code's 8 consecutive continuations |
-| `SessionEnd` | `agent/disposed` | side effects only (1.5 s budget) |
-
-Supported handler types: `command` (shell form and `args` exec form, `${CLAUDE_PROJECT_DIR}` substitution, per-handler `timeout`, `async: true`, exit codes and JSON output per the Claude Code contract) and `http` (POST of the same JSON, header env-var interpolation under `allowedEnvVars`/`httpHookAllowedEnvVars`, `allowedHttpHookUrls` allowlist).
-
-Compatibility details:
-
-- Hooks key on Claude Code tool names. DeepSeek Harness names differ (`bash`, `edit`, `read`, …), so the bridge translates: `bash`→`Bash`, `pwsh`→`PowerShell`, `read`→`Read`, `write`→`Write`, `edit`→`Edit`, `glob`→`Glob`, `grep`→`Grep`, `web`/`web_search`→`WebSearch`, `ask_user_question`→`AskUserQuestion`, `exit_plan_mode`→`ExitPlanMode`, `subagent`→`Agent`, `todo_write`→`TodoWrite`; unknown DeepSeek Harness tools (MCP servers, first-party extras) keep their own name. Matchers, `if` rules, and the `tool_name` field hook scripts receive the translated name, so hooks written for Claude Code run unchanged.
-- Matcher semantics follow the Claude Code spec: exact-name sets (`Bash|Edit`), unanchored regex for anything else, `*`/empty matches all.
-- The `if` filter supports the common `ToolName(glob)` form against one primary argument field for the mapped tools (`Bash(rm *)`, `Edit(*.ts)`, …); uninterpretable rules and tools without a mapped field fail open, matching Claude Code's best-effort contract (its deeper Bash subcommand analysis is not replicated).
-- Timeouts and handler failures fail open (never block the action), as in Claude Code.
-- Subagents: `UserPromptSubmit`, `Stop`, `SessionStart`, and `SessionEnd` run only for the main conversation, as in Claude Code; `PreToolUse`/`PostToolUse` also run for subagent tool calls (`SubagentStart`/`SubagentStop` are not bridged yet).
-
-### Phase-1 limitations
-
-Not bridged yet (documented per subsystem):
-
-- **Skills**: nested `.claude/skills/` below the workspace (their qualified names are not kebab-case), enterprise/managed skills, plugin skills, synced claude.ai skills; `allowed-tools`/`disallowed-tools`, `model`, `effort`, `context: fork`/`agent`/`background`, `paths`, `shell`, and `$ARGUMENTS` substitution in bodies; skill/agent frontmatter `hooks`.
-- **Memory**: `.claude/rules/*.md`, CLAUDE.md `@import`s, and nested CLAUDE.md files.
-- **Hooks**: handler types `mcp_tool`, `prompt`, `agent`; `PreCompact`/`PostCompact`, `Notification`, `SubagentStart`/`SubagentStop`, `PermissionRequest`/`PermissionDenied`, and the remaining async events; `CLAUDE_ENV_FILE`; `asyncRewake`; `updatedInput` rewriting (DeepSeek Harness freezes tool arguments before policy); `permissionDecision: "defer"` (mapped to deny).
-
-## The CodeBuddy Code bridge (phase 2)
-
-### Skills and commands
-
-Reads the CodeBuddy Code skill locations and registers them on the DeepSeek Harness skill registry (provider `codebuddy-code`), so they appear in the model-facing skill catalog, load through the `skill` tool, and are invocable with `/name`:
-
-| CodeBuddy Code location | Registered as |
-| :--- | :--- |
-| `.codebuddy/skills/<name>/SKILL.md` | project-level skill |
-| `.codebuddy/commands/<name>.md` | project-level command (a skill) |
-| `~/.codebuddy/skills/<name>/SKILL.md` | user-level skill |
-| `~/.codebuddy/commands/<name>.md` | user-level command (a skill) |
-
-Mapping rules:
-
-- The DeepSeek Harness skill name is the directory / file name (must be kebab-case; non-kebab names are skipped with a warning). Nested commands qualify as `group:name` — not kebab-case — and are skipped the same way.
-- Only directory skills (`SKILL.md` inside a named directory) are read; flat `<name>.md` skills are a Claude Code extension that CodeBuddy Code does not document.
-- Precedence mirrors CodeBuddy Code: **project assets override user assets** (the inverse of Claude Code, whose band the ranks therefore do not share), and a skill overrides a same-name command at the same level. Native DeepSeek Harness skills (`.dsh/skills`, `.agents/skills`, runtime skills) still win on name conflicts — the bridge registers on the global skills layer, which nearer preset layers shadow.
-- `description` + `when_to_use` become the skill description (combined and capped at 1,536 characters; falls back to the first body paragraph). `when_to_use` is not in the CodeBuddy Code docs but is honored for Claude Code asset compatibility.
-- `disable-model-invocation` → the skill leaves the model catalog but stays user-invocable (`/name`). `user-invocable: false` → hidden from human invocation, model-only. `metadata` is carried through.
-- The `skillOverrides` setting is applied on top: `name-only` collapses the description, `user-invocable-only` hides the skill from the model catalog, `off` hides it everywhere. Most-specific valid value wins (local > project > user), invalid values fall back per file, exactly like CodeBuddy Code.
-- Skill bundles keep their directory as the resource base, so supporting files (`scripts/`, `references/`, …) referenced by `SKILL.md` resolve on demand.
-- Existing skill roots and the settings files are watched; edits appear in the session without a restart.
-
-### CODEBUDDY.md memory
-
-DeepSeek Harness's own loader reads `AGENTS.md` and `CLAUDE.md`, not CodeBuddy Code's memory files. The bridge injects at session start, in the same system-reminder framing DeepSeek Harness uses for workspace instructions:
-
-- `~/.codebuddy/CODEBUDDY.md` (user memory) and `~/.codebuddy/rules/**` (user rules, recursive — only rules that always apply)
-- `<cwd>/CODEBUDDY.md` and `<cwd>/.codebuddy/CODEBUDDY.md` (project memory; identical content collapses to one block)
-- `<cwd>/CODEBUDDY.local.md` (local project memory)
-- `<cwd>/.codebuddy/rules/**` (project rules, recursive — only rules that always apply)
-
-Budget 32 KiB: broader user-level sections are dropped first, then the most specific ones are truncated. Rule frontmatter is stripped from injected content; `enabled: false` and `alwaysApply: false` rules are skipped.
-
-### Hooks
-
-Loads the merged `hooks` field from `~/.codebuddy/settings.json` → `.codebuddy/settings.json` → `.codebuddy/settings.local.json` (groups merge additively, identical handlers deduplicate, `disableAllHooks` comes from the most specific source that sets it) and runs handlers at the DeepSeek Harness lifecycles below:
-
-| CodeBuddy Code event | DeepSeek Harness seam | Decision mapping |
-| :--- | :--- | :--- |
-| `SessionStart` | `agent/session-start` | `additionalContext` (and exit-0 plain stdout) injected before the first prompt; matcher sees `startup`/`resume`/`clear`/`compact` |
-| `UserPromptSubmit` | `agent/pre-step` | exit 2 / `continue: false` erase the prompt and show the reason; context is appended to the step |
-| `PreToolUse` | `tools/pre-execute` | `permissionDecision` `deny` → deny, `ask` → approval, `allow` → allow; exit 2 → deny with the stdout-first message; `modifiedInput` is logged and ignored |
-| `PostToolUse` | `tools/post-execute` | `additionalContext`/exit-2 message/legacy `decision: "block"` reason → context next to the result; `updatedToolOutput` replaces the rendered content |
-| `PostToolUseFailure` | `tools/post-execute` (error results) | same as PostToolUse |
-| `Stop` | `agent/turn-stopping` | exit 2 / `continue: false` / `additionalContext` steer a continuation (`stop_hook_active` set on repeats; capped at 8 consecutive continuations as a bridge safety valve) |
-| `SessionEnd` | `agent/disposed` | side effects only (1.5 s budget, `reason: "other"`) |
-
-Supported handler types: `command` (shell form and `args` exec form, `${CODEBUDDY_PROJECT_DIR}` substitution, per-handler `timeout` defaulting to CodeBuddy Code's 60 s, `async: true`, `once: true`, exit codes and JSON output per the CodeBuddy Code contract) and `http` (`method` POST/PUT/PATCH, `headers`; CodeBuddy Code documents no URL allowlist, so none is applied).
-
-Compatibility details:
-
-- Hooks key on CodeBuddy Code tool names. DeepSeek Harness names differ (`bash`, `edit`, `read`, …), so the bridge translates: `bash`→`Bash`, `pwsh`→`PowerShell`, `read`→`Read`, `write`→`Write`, `edit`→`Edit`, `glob`→`Glob`, `grep`→`Grep`, `web`/`web_search`→`WebSearch`, `ask_user_question`→`AskUserQuestion`, `exit_plan_mode`→`ExitPlanMode`, `subagent`→`Task`, `todo_write`→`TodoWrite`; unknown DeepSeek Harness tools (MCP servers, first-party extras) keep their own name. Matchers, `if` rules, and the `tool_name` field hook scripts receive the translated name, so hooks written for CodeBuddy Code run unchanged.
-- Matcher semantics follow the CodeBuddy Code spec: `*`/empty/omitted matches all; anything else is a case-sensitive regular expression, so a plain `Write` also matches `NotebookWrite` and `^Write$` pins an exact match.
-- Blocking messages follow CodeBuddy Code's exit-2 priority: stdout JSON `reason`/`stopReason`, then plain stdout, then stderr as fallback (the inverse of Claude Code's stderr-first behavior).
-- The `if` filter supports the common `ToolName(glob)` form against one primary argument field for the mapped tools (`Bash(git *)`, `Edit(*.ts)`, …); uninterpretable rules and tools without a mapped field fail open.
-- Timeouts and handler failures fail open (never block the action), as in CodeBuddy Code.
-- Subagents: `UserPromptSubmit`, `Stop`, `SessionStart`, and `SessionEnd` run only for the main conversation, as in CodeBuddy Code; `PreToolUse`/`PostToolUse` also run for subagent tool calls (`SubagentStart`/`SubagentStop` are not bridged yet).
-
-### Phase-2 limitations
-
-Not bridged yet (documented per subsystem):
-
-- **Skills**: flat `.md` skills, nested commands (`group:name` names are not kebab-case), plugin skills; `allowed-tools`, `model`, `context: fork`, `agent`, and skill frontmatter `hooks`; inline shell-command execution, `$ARGUMENTS` substitution, and `@file` references in bodies.
-- **Memory**: conditional rules (`alwaysApply: false` plus `paths`), `@import` expansion, upward-directory discovery, nested-subtree dynamic loading, Auto Memory.
-- **Hooks**: handler types `prompt` and `agent` (both need an LLM evaluation); `Notification`, `SubagentStart`/`SubagentStop`, `PreCompact`/`PostCompact`, `PermissionRequest`/`PermissionDenied`, `Elicitation`, `FileChanged`, `Setup`, and the remaining events; frontmatter hooks (and the `allowUntrustedFrontmatterHooks` gate); plugin `hooks/hooks.json`; the `transcript_path` input field (the bridge has no transcript file to point at); `suppressOutput`/`systemMessage` user-only channels (DeepSeek Harness has no non-model notice channel); `modifiedInput` rewriting (DeepSeek Harness freezes tool arguments before policy). Windows runs hooks through the system shell rather than CodeBuddy Code's forced Git Bash.
-
-## The opencode bridge (phase 3)
-
-### Skills and commands
-
-Reads the opencode asset locations and registers them on the DeepSeek Harness skill registry (provider `opencode`), so they appear in the model-facing skill catalog, load through the `skill` tool, and are invocable with `/name`:
-
-| opencode location | Registered as |
-| :--- | :--- |
-| `.opencode/skills/<name>/SKILL.md` | project-level skill |
-| `.opencode/commands/<name>.md` | project-level command (a skill) |
-| `command.<name>` in `opencode.json(c)` | project-level command (overrides a same-name command file) |
-| `~/.config/opencode/skills/<name>/SKILL.md` | user-level skill |
-| `~/.config/opencode/commands/<name>.md` | user-level command (a skill) |
-| `command.<name>` in `~/.config/opencode/opencode.json(c)` | user-level command (overrides a same-name command file) |
-
-Mapping rules:
-
-- The DeepSeek Harness skill name is the directory / file name, and must be a valid opencode name (`^[a-z0-9]+(-[a-z0-9]+)*$` — lowercase alphanumerics with single hyphens); anything else is skipped with a warning.
-- Skills require the opencode-validated frontmatter: `name` (must equal the directory name) and `description` (1–1,024 characters, capped). Missing or mismatched fields drop the skill with a warning, exactly like opencode's troubleshooting rules. `metadata` (string-to-string) is carried through; `license`/`compatibility` are ignored.
-- Command bodies are the prompt templates; `description` frontmatter (or the first body paragraph) becomes the skill description. `agent`, `model`, and `subtask` are not bridged (DeepSeek Harness has no per-command agent routing).
-- opencode's Claude-compat (`.claude/skills`, `~/.claude/skills`) and agent-compat (`.agents/skills`, `~/.agents/skills`) skill roots are **not re-read**: the claude-code bridge already covers `.claude` assets and DeepSeek Harness's own filesystem provider covers `.agents` assets, so re-registering them would duplicate candidates.
-- Precedence: project assets override user assets; a skill overrides a same-name command; JSON-configured commands override same-name command files at the same level. Native DeepSeek Harness skills (`.dsh/skills`, `.agents/skills`, runtime skills) still win on name conflicts — the bridge registers on the global skills layer, which nearer preset layers shadow.
-- Existing asset roots and `opencode.json(c)` files are watched; edits appear in the session without a restart.
-
-### AGENTS.md / CLAUDE.md rules and instructions memory
-
-DeepSeek Harness's own loader reads the workspace-root `AGENTS.md` and `CLAUDE.md`. The bridge additionally injects at session start, in the same system-reminder framing:
-
-- `~/.config/opencode/AGENTS.md` (global rules; `~/.claude/CLAUDE.md` is the fallback when absent, as opencode does)
-- the closest `AGENTS.md` walking up from the working directory to the git root, with the closest `CLAUDE.md` as the compatibility fallback (first match wins per category); the cwd-level `AGENTS.md`/`CLAUDE.md` DeepSeek Harness already loads are skipped
-- `instructions` entries from `opencode.json(c)`: local file paths and `*`/`**` glob patterns resolved against the config file's directory (remote URLs are skipped — the bridge does not fetch them)
-
-Budget 32 KiB: broader user-level sections are dropped first, then the most specific ones are truncated.
-
-### Phase-3 limitations
-
-Not bridged yet (documented per subsystem):
-
-- **Skills / commands**: nested command directories (not documented by opencode), `$ARGUMENTS`/`$1`/`!`command``/`@file` substitution in command templates, `agent`/`model`/`subtask` command options, custom agents, permission-based skill filtering (`permission.skill` `deny`/`ask` patterns).
-- **Memory**: `OPENCODE_CONFIG` / `OPENCODE_CONFIG_DIR` / `OPENCODE_CONFIG_CONTENT` overrides, remote/managed config layers, upward config-file discovery (project `opencode.json` is read at the cwd only), `{env:…}`/`{file:…}` substitution in config.
-- **Plugins / permissions / MCP**: opencode's JavaScript plugin system (its event hooks need the opencode runtime), permission rules, MCP server config, custom tools — none of these have a file-format bridge here.
-- **Overlap note**: when `claudeCode.memory` is also enabled, the `~/.claude/CLAUDE.md` fallback can be injected twice (once per bridge); keep one of the two memory switches off, or accept the duplicate block.
-
-## The Codex bridge (phase 4)
-
-### Skills
-
-Reads the Codex skill locations and registers them on the DeepSeek Harness skill registry (provider `codex`):
-
-| Codex location | Registered as |
-| :--- | :--- |
-| `$CWD/.agents/skills/<name>/SKILL.md`, then every parent folder up to the repository root | project-level skill (closest directory first) |
-| `~/.agents/skills/<name>/SKILL.md` | user-level skill |
-| `/etc/codex/skills/<name>/SKILL.md` | system-level skill |
-
-Mapping rules:
-
-- The DeepSeek Harness skill name is the directory name (must be kebab-case). Frontmatter must include `name` (matching the directory) and `description` (capped at 1,024 characters) per the agent-skills standard; invalid skills are dropped with a warning.
-- Precedence: project skills (closest directory first) override user skills, which override system skills. Native DeepSeek Harness skills (`.dsh/skills`, `.agents/skills`, runtime skills) still win on name conflicts.
-- Skills disabled via `[[skills.config]]` entries (`path` + `enabled = false`) in `config.toml` are skipped; relative paths resolve against the config file's `.codex/` directory.
-- The repository root is found with `project_root_markers` (default `['.git']`); without a marker only the current directory is checked, as Codex does. Skill roots and settings files are watched.
-
-### AGENTS.md instruction-chain memory
-
-DeepSeek Harness's own loader reads the workspace-root `AGENTS.md`. The bridge additionally injects Codex's instruction chain at session start, in the same system-reminder framing:
-
-- `$CODEX_HOME/AGENTS.override.md` if present, else `$CODEX_HOME/AGENTS.md` (first non-empty wins; `CODEX_HOME` is honored)
-- one file per directory walking from the repository root down to the working directory: `AGENTS.override.md` > `AGENTS.md` > `project_doc_fallback_filenames`; files closer to the working directory come later and override earlier guidance
-- the root-level plain `AGENTS.md` is skipped (DeepSeek Harness already loads it); empty files are skipped; project accumulation stops at `project_doc_max_bytes` (32 KiB default)
-
-Budget 32 KiB for the injected block: broader user-level sections are dropped first, then the most specific ones are truncated.
-
-### Hooks
-
-Loads hooks from `hooks.json` and inline `[hooks]` tables in `config.toml`, across every active layer — `/etc/codex/`, `~/.codex/`, and every `.codex/` folder from the repository root down to the working directory (hooks merge additively; identical handlers deduplicate; `[features].hooks = false` from the most specific layer disables them all) — and runs handlers at the DeepSeek Harness lifecycles below:
-
-| Codex event | DeepSeek Harness seam | Decision mapping |
-| :--- | :--- | :--- |
-| `SessionStart` | `agent/session-start` | `additionalContext` and exit-0 plain stdout injected; matcher sees `startup`/`resume`/`clear`/`compact` |
-| `SubagentStart` | `agent/session-start` (subagents) | `additionalContext` and exit-0 plain stdout injected into the subagent; matcher sees the agent type |
-| `UserPromptSubmit` | `agent/pre-step` | `decision: "block"` / exit 2 / `continue: false` erase the prompt and show the reason; context is appended to the step |
-| `PreToolUse` | `tools/pre-execute` | `permissionDecision: "deny"` / legacy `decision: "block"` / exit 2 → deny; `permissionDecision: "ask"` is ignored (Codex parses but does not support it); `additionalContext` injected; `updatedInput` is logged and ignored |
-| `PostToolUse` | `tools/post-execute` | `decision: "block"` / exit 2 / `continue: false` replace the tool result with the hook feedback (as Codex does); `additionalContext` added next to the result |
-| `Stop` | `agent/turn-stopping` | `decision: "block"` / exit 2 steer a continuation whose prompt is the hook reason (`stop_hook_active` set on repeats); `continue: false` wins and stops; capped at 8 consecutive continuations as a bridge safety valve |
-| `SubagentStop` | `agent/turn-stopping` (subagents) | same as Stop, steering the subagent |
-| `SessionEnd` | `agent/disposed` | side effects only (1 s budget, `reason: "other"`; main thread only) |
-
-Supported handlers: `type: "command"` only (Codex runs `prompt`/`agent` through an LLM and skips them itself), run through the shell with JSON input on stdin, `timeout` in seconds (default 600; 1 s for SessionEnd), `async: true` (background run, output discarded by the bridge), `commandWindows` on Windows; exit codes and JSON output per the Codex contract.
-
-Compatibility details:
-
-- Hooks key on Codex tool names. DeepSeek Harness names differ, so the bridge translates: `bash`/`pwsh`→`Bash`, `edit`/`write`→`apply_patch`, `subagent`→`spawn_agent`, `todo_write`→`update_plan`; unknown DeepSeek Harness tools (MCP servers, first-party extras) keep their own name. Matcher aliases are honored too: `Edit`/`Write` match `apply_patch`, `Agent` matches `spawn_agent`.
-- Matcher semantics follow the Codex spec: `*`/empty/omitted matches all; anything else is a JavaScript regular expression (unparseable matchers fail closed). There is no `if` filter in Codex hooks.
-- Timeouts and handler failures fail open (never block the action), as in Codex.
-- Subagents: `SessionStart`/`SessionEnd`/`UserPromptSubmit`/`Stop` run only for the main conversation, `SubagentStart`/`SubagentStop` only for subagents, and `PreToolUse`/`PostToolUse` for both — matching Codex's event scoping.
-
-### Phase-4 limitations
-
-Not bridged yet (documented per subsystem):
-
-- **Skills**: `agents/openai.yaml` metadata (`allow_implicit_invocation`, tool dependencies), plugin-bundled skills, symlinked skill folders (the bridge reads them through the filesystem, but does not resolve symlink identity), the curated plugin catalog.
-- **Memory**: `model_instructions_file`, Codex's 8,000-character initial-list budget (DeepSeek Harness applies its own catalog budgets).
-- **Hooks**: `PermissionRequest` (no DeepSeek Harness seam for "about to ask for approval"), `PreCompact`/`PostCompact` (no pre-compaction seam; the `compact` session-start source runs SessionStart hooks instead), Codex's hook trust-review flow (`/hooks` — the bridge runs hooks the way the other bridges do, without a trust gate), background-hook output delivery at the next safe point, `systemMessage`/`suppressOutput` user-only channels, `additionalContextLimit` spilling (the bridge caps context by characters instead), plugin-bundled and managed `requirements.toml` hooks, `transcript_path` (the bridge has no transcript file to point at), `updatedInput` rewriting (DeepSeek Harness freezes tool arguments before policy).
-- **Rules / config**: `rules/*.rules` (experimental Python DSL), `notify`, `[agents]` subagent roles, `requirements.toml`, profile files (`--profile`), and untrusted-project gating (project `.codex/` layers are read unconditionally — the bridge has no trust state).
-
 ## Resources
 
-- Bridge-target reference materials (the official Claude Code, CodeBuddy Code, opencode, and Codex skills/commands/hooks specs used so far): [`docs/reference/`](docs/reference/)
-- Contributor documentation (how to add a new agent tool, the DeepSeek Harness integration surface, known pitfalls, build and test): [`docs/development/`](docs/development/)
+- Usage guide (per-bridge details, full config reference, what is not bridged yet): [`docs/usage/`](docs/usage/README.md)
+- Bridge-target reference materials (official upstream specs): [`docs/reference/`](docs/reference/)
+- Contributor documentation (how to add a new agent tool, integration surface, pitfalls): [`docs/development/`](docs/development/)
