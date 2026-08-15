@@ -29,17 +29,66 @@ below in all work done here.
   stable key later patch layers override config by — never use the full
   package name as `id`.
 - Skill providers: one per agent tool, named after the tool (`claude-code`,
-  `codebuddy-code`; later `codex`, `opencode`, …). Each provider owns a
-  distinct rank band; lower rank wins within a layer, and inside one band
-  assets follow the upstream tool's precedence (Claude Code: personal > project;
-  CodeBuddy Code: project > user) and skills outrank same-level commands.
+  `codebuddy-code`, `opencode`, `codex`). Each provider owns a distinct rank
+  band (claude 105–120, codebuddy 125–140, opencode 145–160, codex 165–175);
+  lower rank wins within a layer, and inside one band assets follow the
+  upstream tool's precedence (Claude Code: personal > project; CodeBuddy
+  Code / opencode / Codex: project > user) and skills outrank same-level
+  commands.
+- Every bridge skill provider registers on the **global** skills layer, so
+  preset-layer native skills (`.dsh/skills`, `.agents/skills`, runtime skills)
+  shadow bridged assets on name conflicts via layer order. Never justify that
+  win with rank numbers — the bridge bands numerically outrank runtime skills
+  (250) within one layer, and only the layer order saves the precedence.
 - Config sections on the `bridges` row are named after the tool
-  (`claudeCode`, `codebuddyCode`), each with an `enabled` master switch and
-  per-bridge knobs.
-- Injected-message `source.plugin` ids are per subsystem
-  (`claude-code-memory`, `claude-code-hooks`, `codebuddy-code-memory`,
-  `codebuddy-code-hooks`), and hook `tool_name` payloads carry the upstream
-  tool's names (`Bash`, `Edit`, …), never dsh's.
+  (`claudeCode`, `codebuddyCode`, `opencode`, `codex`), each with an `enabled`
+  master switch and per-bridge knobs.
+- Injected-message `source.plugin` ids are per subsystem (`<tool>-memory`,
+  `<tool>-hooks`, e.g. `claude-code-memory`, `codebuddy-code-hooks`), and hook
+  `tool_name` payloads carry the upstream tool's names (`Bash`, `Edit`, …),
+  never dsh's.
+
+## Documentation Conventions
+
+### README
+
+- The two root READMEs are the **user-facing entry point**. Keep them short
+  (about one screen) and lead with a quick start that shows the payoff —
+  install, run in an existing agent project, show what the user gets — rather
+  than a feature list.
+- Detailed usage (install & verify, the full config reference, per-bridge
+  skills/memory/hooks behavior, limitations) lives in `docs/guides/`; the
+  README links there. Development details (build/test commands, smoke tests,
+  directory layout) never go into the README — link to `docs/development/`.
+- `README.md` (English) and `README_CN.md` (Chinese) must stay in sync: every
+  change is made to both, and each starts with a language-switcher header
+  (`English | [中文](README_CN.md)` / `[English](README.md) | 中文`) followed
+  by the note `> This project is implemented by DeepSeek Harness.` (CN:
+  `> 该项目由 DeepSeek Harness 实现。`).
+- In prose, always spell out **DeepSeek Harness** — never `dsh`/`DSH`. Keep
+  the short form only where it is an identifier: CLI commands (`dsh plugin`,
+  `dsh --profile`), the package name `dsh-bridges`, config keys
+  (`dsh.profile.bundles`), and paths (`.dsh/skills`).
+- Documented behavior must match the code. Example that bit us: dsh's todo
+  tool is `todo_write`, so the hook name-mapping tables must map
+  `todo_write`→`TodoWrite` — a `todo` entry matches nothing.
+
+### docs/ layout
+
+- `docs/guides/` — user-facing usage guides. English in `README.md`, Chinese
+  in `README.zh.md`; the `.zh.md` suffix marks Chinese versions.
+- `docs/reference/` — the official upstream docs of each bridge target, kept
+  verbatim.
+- `docs/development/` — contributor guides (in Chinese), including the
+  checklist for adding a new bridge.
+
+### Adding a bridge updates docs in this order
+
+1. `docs/reference/<tool>/` — collect the official upstream specs first.
+2. `docs/guides/` — add the tool's section (skills/commands, memory, hooks,
+   limitations) and its config block, in both languages.
+3. Root READMEs (both languages) — status callout, supported-agents table row,
+   and the guides/reference links.
 
 ## Git Commit Convention
 
