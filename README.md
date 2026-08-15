@@ -8,7 +8,7 @@ A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin tha
 
 The whole project **is one plugin** — a single bundle row (`id: bridges`) hosting one bridge subsystem per agent tool. Installing `dsh-bridges` once covers every supported tool; each tool's bridge can be toggled independently through config.
 
-> 🚧 **Under construction.** Phase 1: Claude Code. Phase 2 (current): CodeBuddy Code. Codex / opencode bridges are planned for later phases.
+> 🚧 **Under construction.** Phase 1: Claude Code. Phase 2: CodeBuddy Code. Phase 3 (current): opencode. Phase 4 (current): Codex.
 
 ## Supported agents
 
@@ -16,8 +16,8 @@ The whole project **is one plugin** — a single bundle row (`id: bridges`) host
 | :--- | :--- | :--- | :--- | :--- |
 | Claude Code | ✅ phase 1 | `.claude/skills`, `.claude/commands` (+ `~/.claude`) | `.claude/CLAUDE.md`, `~/.claude/CLAUDE.md` | `settings.json` hooks (SessionStart, UserPromptSubmit, Pre/PostToolUse(+Failure), Stop, SessionEnd) |
 | CodeBuddy Code | ✅ phase 2 | `.codebuddy/skills`, `.codebuddy/commands` (+ `~/.codebuddy`) | `CODEBUDDY.md`, `~/.codebuddy/CODEBUDDY.md`, `.codebuddy/rules/` | `settings.json` hooks (SessionStart, UserPromptSubmit, Pre/PostToolUse(+Failure), Stop, SessionEnd) |
-| Codex | 🚧 planned | — | — | — |
-| opencode | 🚧 planned | — | — | — |
+| opencode | ✅ phase 3 | `.opencode/skills`, `.opencode/commands` (+ `~/.config/opencode`), `command.*` in `opencode.json` | `AGENTS.md` (+ `CLAUDE.md` fallback), `instructions` files | — (opencode has no hooks config; its plugin API is out of scope) |
+| Codex | ✅ phase 4 | `.agents/skills` (cwd → repo root), `~/.agents/skills`, `/etc/codex/skills` | `~/.codex/AGENTS.md` + per-directory `AGENTS.md` chain | `hooks.json` / `config.toml` hooks (SessionStart, SubagentStart, UserPromptSubmit, Pre/PostToolUse, Stop, SubagentStop, SessionEnd) |
 
 ## Install
 
@@ -66,6 +66,26 @@ Every tool bridge owns a config section under the `bridges` row; a later patch l
       userCodebuddyDir: '~/.codebuddy'  # user-level CodeBuddy Code directory
       watch: true                     # watch skill roots and settings files
       hookTimeoutMs: 60000            # CodeBuddy Code's 60-second hook limit
+      maxHookOutputChars: 10000
+      memoryMaxBytes: 32768
+    opencode:
+      enabled: true                   # master switch for the opencode bridge
+      skills: true                    # discover .opencode / ~/.config/opencode skills and commands (+ JSON commands)
+      memory: true                    # inject AGENTS.md rules (with CLAUDE.md fallback) and instructions files
+      userOpencodeDir: '~/.config/opencode'  # user-level opencode directory
+      userClaudeDir: '~/.claude'      # user-level Claude Code directory for the CLAUDE.md fallback
+      claudeCompat: true              # honor opencode's Claude Code compatibility fallbacks
+      watch: true                     # watch asset roots and config files
+      memoryMaxBytes: 32768
+    codex:
+      enabled: true                   # master switch for the Codex bridge
+      skills: true                    # discover .agents/skills (cwd → repo root), ~/.agents/skills, /etc/codex/skills
+      memory: true                    # inject the AGENTS.md instruction chain
+      hooks: true                     # run Codex hooks from hooks.json / config.toml
+      userCodexDir: '~/.codex'        # user-level Codex directory (CODEX_HOME wins when set)
+      userSkillsDir: '~/.agents/skills'  # user-level skills directory
+      watch: true                     # watch skill roots and settings files
+      hookTimeoutMs: 600000           # Codex's 600-second hook default
       maxHookOutputChars: 10000
       memoryMaxBytes: 32768
 ```
@@ -198,44 +218,112 @@ Not bridged yet (documented per subsystem):
 - **Memory**: conditional rules (`alwaysApply: false` plus `paths`), `@import` expansion, upward-directory discovery, nested-subtree dynamic loading, Auto Memory.
 - **Hooks**: handler types `prompt` and `agent` (both need an LLM evaluation); `Notification`, `SubagentStart`/`SubagentStop`, `PreCompact`/`PostCompact`, `PermissionRequest`/`PermissionDenied`, `Elicitation`, `FileChanged`, `Setup`, and the remaining events; frontmatter hooks (and the `allowUntrustedFrontmatterHooks` gate); plugin `hooks/hooks.json`; the `transcript_path` input field (the bridge has no transcript file to point at); `suppressOutput`/`systemMessage` user-only channels (DeepSeek Harness has no non-model notice channel); `modifiedInput` rewriting (DeepSeek Harness freezes tool arguments before policy). Windows runs hooks through the system shell rather than CodeBuddy Code's forced Git Bash.
 
-## Layout
+## The opencode bridge (phase 3)
 
-```
-src/
-├── index.ts                 # plugin entry: single bundle row, per-agent config, subsystem registry
-├── util.ts / fs-adapter.ts  # shared by every bridge subsystem
-└── agents/
-    ├── claude-code/         # one directory per supported agent tool
-    │   ├── index.ts         # subsystem registration: skills, memory, hooks
-    │   ├── skills/          # the claude-code skill provider
-    │   ├── memory.ts        # CLAUDE.md memory injection
-    │   └── hooks/           # settings merge, matcher, runner, DeepSeek Harness lifecycle wiring
-    └── codebuddy-code/      # the CodeBuddy Code subsystem
-        ├── index.ts         # subsystem registration: skills, memory, hooks
-        ├── settings.ts      # shared settings loader (hooks, env, skillOverrides)
-        ├── skills/          # the codebuddy-code skill provider
-        ├── memory.ts        # CODEBUDDY.md memory + rules injection
-        └── hooks/           # matcher, runner, DeepSeek Harness lifecycle wiring
-```
+### Skills and commands
 
-Adding an agent tool means adding `src/agents/<tool>/` and one line in `registerBridgeSubsystems()`; the single bundle row already covers it.
+Reads the opencode asset locations and registers them on the DeepSeek Harness skill registry (provider `opencode`), so they appear in the model-facing skill catalog, load through the `skill` tool, and are invocable with `/name`:
 
-## Development
+| opencode location | Registered as |
+| :--- | :--- |
+| `.opencode/skills/<name>/SKILL.md` | project-level skill |
+| `.opencode/commands/<name>.md` | project-level command (a skill) |
+| `command.<name>` in `opencode.json(c)` | project-level command (overrides a same-name command file) |
+| `~/.config/opencode/skills/<name>/SKILL.md` | user-level skill |
+| `~/.config/opencode/commands/<name>.md` | user-level command (a skill) |
+| `command.<name>` in `~/.config/opencode/opencode.json(c)` | user-level command (overrides a same-name command file) |
 
-```sh
-pnpm install
-pnpm build    # compile src/ → lib/
-pnpm test     # vitest unit tests
-```
+Mapping rules:
 
-End-to-end smoke test (installs the plugin into the headless profile and runs it in a fixture project):
+- The DeepSeek Harness skill name is the directory / file name, and must be a valid opencode name (`^[a-z0-9]+(-[a-z0-9]+)*$` — lowercase alphanumerics with single hyphens); anything else is skipped with a warning.
+- Skills require the opencode-validated frontmatter: `name` (must equal the directory name) and `description` (1–1,024 characters, capped). Missing or mismatched fields drop the skill with a warning, exactly like opencode's troubleshooting rules. `metadata` (string-to-string) is carried through; `license`/`compatibility` are ignored.
+- Command bodies are the prompt templates; `description` frontmatter (or the first body paragraph) becomes the skill description. `agent`, `model`, and `subtask` are not bridged (DeepSeek Harness has no per-command agent routing).
+- opencode's Claude-compat (`.claude/skills`, `~/.claude/skills`) and agent-compat (`.agents/skills`, `~/.agents/skills`) skill roots are **not re-read**: the claude-code bridge already covers `.claude` assets and DeepSeek Harness's own filesystem provider covers `.agents` assets, so re-registering them would duplicate candidates.
+- Precedence: project assets override user assets; a skill overrides a same-name command; JSON-configured commands override same-name command files at the same level. Native DeepSeek Harness skills (`.dsh/skills`, `.agents/skills`, runtime skills) still win on name conflicts — the bridge registers on the global skills layer, which nearer preset layers shadow.
+- Existing asset roots and `opencode.json(c)` files are watched; edits appear in the session without a restart.
 
-```sh
-dsh plugin --profile headless add .
-cd /tmp/claude-fixture      # any project with .claude/ assets
-dsh --profile headless "list the skills available in your catalog"
-cd /tmp/codebuddy-fixture   # any project with .codebuddy/ assets
-dsh --profile headless "list the skills available in your catalog"
-```
+### AGENTS.md / CLAUDE.md rules and instructions memory
 
-Reference materials for each bridge target live in [`docs/reference/`](docs/reference/), including the official Claude Code and CodeBuddy Code skills/commands/hooks specs used so far. Contributor documentation — how to add a new agent tool, the DeepSeek Harness integration surface, and known pitfalls — lives in [`docs/development/`](docs/development/).
+DeepSeek Harness's own loader reads the workspace-root `AGENTS.md` and `CLAUDE.md`. The bridge additionally injects at session start, in the same system-reminder framing:
+
+- `~/.config/opencode/AGENTS.md` (global rules; `~/.claude/CLAUDE.md` is the fallback when absent, as opencode does)
+- the closest `AGENTS.md` walking up from the working directory to the git root, with the closest `CLAUDE.md` as the compatibility fallback (first match wins per category); the cwd-level `AGENTS.md`/`CLAUDE.md` DeepSeek Harness already loads are skipped
+- `instructions` entries from `opencode.json(c)`: local file paths and `*`/`**` glob patterns resolved against the config file's directory (remote URLs are skipped — the bridge does not fetch them)
+
+Budget 32 KiB: broader user-level sections are dropped first, then the most specific ones are truncated.
+
+### Phase-3 limitations
+
+Not bridged yet (documented per subsystem):
+
+- **Skills / commands**: nested command directories (not documented by opencode), `$ARGUMENTS`/`$1`/`!`command``/`@file` substitution in command templates, `agent`/`model`/`subtask` command options, custom agents, permission-based skill filtering (`permission.skill` `deny`/`ask` patterns).
+- **Memory**: `OPENCODE_CONFIG` / `OPENCODE_CONFIG_DIR` / `OPENCODE_CONFIG_CONTENT` overrides, remote/managed config layers, upward config-file discovery (project `opencode.json` is read at the cwd only), `{env:…}`/`{file:…}` substitution in config.
+- **Plugins / permissions / MCP**: opencode's JavaScript plugin system (its event hooks need the opencode runtime), permission rules, MCP server config, custom tools — none of these have a file-format bridge here.
+- **Overlap note**: when `claudeCode.memory` is also enabled, the `~/.claude/CLAUDE.md` fallback can be injected twice (once per bridge); keep one of the two memory switches off, or accept the duplicate block.
+
+## The Codex bridge (phase 4)
+
+### Skills
+
+Reads the Codex skill locations and registers them on the DeepSeek Harness skill registry (provider `codex`):
+
+| Codex location | Registered as |
+| :--- | :--- |
+| `$CWD/.agents/skills/<name>/SKILL.md`, then every parent folder up to the repository root | project-level skill (closest directory first) |
+| `~/.agents/skills/<name>/SKILL.md` | user-level skill |
+| `/etc/codex/skills/<name>/SKILL.md` | system-level skill |
+
+Mapping rules:
+
+- The DeepSeek Harness skill name is the directory name (must be kebab-case). Frontmatter must include `name` (matching the directory) and `description` (capped at 1,024 characters) per the agent-skills standard; invalid skills are dropped with a warning.
+- Precedence: project skills (closest directory first) override user skills, which override system skills. Native DeepSeek Harness skills (`.dsh/skills`, `.agents/skills`, runtime skills) still win on name conflicts.
+- Skills disabled via `[[skills.config]]` entries (`path` + `enabled = false`) in `config.toml` are skipped; relative paths resolve against the config file's `.codex/` directory.
+- The repository root is found with `project_root_markers` (default `['.git']`); without a marker only the current directory is checked, as Codex does. Skill roots and settings files are watched.
+
+### AGENTS.md instruction-chain memory
+
+DeepSeek Harness's own loader reads the workspace-root `AGENTS.md`. The bridge additionally injects Codex's instruction chain at session start, in the same system-reminder framing:
+
+- `$CODEX_HOME/AGENTS.override.md` if present, else `$CODEX_HOME/AGENTS.md` (first non-empty wins; `CODEX_HOME` is honored)
+- one file per directory walking from the repository root down to the working directory: `AGENTS.override.md` > `AGENTS.md` > `project_doc_fallback_filenames`; files closer to the working directory come later and override earlier guidance
+- the root-level plain `AGENTS.md` is skipped (DeepSeek Harness already loads it); empty files are skipped; project accumulation stops at `project_doc_max_bytes` (32 KiB default)
+
+Budget 32 KiB for the injected block: broader user-level sections are dropped first, then the most specific ones are truncated.
+
+### Hooks
+
+Loads hooks from `hooks.json` and inline `[hooks]` tables in `config.toml`, across every active layer — `/etc/codex/`, `~/.codex/`, and every `.codex/` folder from the repository root down to the working directory (hooks merge additively; identical handlers deduplicate; `[features].hooks = false` from the most specific layer disables them all) — and runs handlers at the DeepSeek Harness lifecycles below:
+
+| Codex event | DeepSeek Harness seam | Decision mapping |
+| :--- | :--- | :--- |
+| `SessionStart` | `agent/session-start` | `additionalContext` and exit-0 plain stdout injected; matcher sees `startup`/`resume`/`clear`/`compact` |
+| `SubagentStart` | `agent/session-start` (subagents) | `additionalContext` and exit-0 plain stdout injected into the subagent; matcher sees the agent type |
+| `UserPromptSubmit` | `agent/pre-step` | `decision: "block"` / exit 2 / `continue: false` erase the prompt and show the reason; context is appended to the step |
+| `PreToolUse` | `tools/pre-execute` | `permissionDecision: "deny"` / legacy `decision: "block"` / exit 2 → deny; `permissionDecision: "ask"` is ignored (Codex parses but does not support it); `additionalContext` injected; `updatedInput` is logged and ignored |
+| `PostToolUse` | `tools/post-execute` | `decision: "block"` / exit 2 / `continue: false` replace the tool result with the hook feedback (as Codex does); `additionalContext` added next to the result |
+| `Stop` | `agent/turn-stopping` | `decision: "block"` / exit 2 steer a continuation whose prompt is the hook reason (`stop_hook_active` set on repeats); `continue: false` wins and stops; capped at 8 consecutive continuations as a bridge safety valve |
+| `SubagentStop` | `agent/turn-stopping` (subagents) | same as Stop, steering the subagent |
+| `SessionEnd` | `agent/disposed` | side effects only (1 s budget, `reason: "other"`; main thread only) |
+
+Supported handlers: `type: "command"` only (Codex runs `prompt`/`agent` through an LLM and skips them itself), run through the shell with JSON input on stdin, `timeout` in seconds (default 600; 1 s for SessionEnd), `async: true` (background run, output discarded by the bridge), `commandWindows` on Windows; exit codes and JSON output per the Codex contract.
+
+Compatibility details:
+
+- Hooks key on Codex tool names. DeepSeek Harness names differ, so the bridge translates: `bash`/`pwsh`→`Bash`, `edit`/`write`→`apply_patch`, `subagent`→`spawn_agent`, `todo_write`→`update_plan`; unknown DeepSeek Harness tools (MCP servers, first-party extras) keep their own name. Matcher aliases are honored too: `Edit`/`Write` match `apply_patch`, `Agent` matches `spawn_agent`.
+- Matcher semantics follow the Codex spec: `*`/empty/omitted matches all; anything else is a JavaScript regular expression (unparseable matchers fail closed). There is no `if` filter in Codex hooks.
+- Timeouts and handler failures fail open (never block the action), as in Codex.
+- Subagents: `SessionStart`/`SessionEnd`/`UserPromptSubmit`/`Stop` run only for the main conversation, `SubagentStart`/`SubagentStop` only for subagents, and `PreToolUse`/`PostToolUse` for both — matching Codex's event scoping.
+
+### Phase-4 limitations
+
+Not bridged yet (documented per subsystem):
+
+- **Skills**: `agents/openai.yaml` metadata (`allow_implicit_invocation`, tool dependencies), plugin-bundled skills, symlinked skill folders (the bridge reads them through the filesystem, but does not resolve symlink identity), the curated plugin catalog.
+- **Memory**: `model_instructions_file`, Codex's 8,000-character initial-list budget (DeepSeek Harness applies its own catalog budgets).
+- **Hooks**: `PermissionRequest` (no DeepSeek Harness seam for "about to ask for approval"), `PreCompact`/`PostCompact` (no pre-compaction seam; the `compact` session-start source runs SessionStart hooks instead), Codex's hook trust-review flow (`/hooks` — the bridge runs hooks the way the other bridges do, without a trust gate), background-hook output delivery at the next safe point, `systemMessage`/`suppressOutput` user-only channels, `additionalContextLimit` spilling (the bridge caps context by characters instead), plugin-bundled and managed `requirements.toml` hooks, `transcript_path` (the bridge has no transcript file to point at), `updatedInput` rewriting (DeepSeek Harness freezes tool arguments before policy).
+- **Rules / config**: `rules/*.rules` (experimental Python DSL), `notify`, `[agents]` subagent roles, `requirements.toml`, profile files (`--profile`), and untrusted-project gating (project `.codex/` layers are read unconditionally — the bridge has no trust state).
+
+## Resources
+
+- Bridge-target reference materials (the official Claude Code, CodeBuddy Code, opencode, and Codex skills/commands/hooks specs used so far): [`docs/reference/`](docs/reference/)
+- Contributor documentation (how to add a new agent tool, the DeepSeek Harness integration surface, known pitfalls, build and test): [`docs/development/`](docs/development/)

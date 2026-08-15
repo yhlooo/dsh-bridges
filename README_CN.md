@@ -8,7 +8,7 @@
 
 整个项目**就是一个插件**——单条 bundle 行（`id: bridges`），内部为每个 agent 工具承载一个桥接子系统。安装一次 `dsh-bridges` 即可覆盖所有已支持的工具；每个工具的桥接可以通过配置独立开关。
 
-> 🚧 **建设中。** 一期：Claude Code。二期（当前）：CodeBuddy Code。Codex / opencode 的桥接计划在后续阶段实现。
+> 🚧 **建设中。** 一期：Claude Code。二期：CodeBuddy Code。三期（当前）：opencode。四期（当前）：Codex。
 
 ## 支持的 agent 工具
 
@@ -16,8 +16,8 @@
 | :--- | :--- | :--- | :--- | :--- |
 | Claude Code | ✅ 一期 | `.claude/skills`、`.claude/commands`（含 `~/.claude`） | `.claude/CLAUDE.md`、`~/.claude/CLAUDE.md` | `settings.json` hooks（SessionStart、UserPromptSubmit、Pre/PostToolUse(+Failure)、Stop、SessionEnd） |
 | CodeBuddy Code | ✅ 二期 | `.codebuddy/skills`、`.codebuddy/commands`（含 `~/.codebuddy`） | `CODEBUDDY.md`、`~/.codebuddy/CODEBUDDY.md`、`.codebuddy/rules/` | `settings.json` hooks（SessionStart、UserPromptSubmit、Pre/PostToolUse(+Failure)、Stop、SessionEnd） |
-| Codex | 🚧 计划中 | — | — | — |
-| opencode | 🚧 计划中 | — | — | — |
+| opencode | ✅ 三期 | `.opencode/skills`、`.opencode/commands`（含 `~/.config/opencode`）、`opencode.json` 的 `command.*` | `AGENTS.md`（含 `CLAUDE.md` 回退）、`instructions` 文件 | —（opencode 无 hooks 配置；其插件 API 不在范围内） |
+| Codex | ✅ 四期 | `.agents/skills`（cwd → 仓库根）、`~/.agents/skills`、`/etc/codex/skills` | `~/.codex/AGENTS.md` + 逐目录 `AGENTS.md` 链 | `hooks.json` / `config.toml` hooks（SessionStart、SubagentStart、UserPromptSubmit、Pre/PostToolUse、Stop、SubagentStop、SessionEnd） |
 
 ## 安装
 
@@ -66,6 +66,26 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
       userCodebuddyDir: '~/.codebuddy'  # 用户级 CodeBuddy Code 目录
       watch: true                       # 监听技能根目录与 settings 文件
       hookTimeoutMs: 60000              # 对齐 CodeBuddy Code 的 60 秒 hook 上限
+      maxHookOutputChars: 10000
+      memoryMaxBytes: 32768
+    opencode:
+      enabled: true                     # opencode 桥接的总开关
+      skills: true                      # 发现 .opencode / ~/.config/opencode 的 skills 与 commands（含 JSON 命令）
+      memory: true                      # 注入 AGENTS.md 规则（含 CLAUDE.md 回退）与 instructions 文件
+      userOpencodeDir: '~/.config/opencode'  # 用户级 opencode 目录
+      userClaudeDir: '~/.claude'        # CLAUDE.md 回退所用的用户级 Claude Code 目录
+      claudeCompat: true                # 是否启用 opencode 的 Claude Code 兼容回退
+      watch: true                       # 监听资产根目录与配置文件
+      memoryMaxBytes: 32768
+    codex:
+      enabled: true                     # Codex 桥接的总开关
+      skills: true                      # 发现 .agents/skills（cwd → 仓库根）、~/.agents/skills、/etc/codex/skills
+      memory: true                      # 注入 AGENTS.md 指令链
+      hooks: true                       # 运行 hooks.json / config.toml 里的 Codex hooks
+      userCodexDir: '~/.codex'          # 用户级 Codex 目录（设置 CODEX_HOME 时以它为准）
+      userSkillsDir: '~/.agents/skills' # 用户级 skills 目录
+      watch: true                       # 监听技能根目录与 settings 文件
+      hookTimeoutMs: 600000             # 对齐 Codex 的 600 秒 hook 默认值
       maxHookOutputChars: 10000
       memoryMaxBytes: 32768
 ```
@@ -198,44 +218,7 @@ DeepSeek Harness 核心自行加载 `AGENTS.md` 与根目录 `CLAUDE.md`，但�
 - **Memory**：条件规则（`alwaysApply: false` + `paths`）、`@import` 展开、向上递归查找、嵌套子树动态加载、Auto Memory。
 - **Hooks**：`prompt` / `agent` handler 类型（需要 LLM 判定）；`Notification`、`SubagentStart`/`SubagentStop`、`PreCompact`/`PostCompact`、`PermissionRequest`/`PermissionDenied`、`Elicitation`、`FileChanged`、`Setup` 等事件；frontmatter hooks（及 `allowUntrustedFrontmatterHooks` 闸门）；插件 `hooks/hooks.json`；`transcript_path` 输入字段（桥接没有真实转录文件）；`suppressOutput` / `systemMessage` 仅面向用户的通道（DeepSeek Harness 无此通道）；`modifiedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）。Windows 上 hook 走系统 shell 而非 CodeBuddy Code 强制的 Git Bash。
 
-## 目录结构
+## 资源
 
-```
-src/
-├── index.ts                 # 插件入口：单 bundle 行、按工具分段配置、子系统注册表
-├── util.ts / fs-adapter.ts  # 各桥接子系统共享
-└── agents/
-    ├── claude-code/         # 每个受支持的 agent 工具一个目录
-    │   ├── index.ts         # 子系统注册：skills、memory、hooks
-    │   ├── skills/          # claude-code 技能 provider
-    │   ├── memory.ts        # CLAUDE.md 记忆注入
-    │   └── hooks/           # settings 合并、matcher、执行器、DeepSeek Harness 生命周期接线
-    └── codebuddy-code/      # CodeBuddy Code 子系统
-        ├── index.ts         # 子系统注册：skills、memory、hooks
-        ├── settings.ts      # 共享 settings 加载器（hooks、env、skillOverrides）
-        ├── skills/          # codebuddy-code 技能 provider
-        ├── memory.ts        # CODEBUDDY.md 记忆 + 规则注入
-        └── hooks/           # matcher、执行器、DeepSeek Harness 生命周期接线
-```
-
-新增一个 agent 工具 = 增加 `src/agents/<tool>/` 目录 + `registerBridgeSubsystems()` 里加一行注册；单条 bundle 行已经把它涵盖在内。
-
-## 开发
-
-```sh
-pnpm install
-pnpm build    # 编译 src/ → lib/
-pnpm test     # vitest 单元测试
-```
-
-端到端冒烟测试（把插件装进 headless profile 并在 fixture 项目里运行）：
-
-```sh
-dsh plugin --profile headless add .
-cd /tmp/claude-fixture      # 任意带 .claude/ 资产的项目
-dsh --profile headless "list the skills available in your catalog"
-cd /tmp/codebuddy-fixture   # 任意带 .codebuddy/ 资产的项目
-dsh --profile headless "list the skills available in your catalog"
-```
-
-各桥接目标的参考资料在 [`docs/reference/`](docs/reference/)，包括一期所用的 Claude Code 与二期所用的 CodeBuddy Code skills/commands/hooks 官方规范。贡献者文档——如何新增一个 agent 工具、DeepSeek Harness 集成面、已知踩坑——在 [`docs/development/`](docs/development/)。
+- 各桥接目标的参考资料（一期 Claude Code、二期 CodeBuddy Code 的 skills/commands/hooks 官方规范）：[`docs/reference/`](docs/reference/)
+- 贡献者文档（如何新增一个 agent 工具、DeepSeek Harness 集成面、已知踩坑、构建与测试）：[`docs/development/`](docs/development/)
