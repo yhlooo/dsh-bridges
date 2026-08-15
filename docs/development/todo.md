@@ -23,20 +23,43 @@
 
 以下问题先于对应 P0/P1 项决策，产出一份"接缝决策记录"写回本文档：
 
-- [ ] **MCP 接缝**：dsh 的 MCP 客户端是静态组合行（每服务器一行）、无运行时注册表。
-  确认方案 A（dsh 核心增加"文件型 MCP provider"，类似 `dsh-skill-filesystem`，读
-  `.mcp.json`/`config.toml` 注册服务器）vs 方案 B（插件内自托管 `dsh-mcp-client`
-  实例 + `ToolRuntime.register()` 动态注册 MCP 工具）。权衡：方案 B 纯插件可行但重
-  （工具命名冲突、沙箱、teardown），方案 A 需要核心改动。
-- [ ] **subagent 定义接缝**：`ctx.subagents` 目前只注册**执行后端 provider**，没有
-  "命名 subagent 定义"注册表。确认方案 A（推动核心支持命名定义）vs 方案 B（降级为
-  技能：name/description → 技能条目、正文 = 系统提示，工具白名单忽略）。
-- [ ] **会话 shell env 接缝**：settings `env` 需应用到会话/工具子进程。dsh 的
-  `shell-env` 是 host-plane 服务；调研插件是否可通过 `tools/pre-execute` 等接缝为
-  bash 执行注入环境，或需核心支持。
-- [ ] **共享规则引擎**：权限规则解析将复用 hooks 的 matcher 与工具名翻译
-  （`src/agents/*/hooks/names.ts`），提炼到共享模块（`src/util.ts` 或新目录），
-  供 P0-权限组四个工具共用。
+- [x] **MCP 接缝** → 决策：方案 B（见下"接缝决策记录"§1）。2026-08-15，commit 待补。
+- [x] **subagent 定义接缝** → 决策：方案 B（见下"接缝决策记录"§2）。2026-08-15，commit 待补。
+- [x] **会话 shell env 接缝** → 决策：部分可行（见下"接缝决策记录"§3）。2026-08-15，commit 待补。
+- [x] **共享规则引擎** → 决策：新建 `src/permissions/` 共享模块（见下"接缝决策记录"§4）。2026-08-15，commit 待补。
+
+### 接缝决策记录（2026-08-15，基于 dsh 安装包实测）
+
+1. **MCP**：`@deepseek-ai/dsh-mcp-client` 是可按实例动态加载的 cordis 插件
+   （`inject: ['tools']`，`ctx.tools.register` 注册 `mcp__<serverName>__<tool>`
+   工具，disposal 自动断开并注销）。cordis 的 `ctx.plugin(plugin, config)`
+   支持运行时实例化、随 fiber teardown。→ **方案 B 可行**：各桥接子系统解析
+   上游 MCP 配置（`.mcp.json`/`~/.claude.json`/`[mcp_servers]`/opencode `mcp`），
+   为每个服务器 `ctx.plugin()` 一个 mcp-client 实例。注意事项：`serverName`
+   需按工具前缀保证全局唯一（如 `claude__github`）；插件需把 `tools` 加入
+   `inject`；config 文件纳入现有 watcher。方案 A（dsh 核心文件型 MCP
+   provider）留作后续上游提案。
+2. **subagent 定义**：`ctx.subagents` 只有执行后端 provider 注册，**没有命名
+   定义注册表**；但模型侧 `subagent` 工具参数全部内联且丰富：`label`、
+   `persona`、`toolFilter: { allow, deny }`、`agentOptions: { provider, model,
+   maxTokens }`、`maxDepth`。→ **方案 B（技能载体 + 委派规格）**：
+   `.claude/agents` / `.codebuddy/agents` 每个文件注册为技能（frontmatter
+   name/description → 技能元数据；正文 = 上游系统提示 + 委派指令块，把
+   `tools` → `toolFilter.allow`（经工具名翻译表）、`model` →
+   `agentOptions.model`、`maxTurns` → `maxDepth` 写入指令）；其余 frontmatter
+   （permissionMode/background/skills/mcpServers/hooks/memory/isolation/color/
+   effort）记限制。方案 A（核心命名定义目录）留作上游提案。
+3. **shell env**：`ctx.shellEnv` 注册表只接受 `DSH_*` 前缀变量；
+   `ShellExecRequest.env` 只供**插件自 spawn 的子进程**（hooks 桥已用它注入
+   `CLAUDE_PROJECT_DIR`）；模型侧 bash 工具不暴露 env 参数。→ 决策：settings
+   `env` 应用于 ① hook 子进程（claude/codex 扩展、codebuddy 已有）② 桥接自
+   spawn 的 MCP 服务器子进程；模型 bash 调用无法注入 → 记限制 +
+   核心支持候选（P1 项相应标注）。
+4. **共享规则引擎**：新建 `src/permissions/`：规则语法解析（claude/codebuddy/
+   opencode 三种语法 + codex 的 approval_policy 映射）、工具名翻译复用现有
+   `hooks/names.ts` 映射表（提炼为共享），决策在 `tools/pre-execute` 与 hooks
+   的 permissionDecision 协同（hooks 优先，与上游一致，实施时对照各工具
+   hooks 文档确认）。
 
 ## P0 · 迁移阻断项
 
