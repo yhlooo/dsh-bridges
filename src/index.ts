@@ -7,8 +7,10 @@
  *
  * - **claude-code** (implemented): skills/commands → `ctx.skills` provider,
  *   CLAUDE.md memory, settings.json hooks → dsh lifecycle events.
- * - **codex / opencode / codebuddy**: planned; each will add one directory
- *   under `agents/<tool>/` and one entry in {@link registerBridgeSubsystems}.
+ * - **codebuddy-code** (implemented): skills/commands → `ctx.skills` provider,
+ *   CODEBUDDY.md memory + rules, settings.json hooks → dsh lifecycle events.
+ * - **codex / opencode**: planned; each will add one directory under
+ *   `agents/<tool>/` and one entry in {@link registerBridgeSubsystems}.
  *
  * A subsystem registers under this plugin's single bundle row (`id: bridges`
  * in `cordis.patch.yml`), so one installation covers every supported tool and
@@ -18,6 +20,7 @@
 import { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { registerClaudeCodeBridge, type ClaudeCodeConfig } from './agents/claude-code/index.js'
+import { registerCodebuddyCodeBridge, type CodebuddyCodeConfig } from './agents/codebuddy-code/index.js'
 import { createFsAdapter, type FsAdapter } from './fs-adapter.js'
 import type { BridgeLogger } from './util.js'
 
@@ -38,10 +41,22 @@ export const Config = z.object({
     maxHookOutputChars: z.number().default(10_000),
     memoryMaxBytes: z.number().default(32_768),
   }),
+  codebuddyCode: z.object({
+    enabled: z.boolean().default(true),
+    skills: z.boolean().default(true),
+    memory: z.boolean().default(true),
+    hooks: z.boolean().default(true),
+    userCodebuddyDir: z.string().default('~/.codebuddy'),
+    watch: z.boolean().default(true),
+    hookTimeoutMs: z.number().default(60_000),
+    maxHookOutputChars: z.number().default(10_000),
+    memoryMaxBytes: z.number().default(32_768),
+  }),
 })
 
 export interface BridgesConfig {
   claudeCode?: ClaudeCodeConfig
+  codebuddyCode?: CodebuddyCodeConfig
 }
 
 /**
@@ -51,9 +66,9 @@ export interface BridgesConfig {
  */
 export function registerBridgeSubsystems(ctx: Context, logger: BridgeLogger, fs: FsAdapter, config: BridgesConfig): void {
   registerClaudeCodeBridge(ctx, logger, fs, config.claudeCode)
+  registerCodebuddyCodeBridge(ctx, logger, fs, config.codebuddyCode)
   // Planned: registerCodexBridge(ctx, logger, fs, config.codex)
   // Planned: registerOpencodeBridge(ctx, logger, fs, config.opencode)
-  // Planned: registerCodebuddyBridge(ctx, logger, fs, config.codebuddy)
 }
 
 export function apply(ctx: Context, config: BridgesConfig = {}): void {
