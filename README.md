@@ -145,4 +145,4 @@ cd /tmp/claude-fixture   # any project with .claude/ assets
 dsh --profile headless "list the skills available in your catalog"
 ```
 
-Reference materials for each bridge target live in [`docs/reference/`](docs/reference/), including the official Claude Code skills/commands/hooks specs used for phase 1.
+Reference materials for each bridge target live in [`docs/reference/`](docs/reference/), including the official Claude Code skills/commands/hooks specs used for phase 1. Contributor documentation — how to add a new agent tool, the DSH integration surface, and known pitfalls — lives in [`docs/development/`](docs/development/).
