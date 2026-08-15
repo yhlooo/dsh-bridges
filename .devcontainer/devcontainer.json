@@ -19,8 +19,22 @@
       "source": "dsh-bridges-dsh-home",
       "target": "/root/.dsh",
       "type": "volume"
-    }
+    },
+    // Share the host's SSH keys so git over SSH works inside the container.
+    {
+      "source": "${localEnv:HOME}/.ssh",
+      "target": "/root/.ssh",
+      "type": "bind"
+    },
+    // Stage the host's GPG home read-only. GPG daemons (agent/keyboxd) must
+    // not run against the live host dir: POSIX locks pass through the bind
+    // mount and the host's GPG Suite holds them. postCreateCommand copies
+    // the staged files into the container-local ~/.gnupg instead.
+    "type=bind,source=${localEnv:HOME}/.gnupg,target=/root/.gnupg-host,readonly"
   ],
+  // One-way sync host GPG keys into the container's own ~/.gnupg (host stays
+  // the source of truth; runs again on every container rebuild).
+  "postCreateCommand": ".devcontainer/post-create.sh",
   // dsh web serves the DeepSeek Harness Web UI on 127.0.0.1:3080
   "forwardPorts": [3080],
   "portsAttributes": {

@@ -111,3 +111,6 @@ source $ZSH/oh-my-zsh.sh
 PROMPT='
 $(_user_host)${_current_dir} $(git_prompt_info) $(ruby_prompt_info)
 %{%(!.${fg[red]}.${fg[white]})%}>%{$reset_color%} '
+
+# pinentry needs the tty to prompt for the GPG passphrase when signing commits
+export GPG_TTY=$TTY

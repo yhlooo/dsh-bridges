@@ -6,7 +6,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         tzdata build-essential xz-utils python3 \
         ca-certificates dnsutils \
-        curl git zsh vim gpg jq ssh
+        curl git zsh vim gnupg pinentry-curses jq ssh
 
 ENV LC_ALL=C.utf8
 
