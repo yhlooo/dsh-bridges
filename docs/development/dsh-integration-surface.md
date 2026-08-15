@@ -76,7 +76,7 @@ interface SkillProvider {
 
 - `SkillCandidate` 关键字段：`name`（kebab-case，用 `isSkillName` 校验）、`description`、`whenToUse?`、`invocation: { modelInvocable, userInvocable }`（必填解析值）、`source`（提示可见元数据字符串）、`provider`、`resourceBase?`（`{kind:'directory',path}` | `{kind:'url',url}` | `{kind:'opaque',description}`）、`rank`（同层内越小越优先）、`locator`（不透明，回传给 `get`）、`path?`、`metadata?`。
 - `SkillDefinition` = 摘要 + `content`（正文）。
-- **冲突规则**：跨层"最近层整名胜出"；同层内按 rank → 注册顺序 → provider 内顺序。运行时技能 rank=250；`BUNDLED_SKILL_RANK`=600。dsh 自带 filesystem provider 用 100/200/300/400/500（项目 dsh / 项目 agents / custom / 用户 dsh / 用户 agents），本项目的 claude 段选 105–120。
+- **冲突规则**：跨层"最近层整名胜出"；同层内按 rank → 注册顺序 → provider 内顺序。运行时技能 rank=250；`BUNDLED_SKILL_RANK`=600。dsh 自带 filesystem provider 用 100/200/300/400/500（项目 dsh / 项目 agents / custom / 用户 dsh / 用户 agents），本项目的段分配：claude 105–120（个人 < 项目）、codebuddy 125–140（**项目 < 用户**——段内顺序跟随上游优先级，CodeBuddy 与 Claude 相反，别套用同一顺序）。
 - `get()` 返回的名字与候选不一致 → 注册表自动 invalidate 该 provider。文件消失返回 `undefined` 即可。
 
 ## 3. 文件系统服务（可选 `ctx.get('fs')`）

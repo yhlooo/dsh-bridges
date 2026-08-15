@@ -140,3 +140,17 @@ codebuddy-code 复用 claude-code 的骨架时，以下四处语义不同，照�
 | 默认 hook 超时 | 600 秒（UserPromptSubmit 30 秒） | **60 秒**，无 UserPromptSubmit 特例 |
 
 其余差异：`when_to_use` 不在 CodeBuddy Code 文档里（为兼容 Claude 资产仍识别）；PreToolUse 改写字段叫 `modifiedInput`（Claude 是 `updatedInput`）；`permissionDecision` 无 `defer`；`decision: "block"` 已废弃但仍兼容读取；settings 无 `allowedHttpHookUrls`（HTTP hook 不设白名单）；嵌套命令限定名 `group:name` 含 `:` 非 kebab-case，按"跳过 + warn、不转写"处理。skills.md 的 `skillOverrides` 四态不在 settings.md 表格里但确为 settings.json 键，实现时要读 settings 文件而不是 skill 文件。
+
+## 17. 端到端冒烟的两个环境坑（codebuddy-code 二期踩到）
+
+**现象一**：新 profile（`dsh plugin --profile cb-test add .`）跑 headless 冒烟，180 秒超时（exit 124）且零输出。
+
+**原因**：新 profile 没有模型路由凭据，headless 卡在模型调用上；`--dump-config` 里能看到 `agent-default-model` 行不代表凭据已配置。这不是插件问题。
+
+**正确做法**：冒烟用已配置好路由的 profile（本仓库是 `headless`），不要为冒烟临时新建 profile；必要时先验证 profile 能裸跑一个最小提示词。
+
+**现象二**："无资产零开销"验证失败——空项目里也发现了用户级技能。
+
+**原因**：用户级资产在 `~/.codebuddy` / `~/.claude`，冒烟 fixture 往往往 HOME 里写过用户级资产，空项目自然还能发现它们。
+
+**正确做法**：零开销验证用 `HOME=/tmp/cleanhome dsh --profile headless ...` 隔离 HOME；冒烟用完的用户级 fixture（`~/.codebuddy` 等）要及时清理，否则会污染后续所有项目的目录。

@@ -57,11 +57,11 @@
 
 - 每个工具注册**一个** provider（名 = 工具名，如 `claude-code`），实现 `list()`（发现 + 摘要）与 `get()`（按需加载正文）。契约见 [dsh-integration-surface.md](dsh-integration-surface.md#skills-注册表)。
 - **命名**：DSH 技能名必须是 kebab-case（`isSkillName`），上游允许的非法名（camelCase 等）**跳过 + warn**，不要私自转写。
-- **rank 段分配**：每个工具独占一段（claude 用 105–120），段内再按上游语义细分（claude：个人 < 项目，skill < 同级 command）。rank 越小越优先；段之间谁优先由你的设计决定并在 README 写明。运行时技能 rank=250、bundled=600，别碰。
+- **rank 段分配**：每个工具独占一段（claude 用 105–120、codebuddy 用 125–140），段内再按**上游语义**细分（claude：个人 < 项目、skill < 同级 command；codebuddy：项目 < 用户、skill < 同级 command——上游优先级不同，段内顺序要跟着上游走，别照抄别的工具）。rank 越小越优先；段之间谁优先由你的设计决定并在 README 写明。运行时技能 rank=250、bundled=600，别碰。
 - **invocation policy 映射**：`disable-model-invocation` → `modelInvocable` 取反；`user-invocable` → `userInvocable`；非法布尔值**丢弃整个技能 + warn**（fail closed）。
 - **description**：上游的 `description` + 触发条件字段合并，按上游的截断长度截断；缺省时回退正文首段（claude 的行为）。
 - **resourceBase**：目录型技能给 `{ kind: 'directory', path }`，支撑文件随正文按需解析。
-- **监听**：用 chokidar 监听已存在的技能根目录，变更时调 `control.invalidate()`（目录增删 / `SKILL.md` 增删改 / 扁平 md）；注意 LRU 上限防止项目多了泄漏。
+- **监听**：用 chokidar 监听已存在的技能根目录，变更时调 `control.invalidate()`（目录增删 / `SKILL.md` 增删改 / 扁平 md）；**settings 能改变目录内容时（如 codebuddy 的 `skillOverrides`）settings 文件也要纳入 watcher**，否则改 settings 不会刷新目录；注意 LRU 上限防止项目多了泄漏。
 - **get() 语义**：文件消失 → 返回 `undefined`（技能不可加载）；frontmatter 损坏 → warn + `undefined`；调用方 abort → 抛错。
 
 ### 记忆 → `agent/session-start` 注入
@@ -88,8 +88,8 @@
 - **decision 映射**：deny→`{kind:'deny',reason}`；ask→`{kind:'ask',reason?}`；allow→调用 `next()`；block 类决策在 pre-step 用"**替换进入消息**"（`{kind:'enter', messages:[通知]}`）而非 reject——reject 后原因没有任何可见通道；continue 类决策用 `steer`。
 - **fail-open**：hook 超时 / 启动失败 / 被取消 → 放行（上游命令类 hook 的语义）；只有上游明确规定 fail-closed 的才拦截。
 - **工具名翻译**：上游工具名（`Bash`、`Edit`…）与 DSH（`bash`、`edit`…）不同，matcher、`if` 规则、hook 的 `tool_name` 载荷都用**上游名字**（翻译表见 `src/agents/claude-code/hooks/names.ts`），这样上游写好的 hook 脚本原样可用。
-- **多层级配置合并**：settings 按"宽 → 具体"叠加合并，相同 handler 去重（JSON 序列化比较），禁用开关取最具体层定义的值；`if` 过滤器只在工具事件上生效。
-- 映射决策**写进 README 的映射表**（claude 的 README 有完整表格），这是阶段五验收的依据。
+- **多层级配置合并**：settings 按"宽 → 具体"叠加合并，相同 handler 去重（JSON 序列化比较），禁用开关取最具体层定义的值；`if` 过滤器只在工具事件上生效。**同一批 settings 文件被多个子块读取时（如 codebuddy 的 hooks 与 skills 的 `skillOverrides`），把加载器做成子系统级共享实例**（按路径 stamp 缓存），避免两份缓存与两份解析。
+- 映射决策**写进 README 的映射表**（claude / codebuddy 的 README 都有完整表格），这是阶段五验收的依据。
 
 ---
 
@@ -113,6 +113,7 @@ src/agents/<tool>/
     └── bridge.ts     # DSH 事件接线与 decision 映射
 ```
 
+- 当 settings 同时服务 skills 与 hooks（如 codebuddy 的 `skillOverrides` + hooks）时，把加载器提为子系统根级的 `settings.ts` 共享实例（codebuddy 的布局），hooks/ 目录只留 types/matcher/run/bridge；布局以"谁消费"为准，不必死守上图。
 - 公共代码放 `src/util.ts` / `src/fs-adapter.ts`，只放**多个工具都会用**的东西；一个工具的细节留在自己的目录里。
 - 每个子系统入口签名统一：`(ctx: Context, logger: BridgeLogger, fs: FsAdapter, config: XxxConfig)`，方便在注册表里统一分发。
 
@@ -163,6 +164,11 @@ pnpm test         # vitest（src/**/*.test.ts）
    - 记忆被引用；
    - hook：拦截（如 deny 某命令并看到原因）、上下文注入、提示词拦截。
 4. 验证"无资产零开销"：在没有任何上游资产的目录跑一次，确认无告警、无注入。
+
+冒烟的两条实操经验（详见 [pitfalls](pitfalls.md) 第 17 条）：
+
+- **用已配置模型路由的 profile**（本仓库的 `headless`）：新建 profile 没有 API 凭据，headless 会静默超时（exit 124、零输出），容易误判为插件问题。
+- **"零开销"验证要隔离 HOME**：用户级资产在 `~/.codebuddy` / `~/.claude`，宿主 HOME 里一旦有残留就会让"无资产"项目也发现到用户级资产；用 `HOME=/tmp/cleanhome dsh ...` 排除。
 
 ---
 
