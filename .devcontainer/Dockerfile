@@ -10,14 +10,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # dependency of dsh) when no prebuilt binary exists for the platform.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        build-essential \
-        ca-certificates \
-        curl \
-        git \
-        python3 \
-        xz-utils \
-        zsh \
-    && rm -rf /var/lib/apt/lists/*
+        build-essential xz-utils python3 \
+        ca-certificates dnsutils \
+        curl git zsh vim
 
 # Node.js 22 LTS (required by dsh).
 # Detect the CPU arch with uname so this works with both docker buildx and podman build.
