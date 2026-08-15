@@ -1,0 +1,20 @@
+{
+  "name": "dsh-bridges",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bridges that let dsh (DeepSeek Harness) reuse projects already configured for other coding agents",
+  "type": "module",
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^3.0.5"
+  }
+}

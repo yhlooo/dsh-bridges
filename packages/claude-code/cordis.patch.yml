@@ -1,0 +1,10 @@
+# @dsh-bridges/claude-code bundle patch: one bridge row over the composed tree.
+#
+# The bridge registers a `claude-code` skill provider on the host `skills`
+# registry (global layer) and wires Claude Code hook events into DSH agent and
+# tool lifecycles. A preset's nearer skill layer shadows this provider's
+# entries on name conflicts, so DSH-native skills always win collisions.
+
+- insert:
+    - id: claude-code
+      name: '@dsh-bridges/claude-code'
