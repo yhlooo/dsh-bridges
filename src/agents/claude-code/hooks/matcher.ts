@@ -11,9 +11,9 @@
  * field per tool and fails open when the rule cannot be interpreted, matching
  * Claude Code's best-effort contract. Claude Code's deeper Bash subcommand
  * analysis is not replicated.
- * @module @dsh-bridges/claude-code/hooks/matcher
+ * @module dsh-bridges/agents/claude-code/hooks/matcher
  */
-import { isPlainObject } from '../util.js'
+import { isPlainObject } from '../../../util.js'
 
 const EXACT_SET_RE = /^[A-Za-z0-9_\-, |]*$/
 

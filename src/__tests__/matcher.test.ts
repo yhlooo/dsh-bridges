@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { globMatch, matchIf, matchMatcher, primaryMatchField } from '../hooks/matcher.js'
+import { globMatch, matchIf, matchMatcher, primaryMatchField } from '../agents/claude-code/hooks/matcher.js'
 
 describe('matchMatcher', () => {
   it('matches everything for star, empty, and omitted matchers', () => {

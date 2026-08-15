@@ -5,15 +5,15 @@
  * Claude Code additionally reads `~/.claude/CLAUDE.md` (user) and
  * `./.claude/CLAUDE.md` (project); this module injects those two files at
  * session start with the same framing DSH uses for workspace instructions.
- * @module @dsh-bridges/claude-code/memory
+ * @module dsh-bridges/agents/claude-code/memory
  */
 import { join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { FsAdapter } from './fs-adapter.js'
-import type { BridgeLogger } from './util.js'
-import { escapeReminderClose, expandHome } from './util.js'
+import type { FsAdapter } from '../../fs-adapter.js'
+import type { BridgeLogger } from '../../util.js'
+import { escapeReminderClose, expandHome } from '../../util.js'
 
 export interface MemoryConfig {
   userClaudeDir: string

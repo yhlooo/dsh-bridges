@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FsAdapter, BridgeDirEntry } from '../fs-adapter.js'
-import { SettingsLoader } from '../hooks/settings.js'
+import { SettingsLoader } from '../agents/claude-code/hooks/settings.js'
 
 const silent = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
 

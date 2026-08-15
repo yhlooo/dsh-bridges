@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { BridgeDirEntry, FsAdapter } from '../fs-adapter.js'
-import { ClaudeSkillProvider } from '../skills/provider.js'
+import { ClaudeSkillProvider } from '../agents/claude-code/skills/provider.js'
 import type { SkillLookupOptions } from '@deepseek-ai/dsh-skill'
 
 const silent = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }

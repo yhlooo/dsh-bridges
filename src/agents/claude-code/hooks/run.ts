@@ -10,11 +10,11 @@
  *
  * `mcp_tool`, `prompt`, and `agent` handler types are not bridged yet and are
  * skipped with a diagnostic.
- * @module @dsh-bridges/claude-code/hooks/run
+ * @module dsh-bridges/agents/claude-code/hooks/run
  */
 import { spawn, type ChildProcess } from 'node:child_process'
-import type { BridgeLogger } from '../util.js'
-import { isPlainObject } from '../util.js'
+import type { BridgeLogger } from '../../../util.js'
+import { isPlainObject } from '../../../util.js'
 import { matchIf, matchMatcher, globMatch } from './matcher.js'
 import type { BridgedHookEvent, CommandHook, HookDef, HookJsonOutput, HookOutcome, HttpHook, MatcherGroup } from './types.js'
 

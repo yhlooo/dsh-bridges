@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { firstParagraph, FrontmatterError, parseSkillFile, splitFrontmatter } from '../skills/parse.js'
+import { firstParagraph, FrontmatterError, parseSkillFile, splitFrontmatter } from '../agents/claude-code/skills/parse.js'
 
 describe('splitFrontmatter', () => {
   it('splits a fenced frontmatter block from the body', () => {

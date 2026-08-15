@@ -1,6 +1,6 @@
 /**
  * Claude Code hook configuration and runtime types.
- * @module @dsh-bridges/claude-code/hooks/types
+ * @module dsh-bridges/agents/claude-code/hooks/types
  */
 
 /** Handler fields shared by every hook type. */

@@ -16,17 +16,17 @@
  * `defer`), the closest safe behavior is chosen and logged. Subagents are
  * excluded from `UserPromptSubmit` and `Stop`, which Claude Code keeps for
  * the main conversation (its `SubagentStop` event is not bridged yet).
- * @module @dsh-bridges/claude-code/hooks/bridge
+ * @module dsh-bridges/agents/claude-code/hooks/bridge
  */
 import type { ChildProcess } from 'node:child_process'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import { createUserMessage, type ContentBlock, type UserMessage } from '@deepseek-ai/dsh-llm'
 import type { PostToolDecision, PreToolDecision, ToolExecution, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
-import type { FsAdapter } from '../fs-adapter.js'
+import type { FsAdapter } from '../../../fs-adapter.js'
 import { claudeToolName } from './names.js'
-import type { BridgeLogger } from '../util.js'
-import { capString, escapeReminderClose, isPlainObject } from '../util.js'
+import type { BridgeLogger } from '../../../util.js'
+import { capString, escapeReminderClose, isPlainObject } from '../../../util.js'
 import { runEventHooks } from './run.js'
 import { SettingsLoader } from './settings.js'
 import type { BridgedHookEvent, HookOutcome } from './types.js'

@@ -8,12 +8,12 @@
  * as `disableAllHooks` come from the most specific source that defines them.
  * Managed (enterprise) settings have no discoverable file path and are out of
  * scope for this bridge.
- * @module @dsh-bridges/claude-code/hooks/settings
+ * @module dsh-bridges/agents/claude-code/hooks/settings
  */
 import { join } from 'node:path'
-import type { FsAdapter } from '../fs-adapter.js'
-import type { BridgeLogger } from '../util.js'
-import { expandHome, isPlainObject } from '../util.js'
+import type { FsAdapter } from '../../../fs-adapter.js'
+import type { BridgeLogger } from '../../../util.js'
+import { expandHome, isPlainObject } from '../../../util.js'
 import type { HookDef, HookSettings, LoadedHookSettings, MatcherGroup } from './types.js'
 
 export interface SettingsLoaderConfig {

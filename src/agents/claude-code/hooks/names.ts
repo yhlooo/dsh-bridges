@@ -7,7 +7,7 @@
  * against the translated Claude Code name and receive it in the `tool_name`
  * input field, so a hook written for Claude Code runs unchanged. Unknown DSH
  * tools (MCP servers, first-party extras) keep their own name.
- * @module @dsh-bridges/claude-code/hooks/names
+ * @module dsh-bridges/agents/claude-code/hooks/names
  */
 
 const DSH_TO_CLAUDE_TOOL: Readonly<Record<string, string>> = {

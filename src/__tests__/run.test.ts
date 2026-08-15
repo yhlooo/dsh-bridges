@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { parseHookStdout, runEventHooks } from '../hooks/run.js'
-import { resolveBlockDecision, resolvePreToolUse } from '../hooks/bridge.js'
-import type { HookOutcome, MatcherGroup } from '../hooks/types.js'
+import { parseHookStdout, runEventHooks } from '../agents/claude-code/hooks/run.js'
+import { resolveBlockDecision, resolvePreToolUse } from '../agents/claude-code/hooks/bridge.js'
+import type { HookOutcome, MatcherGroup } from '../agents/claude-code/hooks/types.js'
 
 const silent = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
 

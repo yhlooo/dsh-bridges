@@ -12,15 +12,15 @@
  * assets, and a skill overrides a same-name command at the same level. Ranks
  * live below the DSH runtime-skill rank (250), so embedded runtime skills keep
  * winning over Claude assets.
- * @module @dsh-bridges/claude-code/skills/provider
+ * @module dsh-bridges/agents/claude-code/skills/provider
  */
 import { join, dirname } from 'node:path'
 import { watch } from 'chokidar'
 import type { SkillCandidate, SkillDefinition, SkillLookupOptions, SkillProvider, SkillProviderControl } from '@deepseek-ai/dsh-skill'
 import { isSkillName } from '@deepseek-ai/dsh-skill'
-import type { FsAdapter } from '../fs-adapter.js'
-import type { BridgeLogger } from '../util.js'
-import { capString, expandHome, stripMarkdownExtension } from '../util.js'
+import type { FsAdapter } from '../../../fs-adapter.js'
+import type { BridgeLogger } from '../../../util.js'
+import { capString, expandHome, stripMarkdownExtension } from '../../../util.js'
 import { FrontmatterError, firstParagraph, parseSkillFile } from './parse.js'
 
 export const PROVIDER_NAME = 'claude-code'

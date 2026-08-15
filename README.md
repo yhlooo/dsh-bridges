@@ -2,13 +2,18 @@
 
 A [dsh](https://github.com/deepseek-ai/deepseek-harness) (DeepSeek Harness) plugin that bridges dsh into projects already configured for other coding agents, so a project set up for Claude Code, Codex, opencode, or CodeBuddy keeps working when you run dsh on it.
 
-> 🚧 **Under construction.** Phase 1 (current): Claude Code compatibility. Codex / opencode / CodeBuddy bridges are planned for later phases.
+The whole project **is one plugin** — a single bundle row (`id: bridges`) hosting one bridge subsystem per agent tool. Installing `dsh-bridges` once covers every supported tool; each tool's bridge can be toggled independently through config.
 
-## Packages
+> 🚧 **Under construction.** Phase 1 (current): Claude Code. Codex / opencode / CodeBuddy bridges are planned for later phases.
 
-| Package | Status | What it bridges |
-| :--- | :--- | :--- |
-| [`@dsh-bridges/claude-code`](packages/claude-code) | ✅ phase 1 | Claude Code **skills**, **commands**, **hooks**, and **CLAUDE.md memory** |
+## Supported agents
+
+| Agent | Status | Skills / commands | Memory | Hooks |
+| :--- | :--- | :--- | :--- | :--- |
+| Claude Code | ✅ phase 1 | `.claude/skills`, `.claude/commands` (+ `~/.claude`) | `.claude/CLAUDE.md`, `~/.claude/CLAUDE.md` | `settings.json` hooks (SessionStart, UserPromptSubmit, Pre/PostToolUse, Stop, SessionEnd) |
+| Codex | 🚧 planned | — | — | — |
+| opencode | 🚧 planned | — | — | — |
+| CodeBuddy | 🚧 planned | — | — | — |
 
 ## Install
 
@@ -16,21 +21,41 @@ Plugins install into a dsh profile with the profile plugin manager (pnpm):
 
 ```sh
 # from a checkout of this repository:
-dsh plugin --profile <name> add ./packages/claude-code
+dsh plugin --profile <name> add .
 
 # or from a published tarball / registry package:
-dsh plugin --profile <name> add @dsh-bridges/claude-code
+dsh plugin --profile <name> add dsh-bridges
 ```
 
-The plugin manager appends the package to the profile's `dsh.profile.bundles`, and its `cordis.patch.yml` inserts one `claude-code` bridge row into the composed tree. Verify with:
+The plugin manager appends the package to the profile's `dsh.profile.bundles`, and its `cordis.patch.yml` inserts one `bridges` row into the composed tree. Verify with:
 
 ```sh
-dsh --profile <name> --dump-config   # the row "@dsh-bridges/claude-code" should appear
+dsh --profile <name> --dump-config   # the row "dsh-bridges" should appear
 ```
 
-Then start dsh in a project that has Claude Code assets (`.claude/`, `~/.claude/`); the assets are discovered per session workspace.
+Then start dsh in a project that has agent assets (`.claude/`, `~/.claude/`); assets are discovered per session workspace.
 
-## What the Claude Code bridge does
+## Config
+
+Every tool bridge owns a config section under the `bridges` row; a later patch layer (the profile's `cordis.patch.yml`, a `--patch` overlay) can override any field:
+
+```yaml
+- id: bridges
+  config:
+    claudeCode:
+      enabled: true               # master switch for the Claude Code bridge
+      skills: true                # discover .claude / ~/.claude skills and commands
+      memory: true                # inject ~/.claude/CLAUDE.md and .claude/CLAUDE.md
+      hooks: true                 # run Claude Code hooks from settings.json
+      userClaudeDir: '~/.claude'  # user-level Claude Code directory
+      watch: true                 # watch skill roots and republish on change
+      hookTimeoutMs: 600000
+      userPromptHookTimeoutMs: 30000
+      maxHookOutputChars: 10000
+      memoryMaxBytes: 32768
+```
+
+## The Claude Code bridge (phase 1)
 
 ### Skills and commands
 
@@ -81,7 +106,7 @@ Compatibility details:
 - The `if` filter supports the common `ToolName(glob)` form against one primary argument per tool (`Bash(rm *)`, `Edit(*.ts)`, …) and fails open when uninterpretable, matching Claude Code's best-effort contract (its deeper Bash subcommand analysis is not replicated).
 - Timeouts and handler failures fail open (never block the action), as in Claude Code.
 
-## Phase-1 limitations
+### Phase-1 limitations
 
 Not bridged yet (documented per subsystem):
 
@@ -89,18 +114,33 @@ Not bridged yet (documented per subsystem):
 - **Memory**: `.claude/rules/*.md`, CLAUDE.md `@import`s, and nested CLAUDE.md files.
 - **Hooks**: handler types `mcp_tool`, `prompt`, `agent`; `PreCompact`/`PostCompact`, `Notification`, `SubagentStart`/`SubagentStop`, `PermissionRequest`/`PermissionDenied`, and the remaining async events; `CLAUDE_ENV_FILE`; `asyncRewake`; `updatedInput` rewriting (dsh freezes tool arguments before policy); `permissionDecision: "defer"` (mapped to deny). `PreToolUse` hooks also run for subagent tool calls, matching Claude Code.
 
+## Layout
+
+```
+src/
+├── index.ts                 # plugin entry: single bundle row, per-agent config, subsystem registry
+├── util.ts / fs-adapter.ts  # shared by every bridge subsystem
+└── agents/
+    └── claude-code/         # one directory per supported agent tool
+        ├── skills/          # the claude-code skill provider
+        ├── memory.ts        # CLAUDE.md memory injection
+        └── hooks/           # settings merge, matcher, runner, DSH lifecycle wiring
+```
+
+Adding an agent tool means adding `src/agents/<tool>/` and one line in `registerBridgeSubsystems()`; the single bundle row already covers it.
+
 ## Development
 
 ```sh
 pnpm install
-pnpm build    # compile packages/*/src → lib
+pnpm build    # compile src/ → lib/
 pnpm test     # vitest unit tests
 ```
 
-End-to-end smoke test (installs the bridge into the headless profile and runs it in a fixture project):
+End-to-end smoke test (installs the plugin into the headless profile and runs it in a fixture project):
 
 ```sh
-dsh plugin --profile headless add ./packages/claude-code
+dsh plugin --profile headless add .
 cd /tmp/claude-fixture   # any project with .claude/ assets
 dsh --profile headless "list the skills available in your catalog"
 ```

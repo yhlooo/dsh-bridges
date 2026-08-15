@@ -1,9 +1,9 @@
 /**
  * Claude Code `SKILL.md` / command-file frontmatter parsing and field mapping.
- * @module @dsh-bridges/claude-code/skills/parse
+ * @module dsh-bridges/agents/claude-code/skills/parse
  */
 import { parse as parseYaml } from 'yaml'
-import { isPlainObject, parseClaudeBoolean } from '../util.js'
+import { isPlainObject, parseClaudeBoolean } from '../../../util.js'
 
 /** A `---`-fenced YAML frontmatter block at the very start of a file. */
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/
