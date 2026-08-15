@@ -18,7 +18,7 @@
 | [references.md](references.md) | @file/@url 引用用法与配置 |
 | [mcp-servers.md](mcp-servers.md) | MCP 服务器配置（本地/远程/OAuth） |
 
-## 配置规范速查（一期重点）
+## 配置规范速查
 
 ### 配置文件
 

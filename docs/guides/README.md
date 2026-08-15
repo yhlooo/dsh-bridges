@@ -83,7 +83,7 @@ Every tool bridge owns a config section under the `bridges` row; a later patch l
       memoryMaxBytes: 32768
 ```
 
-## The Claude Code bridge (phase 1)
+## The Claude Code bridge
 
 ### Skills and commands
 
@@ -135,7 +135,7 @@ Compatibility details:
 - Timeouts and handler failures fail open (never block the action), as in Claude Code.
 - Subagents: `UserPromptSubmit`, `Stop`, `SessionStart`, and `SessionEnd` run only for the main conversation, as in Claude Code; `PreToolUse`/`PostToolUse` also run for subagent tool calls (`SubagentStart`/`SubagentStop` are not bridged yet).
 
-### Phase-1 limitations
+### Limitations
 
 Not bridged yet (documented per subsystem):
 
@@ -143,7 +143,7 @@ Not bridged yet (documented per subsystem):
 - **Memory**: `.claude/rules/*.md`, CLAUDE.md `@import`s, and nested CLAUDE.md files.
 - **Hooks**: handler types `mcp_tool`, `prompt`, `agent`; `PreCompact`/`PostCompact`, `Notification`, `SubagentStart`/`SubagentStop`, `PermissionRequest`/`PermissionDenied`, and the remaining async events; `CLAUDE_ENV_FILE`; `asyncRewake`; `updatedInput` rewriting (DeepSeek Harness freezes tool arguments before policy); `permissionDecision: "defer"` (mapped to deny).
 
-## The CodeBuddy Code bridge (phase 2)
+## The CodeBuddy Code bridge
 
 ### Skills and commands
 
@@ -203,7 +203,7 @@ Compatibility details:
 - Timeouts and handler failures fail open (never block the action), as in CodeBuddy Code.
 - Subagents: `UserPromptSubmit`, `Stop`, `SessionStart`, and `SessionEnd` run only for the main conversation, as in CodeBuddy Code; `PreToolUse`/`PostToolUse` also run for subagent tool calls (`SubagentStart`/`SubagentStop` are not bridged yet).
 
-### Phase-2 limitations
+### Limitations
 
 Not bridged yet (documented per subsystem):
 
@@ -211,7 +211,7 @@ Not bridged yet (documented per subsystem):
 - **Memory**: conditional rules (`alwaysApply: false` plus `paths`), `@import` expansion, upward-directory discovery, nested-subtree dynamic loading, Auto Memory.
 - **Hooks**: handler types `prompt` and `agent` (both need an LLM evaluation); `Notification`, `SubagentStart`/`SubagentStop`, `PreCompact`/`PostCompact`, `PermissionRequest`/`PermissionDenied`, `Elicitation`, `FileChanged`, `Setup`, and the remaining events; frontmatter hooks (and the `allowUntrustedFrontmatterHooks` gate); plugin `hooks/hooks.json`; the `transcript_path` input field (the bridge has no transcript file to point at); `suppressOutput`/`systemMessage` user-only channels (DeepSeek Harness has no non-model notice channel); `modifiedInput` rewriting (DeepSeek Harness freezes tool arguments before policy). Windows runs hooks through the system shell rather than CodeBuddy Code's forced Git Bash.
 
-## The opencode bridge (phase 3)
+## The opencode bridge
 
 ### Skills and commands
 
@@ -245,7 +245,7 @@ DeepSeek Harness's own loader reads the workspace-root `AGENTS.md` and `CLAUDE.m
 
 Budget 32 KiB: broader user-level sections are dropped first, then the most specific ones are truncated.
 
-### Phase-3 limitations
+### Limitations
 
 Not bridged yet (documented per subsystem):
 
@@ -254,7 +254,7 @@ Not bridged yet (documented per subsystem):
 - **Plugins / permissions / MCP**: opencode's JavaScript plugin system (its event hooks need the opencode runtime), permission rules, MCP server config, custom tools — none of these have a file-format bridge here.
 - **Overlap note**: when `claudeCode.memory` is also enabled, the `~/.claude/CLAUDE.md` fallback can be injected twice (once per bridge); keep one of the two memory switches off, or accept the duplicate block.
 
-## The Codex bridge (phase 4)
+## The Codex bridge
 
 ### Skills
 
@@ -307,7 +307,7 @@ Compatibility details:
 - Timeouts and handler failures fail open (never block the action), as in Codex.
 - Subagents: `SessionStart`/`SessionEnd`/`UserPromptSubmit`/`Stop` run only for the main conversation, `SubagentStart`/`SubagentStop` only for subagents, and `PreToolUse`/`PostToolUse` for both — matching Codex's event scoping.
 
-### Phase-4 limitations
+### Limitations
 
 Not bridged yet (documented per subsystem):
 

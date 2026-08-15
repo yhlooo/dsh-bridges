@@ -1,7 +1,7 @@
 # CodeBuddy Code 桥接示例项目
 
 以本项目作为 DeepSeek Harness 的会话工作区打开，即可查看 dsh-bridges 的
-codebuddy-code 桥接（二期）如何将 CodeBuddy Code 的资产桥接进来。
+codebuddy-code 桥接如何将 CodeBuddy Code 的资产桥接进来。
 
 > 只含**项目级**资产。用户级资产（`~/.codebuddy/`）作用于整台机器，
 > 示例有意不提供；如需体验可自行将文件复制到 `~/.codebuddy/`。

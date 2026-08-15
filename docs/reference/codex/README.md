@@ -22,7 +22,7 @@
 | [plugins.md](plugins.md) | 插件构建（skills-only 插件等） |
 | [approvals-security.md](approvals-security.md) | 沙箱、审批、网络控制 |
 
-## 配置规范速查（一期重点）
+## 配置规范速查
 
 ### 配置文件
 

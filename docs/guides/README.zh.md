@@ -79,7 +79,7 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
       memoryMaxBytes: 32768
 ```
 
-## Claude Code 桥接（一期）
+## Claude Code 桥接
 
 ### Skills 与 Commands
 
@@ -131,7 +131,7 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 - 超时与 handler 失败一律放行（绝不因此阻断动作），同 Claude Code。
 - 子代理：`UserPromptSubmit`、`Stop`、`SessionStart`、`SessionEnd` 仅对主会话生效，与 Claude Code 一致；`PreToolUse`/`PostToolUse` 也会在子代理的工具调用上触发（`SubagentStart`/`SubagentStop` 尚未桥接）。
 
-### 一期限制
+### 限制
 
 尚未桥接（按子系统记录）：
 
@@ -139,7 +139,7 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 - **Memory**：`.claude/rules/*.md`、CLAUDE.md 的 `@import`、嵌套 CLAUDE.md。
 - **Hooks**：`mcp_tool`、`prompt`、`agent` 三种 handler 类型；`PreCompact`/`PostCompact`、`Notification`、`SubagentStart`/`SubagentStop`、`PermissionRequest`/`PermissionDenied` 及其余异步事件；`CLAUDE_ENV_FILE`；`asyncRewake`；`updatedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）；`permissionDecision: "defer"`（映射为拒绝）。
 
-## CodeBuddy Code 桥接（二期）
+## CodeBuddy Code 桥接
 
 ### Skills 与 Commands
 
@@ -199,7 +199,7 @@ DeepSeek Harness 核心自行加载 `AGENTS.md` 与根目录 `CLAUDE.md`，但�
 - 超时与 handler 失败一律放行（绝不因此阻断动作），同 CodeBuddy Code。
 - 子代理：`UserPromptSubmit`、`Stop`、`SessionStart`、`SessionEnd` 仅对主会话生效，与 CodeBuddy Code 一致；`PreToolUse`/`PostToolUse` 也会在子代理的工具调用上触发（`SubagentStart`/`SubagentStop` 尚未桥接）。
 
-### 二期限制
+### 限制
 
 尚未桥接（按子系统记录）：
 
@@ -207,7 +207,7 @@ DeepSeek Harness 核心自行加载 `AGENTS.md` 与根目录 `CLAUDE.md`，但�
 - **Memory**：条件规则（`alwaysApply: false` + `paths`）、`@import` 展开、向上递归查找、嵌套子树动态加载、Auto Memory。
 - **Hooks**：`prompt` / `agent` handler 类型（需要 LLM 判定）；`Notification`、`SubagentStart`/`SubagentStop`、`PreCompact`/`PostCompact`、`PermissionRequest`/`PermissionDenied`、`Elicitation`、`FileChanged`、`Setup` 等事件；frontmatter hooks（及 `allowUntrustedFrontmatterHooks` 闸门）；插件 `hooks/hooks.json`；`transcript_path` 输入字段（桥接没有真实转录文件）；`suppressOutput` / `systemMessage` 仅面向用户的通道（DeepSeek Harness 无此通道）；`modifiedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）。Windows 上 hook 走系统 shell 而非 CodeBuddy Code 强制的 Git Bash。
 
-## opencode 桥接（三期）
+## opencode 桥接
 
 ### Skills 与 Commands
 
@@ -241,7 +241,7 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md` 与 `CLAUDE.md`。�
 
 预算 32 KiB：超限先丢弃全部用户级、再截断最具体的项目级。
 
-### 三期限制
+### 限制
 
 尚未桥接（按子系统记录）：
 
@@ -250,7 +250,7 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md` 与 `CLAUDE.md`。�
 - **插件 / 权限 / MCP**：opencode 的 JavaScript 插件系统（事件 hook 需要 opencode 运行时）、权限规则、MCP 配置、自定义工具——这些没有文件格式层面的桥接面。
 - **重叠提示**：若同时开启 `claudeCode.memory`，`~/.claude/CLAUDE.md` 回退可能被注入两次（每个桥接各一次）；关闭其一或接受重复块。
 
-## Codex 桥接（四期）
+## Codex 桥接
 
 ### Skills
 
@@ -303,7 +303,7 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md`。本桥接在会话
 - 超时与 handler 失败一律放行，同 Codex。
 - 子代理：`SessionStart`/`SessionEnd`/`UserPromptSubmit`/`Stop` 仅主会话，`SubagentStart`/`SubagentStop` 仅子代理，`PreToolUse`/`PostToolUse` 两者皆触发——与 Codex 的事件作用域一致。
 
-### 四期限制
+### 限制
 
 尚未桥接（按子系统记录）：
 

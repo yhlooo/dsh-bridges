@@ -40,7 +40,7 @@
 6. **其他资产**：subagents、MCP 配置、plugins、output styles 等——明确哪些**纳入本期**、哪些记入限制。
 7. **限制清单**：明确"本期不桥接什么"，防止范围蔓延。
 
-> 一期教训：范围控制写进速查表（claude-code 的速查表在"一期重点"下明确列了 skills/commands/hooks 三类），嵌套技能、插件技能、`$ARGUMENTS` 替换等当时就记为限制，而不是实现中途临时决定。
+> 范围控制的教训：把范围写进速查表（claude-code 的速查表明确列了 skills/commands/hooks 三类），嵌套技能、插件技能、`$ARGUMENTS` 替换等当时就记为限制，而不是实现中途临时决定。
 
 ---
 

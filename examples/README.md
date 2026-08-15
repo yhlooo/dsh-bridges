@@ -5,10 +5,10 @@
 
 | 工具 | 目录 | 演示内容 |
 | :--- | :--- | :--- |
-| Claude Code（一期） | [`claude-code/`](claude-code/) | `.claude/skills`（目录型 + 扁平）、`.claude/commands`、`.claude/CLAUDE.md` 记忆、`settings.json` hooks（SessionStart / UserPromptSubmit / PreToolUse+`if` / PostToolUse / Stop / SessionEnd，含 `${CLAUDE_PROJECT_DIR}`） |
-| CodeBuddy Code（二期） | [`codebuddy-code/`](codebuddy-code/) | `.codebuddy/skills`、`.codebuddy/commands`、`CODEBUDDY.md` 与 `.codebuddy/CODEBUDDY.md` 记忆、`.codebuddy/rules`（含被跳过的条件规则）、`settings.json` hooks（含 `${CODEBUDDY_PROJECT_DIR}`） |
-| opencode（三期） | [`opencode/`](opencode/) | `.opencode/skills`、`.opencode/commands`、`opencode.jsonc` 的 JSON 命令与 `instructions`（单文件 + glob）、`AGENTS.md` 记忆 |
-| Codex（四期） | [`codex/`](codex/) | `.agents/skills`（含被 `config.toml` 禁用的技能）、AGENTS.md 指令链（嵌套目录）、`.codex/hooks.json` 与 `config.toml` hooks |
+| Claude Code | [`claude-code/`](claude-code/) | `.claude/skills`（目录型 + 扁平）、`.claude/commands`、`.claude/CLAUDE.md` 记忆、`settings.json` hooks（SessionStart / UserPromptSubmit / PreToolUse+`if` / PostToolUse / Stop / SessionEnd，含 `${CLAUDE_PROJECT_DIR}`） |
+| CodeBuddy Code | [`codebuddy-code/`](codebuddy-code/) | `.codebuddy/skills`、`.codebuddy/commands`、`CODEBUDDY.md` 与 `.codebuddy/CODEBUDDY.md` 记忆、`.codebuddy/rules`（含被跳过的条件规则）、`settings.json` hooks（含 `${CODEBUDDY_PROJECT_DIR}`） |
+| opencode | [`opencode/`](opencode/) | `.opencode/skills`、`.opencode/commands`、`opencode.jsonc` 的 JSON 命令与 `instructions`（单文件 + glob）、`AGENTS.md` 记忆 |
+| Codex | [`codex/`](codex/) | `.agents/skills`（含被 `config.toml` 禁用的技能）、AGENTS.md 指令链（嵌套目录）、`.codex/hooks.json` 与 `config.toml` hooks |
 
 ## 通用步骤
 

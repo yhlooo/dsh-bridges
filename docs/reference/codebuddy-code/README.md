@@ -24,7 +24,7 @@
 | [best-practices.md](best-practices.md) / [common-workflows.md](common-workflows.md) | 最佳实践与常见工作流 |
 | [troubleshooting.md](troubleshooting.md) | 问题排查 |
 
-## 配置规范速查（一期重点）
+## 配置规范速查
 
 ### 配置目录
 
@@ -50,7 +50,7 @@
 
 > 注：CodeBuddy Code 与 Claude Code 高度相似（目录结构、CODEBUDDY.md 对 CLAUDE.md、settings/hooks/skills 体系），细节差异以各文件原文为准。
 
-## 桥接映射（dsh-bridges 一期）
+## 桥接映射（dsh-bridges）
 
 这是 `src/agents/codebuddy-code/` 子系统把 CodeBuddy Code 资产映射到 DSH 接缝的决策记录，验收以此表为准。
 
@@ -79,7 +79,7 @@
 | `CODEBUDDY.local.md` | 本地项目记忆，注入 |
 | `.codebuddy/rules/**/*.md`（递归） | 同上，仅始终应用规则 |
 
-- 条件规则（`alwaysApply: false` + `paths`）依赖文件操作触发，一期不桥接（直接跳过）；`@import` 展开、向上递归查找、嵌套子树动态加载一期不桥接。
+- 条件规则（`alwaysApply: false` + `paths`）依赖文件操作触发，不桥接（直接跳过）；`@import` 展开、向上递归查找、嵌套子树动态加载不桥接。
 - 预算 32 KiB：超限先丢弃全部用户级、再截断项目级；注入框架为 `<system-reminder>`（`</system-reminder>` 转义）。
 
 ### Hooks → DSH 生命周期
@@ -96,11 +96,11 @@
 - settings 来源与合并：`~/.codebuddy/settings.json`（user）→ `.codebuddy/settings.json`（project）→ `.codebuddy/settings.local.json`（local）；分组叠加合并、相同 handler 按 JSON 去重、`disableAllHooks` 取最具体定义层、`env` 合并。
 - matcher 语义：`*` / 空 / 缺省匹配全部；其余按区分大小写的正则（`Write` 可命中 `NotebookWrite`，`^Write$` 精确）；非法正则 fail closed。`if` 字段用权限规则语法 `ToolName(glob)`，无法解析时 fail open。
 - 退出码协议：0 = 成功（`SessionStart`/`UserPromptSubmit` 的 stdout 进上下文）；2 = 阻塞（消息优先级：stdout JSON `reason`/`stopReason` > 纯文本 stdout > stderr）；其他非零 = 非阻塞错误。
-- handler 类型：`command`（shell / `args` exec 形态、`${CODEBUDDY_PROJECT_DIR}` 替换、`timeout`、`async`、`once`）与 `http`（`method` POST/PUT/PATCH、`headers`；CodeBuddy Code 无 URL 白名单设置，不设白名单）。`prompt` / `agent` 需要小模型 / 子代理判定，一期不桥接（配置归一化时丢弃）。
-- 工具名翻译：`bash`→`Bash`、`pwsh`→`PowerShell`、`read`→`Read`、`write`→`Write`、`edit`→`Edit`、`glob`→`Glob`、`grep`→`Grep`、`web`/`web_search`→`WebSearch`、`ask_user_question`→`AskUserQuestion`、`exit_plan_mode`→`ExitPlanMode`、`subagent`→`Task`、`todo`→`TodoWrite`。
+- handler 类型：`command`（shell / `args` exec 形态、`${CODEBUDDY_PROJECT_DIR}` 替换、`timeout`、`async`、`once`）与 `http`（`method` POST/PUT/PATCH、`headers`；CodeBuddy Code 无 URL 白名单设置，不设白名单）。`prompt` / `agent` 需要小模型 / 子代理判定，不桥接（配置归一化时丢弃）。
+- 工具名翻译：`bash`→`Bash`、`pwsh`→`PowerShell`、`read`→`Read`、`write`→`Write`、`edit`→`Edit`、`glob`→`Glob`、`grep`→`Grep`、`web`/`web_search`→`WebSearch`、`ask_user_question`→`AskUserQuestion`、`exit_plan_mode`→`ExitPlanMode`、`subagent`→`Task`、`todo_write`→`TodoWrite`。
 - 未桥接事件：`Notification`、`SubagentStart`/`SubagentStop`、`PreCompact`/`PostCompact`、`PermissionRequest`/`PermissionDenied`、`Elicitation`、`FileChanged`、`Setup` 等。子代理排除主会话事件（UserPromptSubmit/Stop/SessionStart/SessionEnd）。
 
-### 一期不桥接（限制清单）
+### 不桥接（限制清单）
 
 - Skills：扁平 `.md` 技能、嵌套命令（`group:name`）、插件技能；`allowed-tools`、`model`、`context: fork`、`agent`、frontmatter `hooks`；正文 `!`command`` 内联执行、`$ARGUMENTS` 替换、`@file` 引用。
 - Memory：条件规则（`alwaysApply: false` + `paths`）、`@import`、向上递归查找、嵌套子树动态加载、Auto Memory。

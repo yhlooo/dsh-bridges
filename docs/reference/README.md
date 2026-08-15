@@ -7,7 +7,7 @@
 ```
 docs/reference/
 ├── README.md                  # 本索引
-├── claude-code/               # Claude Code 官方文档（一期目标）
+├── claude-code/               # Claude Code 官方文档
 │   ├── README.md              # 资料说明 + 配置规范速查
 │   ├── llms.txt               # 官方文档完整页面索引
 │   ├── skills.md / commands.md / hooks.md / hooks-guide.md
@@ -42,6 +42,6 @@ docs/reference/
 - 下载的官方原文保持原样不改动，仅在文件头部注明**来源 URL**和**抓取/复制日期**。
 - 更新方式：按文件头部注明的来源 URL 重新下载即可。
 - 每个工具目录下的 README.md 是自写的索引与配置规范速查，其余为原文。
-- 本资料库现服务于全部四期目标：让 DeepSeek Harness 兼容已经配置好 Claude
+- 本资料库服务于所有桥接目标：让 DeepSeek Harness 兼容已经配置好 Claude
   Code、CodeBuddy Code、opencode、Codex 的项目；每个工具目录下，README.md 里
   的**配置规范速查**标明了该桥接实现所依据的重点规范。

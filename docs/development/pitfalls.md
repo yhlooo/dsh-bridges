@@ -1,6 +1,6 @@
 # 踩坑记录
 
-claude-code 一期、codebuddy-code 二期、opencode 三期、codex 四期真实踩过的坑，按"现象 → 原因 → 正确写法"记录。实现中报错先来这里找；解决新坑后补一条。
+claude-code、codebuddy-code、opencode、codex 各桥接真实踩过的坑，按"现象 → 原因 → 正确写法"记录。实现中报错先来这里找；解决新坑后补一条。
 
 ## 1. patch 新行报 `patch: entry "x" not found`
 
@@ -141,7 +141,7 @@ codebuddy-code 复用 claude-code 的骨架时，以下四处语义不同，照�
 
 其余差异：`when_to_use` 不在 CodeBuddy Code 文档里（为兼容 Claude 资产仍识别）；PreToolUse 改写字段叫 `modifiedInput`（Claude 是 `updatedInput`）；`permissionDecision` 无 `defer`；`decision: "block"` 已废弃但仍兼容读取；settings 无 `allowedHttpHookUrls`（HTTP hook 不设白名单）；嵌套命令限定名 `group:name` 含 `:` 非 kebab-case，按"跳过 + warn、不转写"处理。skills.md 的 `skillOverrides` 四态不在 settings.md 表格里但确为 settings.json 键，实现时要读 settings 文件而不是 skill 文件。
 
-## 17. 端到端冒烟的两个环境坑（codebuddy-code 二期踩到）
+## 17. 端到端冒烟的两个环境坑（codebuddy-code 桥接踩到）
 
 **现象一**：新 profile（`dsh plugin --profile cb-test add .`）跑 headless 冒烟，180 秒超时（exit 124）且零输出。
 

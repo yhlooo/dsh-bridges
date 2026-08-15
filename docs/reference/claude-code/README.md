@@ -18,7 +18,7 @@
 | [sub-agents.md](sub-agents.md) | 自定义 subagent 规范（`.claude/agents/`、frontmatter、权限） |
 | [debug-your-config.md](debug-your-config.md) | 配置排查：`/context`、`/doctor`、`/hooks`、`/mcp` |
 
-## 配置规范速查（一期重点）
+## 配置规范速查
 
 ### 配置目录
 
