@@ -35,7 +35,7 @@ Every bridge is on by default; tune or disable any of them from a patch layer:
       hooks: true       # settings.json hooks
 ```
 
-Full per-bridge configuration and behavior: [`docs/usage/`](docs/usage/README.md)
+Full per-bridge configuration and behavior: [`docs/guides/`](docs/guides/README.md)
 
 ## What it bridges
 
@@ -56,6 +56,6 @@ Full per-bridge configuration and behavior: [`docs/usage/`](docs/usage/README.md
 
 ## Resources
 
-- Usage guide (per-bridge details, full config reference, what is not bridged yet): [`docs/usage/`](docs/usage/README.md)
+- Usage guide (per-bridge details, full config reference, what is not bridged yet): [`docs/guides/`](docs/guides/README.md)
 - Bridge-target reference materials (official upstream specs): [`docs/reference/`](docs/reference/)
 - Contributor documentation (how to add a new agent tool, integration surface, pitfalls): [`docs/development/`](docs/development/)

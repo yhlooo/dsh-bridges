@@ -35,7 +35,7 @@ dsh --profile <name> "list the skills available in your catalog"
       hooks: true       # settings.json hooks
 ```
 
-各桥接的完整配置与行为说明：[`docs/usage/`](docs/usage/README.zh.md)
+各桥接的完整配置与行为说明：[`docs/guides/`](docs/guides/README.zh.md)
 
 ## 桥接了什么
 
@@ -56,6 +56,6 @@ dsh --profile <name> "list the skills available in your catalog"
 
 ## 资源
 
-- 使用指南（各桥接细节、完整配置参考、尚未桥接的部分）：[`docs/usage/`](docs/usage/README.zh.md)
+- 使用指南（各桥接细节、完整配置参考、尚未桥接的部分）：[`docs/guides/`](docs/guides/README.zh.md)
 - 各桥接目标的参考资料（官方上游规范）：[`docs/reference/`](docs/reference/)
 - 贡献者文档（如何新增一个 agent 工具、集成面、踩坑）：[`docs/development/`](docs/development/)
