@@ -28,15 +28,18 @@ below in all work done here.
   `@deepseek-ai/dsh-skill-filesystem` → `skill-filesystem`). The `id` is the
   stable key later patch layers override config by — never use the full
   package name as `id`.
-- Skill providers: one per agent tool, named after the tool (`claude-code`;
-  later `codex`, `opencode`, …). Each provider owns a distinct rank band; lower
-  rank wins within a layer, and inside one band personal assets outrank project
-  assets and skills outrank same-level commands.
+- Skill providers: one per agent tool, named after the tool (`claude-code`,
+  `codebuddy-code`; later `codex`, `opencode`, …). Each provider owns a
+  distinct rank band; lower rank wins within a layer, and inside one band
+  assets follow the upstream tool's precedence (Claude Code: personal > project;
+  CodeBuddy Code: project > user) and skills outrank same-level commands.
 - Config sections on the `bridges` row are named after the tool
-  (`claudeCode`), each with an `enabled` master switch and per-bridge knobs.
+  (`claudeCode`, `codebuddyCode`), each with an `enabled` master switch and
+  per-bridge knobs.
 - Injected-message `source.plugin` ids are per subsystem
-  (`claude-code-memory`, `claude-code-hooks`), and hook `tool_name` payloads
-  carry the upstream tool's names (`Bash`, `Edit`, …), never dsh's.
+  (`claude-code-memory`, `claude-code-hooks`, `codebuddy-code-memory`,
+  `codebuddy-code-hooks`), and hook `tool_name` payloads carry the upstream
+  tool's names (`Bash`, `Edit`, …), never dsh's.
 
 ## Git Commit Convention
 

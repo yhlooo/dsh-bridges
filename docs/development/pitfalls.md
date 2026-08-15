@@ -1,6 +1,6 @@
 # 踩坑记录
 
-claude-code 一期真实踩过的坑，按"现象 → 原因 → 正确写法"记录。实现中报错先来这里找；解决新坑后补一条。
+claude-code 一期与 codebuddy-code 二期真实踩过的坑，按"现象 → 原因 → 正确写法"记录。实现中报错先来这里找；解决新坑后补一条。
 
 ## 1. patch 新行报 `patch: entry "x" not found`
 
@@ -127,3 +127,16 @@ return { kind: 'enter', messages: [makeBlockNotice('UserPromptSubmit', reason)] 
 ## 15. 无资产项目也要干净
 
 无 `.claude/`（或对应工具目录）时：skills provider 返回空目录（确认缺失的根是合法空态）、记忆注入跳过、hooks 无组直接放行；日志里不应出现告警。把"零开销"当验收项，防止探测逻辑对普通项目产生噪声或性能开销。
+
+## 16. CodeBuddy 与 Claude 的同名机制语义相反，不能照抄 claude-code
+
+codebuddy-code 复用 claude-code 的骨架时，以下四处语义不同，照抄会产出错误行为：
+
+| 机制 | Claude Code | CodeBuddy Code（以 docs/reference/codebuddy-code/*.md 为准） |
+| :--- | :--- | :--- |
+| 资产优先级 | 个人 > 项目 | **项目 > 用户**（rank 段顺序反过来） |
+| matcher | 纯 `[A-Za-z0-9_\-, \|]` 字符集是精确名集合，其余是非锚定正则 | `*`/空/缺省匹配全部，**其余一律按区分大小写正则**（裸 `Write` 命中 `NotebookWrite`，精确要写 `^Write$`） |
+| 退出码 2 消息优先级 | JSON reason → **stderr** → 兜底 | stdout JSON `reason`/`stopReason` → 纯文本 stdout → **stderr 兜底**（stderr 是给用户看日志的位置） |
+| 默认 hook 超时 | 600 秒（UserPromptSubmit 30 秒） | **60 秒**，无 UserPromptSubmit 特例 |
+
+其余差异：`when_to_use` 不在 CodeBuddy Code 文档里（为兼容 Claude 资产仍识别）；PreToolUse 改写字段叫 `modifiedInput`（Claude 是 `updatedInput`）；`permissionDecision` 无 `defer`；`decision: "block"` 已废弃但仍兼容读取；settings 无 `allowedHttpHookUrls`（HTTP hook 不设白名单）；嵌套命令限定名 `group:name` 含 `:` 非 kebab-case，按"跳过 + warn、不转写"处理。skills.md 的 `skillOverrides` 四态不在 settings.md 表格里但确为 settings.json 键，实现时要读 settings 文件而不是 skill 文件。

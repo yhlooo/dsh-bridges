@@ -1,6 +1,6 @@
 # 在本项目中添加 / 适配一个 agent 工具
 
-本指南记录如何在 dsh-bridges 里接入一个新的 agent 工具（如 codex / opencode / codebuddy），让 dsh 读取并注册该工具的项目资产（skills / commands / 记忆 / hooks 等）。claude-code 是第一个按此流程完成的实例，文中以其实现为参考答案。
+本指南记录如何在 dsh-bridges 里接入一个新的 agent 工具（如 codex / opencode / codebuddy），让 dsh 读取并注册该工具的项目资产（skills / commands / 记忆 / hooks 等）。claude-code 是第一个按此流程完成的实例，codebuddy-code 是第二个（其与 Claude 同名机制相反的语义差异记录在 [pitfalls.md](pitfalls.md) 第 16 条），文中以两者的实现为参考答案。
 
 ## 前置知识
 
