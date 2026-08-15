@@ -2,7 +2,9 @@
 
 [English](README.md) | 中文
 
-一个 [dsh](https://github.com/deepseek-ai/deepseek-harness)（DeepSeek Harness）插件：把已经为其他 coding agent（Claude Code、Codex、opencode、CodeBuddy）配置好的项目桥接进 dsh，让这些项目在改用 dsh 时配置继续生效。
+> 该项目由 DeepSeek Harness 实现。
+
+一个 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 插件：把已经为其他 coding agent（Claude Code、Codex、opencode、CodeBuddy）配置好的项目桥接进 DeepSeek Harness，让这些项目在改用 DeepSeek Harness 时配置继续生效。
 
 整个项目**就是一个插件**——单条 bundle 行（`id: bridges`），内部为每个 agent 工具承载一个桥接子系统。安装一次 `dsh-bridges` 即可覆盖所有已支持的工具；每个工具的桥接可以通过配置独立开关。
 
@@ -19,7 +21,7 @@
 
 ## 安装
 
-插件通过 profile 的插件管理器（pnpm）安装到某个 dsh profile：
+插件通过 profile 的插件管理器（pnpm）安装到某个 DeepSeek Harness profile：
 
 ```sh
 # 从本仓库 checkout 安装（先编译 src/ → lib/）：
@@ -36,7 +38,7 @@ dsh plugin --profile <name> add dsh-bridges
 dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 ```
 
-然后在带有 agent 资产（`.claude/`、`~/.claude/`、`.codebuddy/`、`~/.codebuddy/`）的项目里启动 dsh；资产按会话工作区发现。
+然后在带有 agent 资产（`.claude/`、`~/.claude/`、`.codebuddy/`、`~/.codebuddy/`）的项目里启动 DeepSeek Harness；资产按会话工作区发现。
 
 ## 配置
 
@@ -72,7 +74,7 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 
 ### Skills 与 Commands
 
-读取 Claude Code 的技能位置并注册到 dsh 的技能注册表（provider 名 `claude-code`），使它们出现在模型可见的技能目录中、可通过 `skill` 工具加载、也可用 `/名字` 直接调用：
+读取 Claude Code 的技能位置并注册到 DeepSeek Harness 的技能注册表（provider 名 `claude-code`），使它们出现在模型可见的技能目录中、可通过 `skill` 工具加载、也可用 `/名字` 直接调用：
 
 | Claude Code 位置 | 注册为 |
 | :--- | :--- |
@@ -83,24 +85,24 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 
 映射规则：
 
-- DSH 技能名取目录名 / 文件名（必须 kebab-case；不合法的名字跳过并告警）。
+- DeepSeek Harness 技能名取目录名 / 文件名（必须 kebab-case；不合法的名字跳过并告警）。
 - `description` + `when_to_use` 合并为技能描述（按 Claude Code 的 1,536 字符目录上限截断；`description` 缺省时回退到正文首段）。
 - `disable-model-invocation` → 该技能退出模型目录，但仍可用 `/名字` 调用。
 - `user-invocable: false` → 不面向人工调用，仅模型可用。
 - `metadata` 原样透传；其余 frontmatter 字段（见限制）暂忽略。
-- 优先级与 Claude Code 一致：个人资产覆盖项目资产；同级下技能覆盖同名命令。同名冲突时 DSH 原生技能（`.dsh/skills`、`.agents/skills`、运行时技能）永远胜出——桥接注册在全局技能层，会被更近的 preset 层遮蔽。
+- 优先级与 Claude Code 一致：个人资产覆盖项目资产；同级下技能覆盖同名命令。同名冲突时 DeepSeek Harness 原生技能（`.dsh/skills`、`.agents/skills`、运行时技能）永远胜出——桥接注册在全局技能层，会被更近的 preset 层遮蔽。
 - 技能目录整体作为资源基目录，`SKILL.md` 里引用的支撑文件（`scripts/`、`references/` 等）按需解析。
 - 已存在的技能根目录会被监听；改动无需重启即可在会话内生效。
 
 ### CLAUDE.md 记忆
 
-根目录 `CLAUDE.md` 由 DSH 核心自行加载。本桥接在会话开始时额外注入 `~/.claude/CLAUDE.md`（用户级）与 `.claude/CLAUDE.md`（项目级），采用 dsh 工作区指令相同的 system-reminder 框架，预算 32 KiB（超限先丢弃更宽的用户级文件，仍超限则截断项目级文件）。
+根目录 `CLAUDE.md` 由 DeepSeek Harness 核心自行加载。本桥接在会话开始时额外注入 `~/.claude/CLAUDE.md`（用户级）与 `.claude/CLAUDE.md`（项目级），采用 DeepSeek Harness 工作区指令相同的 system-reminder 框架，预算 32 KiB（超限先丢弃更宽的用户级文件，仍超限则截断项目级文件）。
 
 ### Hooks
 
-合并读取 `~/.claude/settings.json` → `.claude/settings.json` → `.claude/settings.local.json` 的 `hooks` 字段（分组叠加合并、相同 handler 去重、`disableAllHooks` 取最具体定义它的层级），并在下列 DSH 生命周期执行 handler：
+合并读取 `~/.claude/settings.json` → `.claude/settings.json` → `.claude/settings.local.json` 的 `hooks` 字段（分组叠加合并、相同 handler 去重、`disableAllHooks` 取最具体定义它的层级），并在下列 DeepSeek Harness 生命周期执行 handler：
 
-| Claude Code 事件 | DSH 接缝 | 决策映射 |
+| Claude Code 事件 | DeepSeek Harness 接缝 | 决策映射 |
 | :--- | :--- | :--- |
 | `SessionStart` | `agent/session-start` | `additionalContext`（及退出码 0 的纯文本 stdout）在首个提示词前注入 |
 | `UserPromptSubmit` | `agent/pre-step` | `decision: "block"` / 退出码 2 / `continue: false` 擦除提示词并展示原因；上下文追加到本步 |
@@ -114,7 +116,7 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 
 兼容性细节：
 
-- hooks 以 Claude Code 工具名为键。DSH 的命名不同（`bash`、`edit`、`read`……），因此桥接做了翻译：`bash`→`Bash`、`pwsh`→`PowerShell`、`read`→`Read`、`write`→`Write`、`edit`→`Edit`、`glob`→`Glob`、`grep`→`Grep`、`web`/`web_search`→`WebSearch`、`ask_user_question`→`AskUserQuestion`、`exit_plan_mode`→`ExitPlanMode`、`subagent`→`Agent`、`todo_write`→`TodoWrite`；未映射的 dsh 工具（MCP 服务器、一方扩展）保留原名。matcher、`if` 规则以及 hook 脚本收到的 `tool_name` 字段都是翻译后的名字，因此为 Claude Code 写好的 hook 脚本原样可用。
+- hooks 以 Claude Code 工具名为键。DeepSeek Harness 的命名不同（`bash`、`edit`、`read`……），因此桥接做了翻译：`bash`→`Bash`、`pwsh`→`PowerShell`、`read`→`Read`、`write`→`Write`、`edit`→`Edit`、`glob`→`Glob`、`grep`→`Grep`、`web`/`web_search`→`WebSearch`、`ask_user_question`→`AskUserQuestion`、`exit_plan_mode`→`ExitPlanMode`、`subagent`→`Agent`、`todo_write`→`TodoWrite`；未映射的 DeepSeek Harness 工具（MCP 服务器、一方扩展）保留原名。matcher、`if` 规则以及 hook 脚本收到的 `tool_name` 字段都是翻译后的名字，因此为 Claude Code 写好的 hook 脚本原样可用。
 - matcher 语义遵循 Claude Code 规范：精确名集合（`Bash|Edit`）、其余一律视为非锚定正则、`*`/空匹配全部。
 - `if` 过滤器支持常见的 `ToolName(glob)` 形态，对已映射的工具各对应一个主参数字段（`Bash(rm *)`、`Edit(*.ts)`……）；无法解析的规则以及没有映射字段的工具一律放行，与 Claude Code 的 best-effort 约定一致（不复制其更深的 Bash 子命令分析）。
 - 超时与 handler 失败一律放行（绝不因此阻断动作），同 Claude Code。
@@ -126,13 +128,13 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 
 - **Skills**：工作区以下的嵌套 `.claude/skills/`（其限定名非 kebab-case）、企业 / managed 技能、插件技能、claude.ai 同步技能；`allowed-tools`/`disallowed-tools`、`model`、`effort`、`context: fork`/`agent`/`background`、`paths`、`shell` 以及正文中的 `$ARGUMENTS` 替换；skill/agent frontmatter 里的 `hooks`。
 - **Memory**：`.claude/rules/*.md`、CLAUDE.md 的 `@import`、嵌套 CLAUDE.md。
-- **Hooks**：`mcp_tool`、`prompt`、`agent` 三种 handler 类型；`PreCompact`/`PostCompact`、`Notification`、`SubagentStart`/`SubagentStop`、`PermissionRequest`/`PermissionDenied` 及其余异步事件；`CLAUDE_ENV_FILE`；`asyncRewake`；`updatedInput` 改写（dsh 在策略执行前就冻结了工具参数）；`permissionDecision: "defer"`（映射为拒绝）。
+- **Hooks**：`mcp_tool`、`prompt`、`agent` 三种 handler 类型；`PreCompact`/`PostCompact`、`Notification`、`SubagentStart`/`SubagentStop`、`PermissionRequest`/`PermissionDenied` 及其余异步事件；`CLAUDE_ENV_FILE`；`asyncRewake`；`updatedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）；`permissionDecision: "defer"`（映射为拒绝）。
 
 ## CodeBuddy Code 桥接（二期）
 
 ### Skills 与 Commands
 
-读取 CodeBuddy Code 的技能位置并注册到 dsh 的技能注册表（provider 名 `codebuddy-code`），使它们出现在模型可见的技能目录中、可通过 `skill` 工具加载、也可用 `/名字` 直接调用：
+读取 CodeBuddy Code 的技能位置并注册到 DeepSeek Harness 的技能注册表（provider 名 `codebuddy-code`），使它们出现在模型可见的技能目录中、可通过 `skill` 工具加载、也可用 `/名字` 直接调用：
 
 | CodeBuddy Code 位置 | 注册为 |
 | :--- | :--- |
@@ -143,9 +145,9 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 
 映射规则：
 
-- DSH 技能名取目录名 / 文件名（必须 kebab-case；不合法的名字跳过并告警）。嵌套命令的限定名是 `group:name`（含 `:` 非 kebab-case），同样跳过 + 告警，不做转写。
+- DeepSeek Harness 技能名取目录名 / 文件名（必须 kebab-case；不合法的名字跳过并告警）。嵌套命令的限定名是 `group:name`（含 `:` 非 kebab-case），同样跳过 + 告警，不做转写。
 - 只读目录型技能（目录内 `SKILL.md`）；扁平 `<name>.md` 技能是 Claude Code 扩展，CodeBuddy Code 文档未记载，不读取。
-- 优先级与 CodeBuddy Code 一致：**项目资产覆盖用户资产**（与 Claude Code 相反，因此 rank 段独立分配）；同级下技能覆盖同名命令。同名冲突时 DSH 原生技能（`.dsh/skills`、`.agents/skills`、运行时技能）永远胜出——桥接注册在全局技能层，会被更近的 preset 层遮蔽。
+- 优先级与 CodeBuddy Code 一致：**项目资产覆盖用户资产**（与 Claude Code 相反，因此 rank 段独立分配）；同级下技能覆盖同名命令。同名冲突时 DeepSeek Harness 原生技能（`.dsh/skills`、`.agents/skills`、运行时技能）永远胜出——桥接注册在全局技能层，会被更近的 preset 层遮蔽。
 - `description` + `when_to_use` 合并为技能描述（1,536 字符上限截断；`description` 缺省时回退到正文首段）。`when_to_use` 未见于 CodeBuddy Code 文档，为兼容 Claude 资产而识别。
 - `disable-model-invocation` → 该技能退出模型目录，但仍可用 `/名字` 调用。`user-invocable: false` → 不面向人工调用，仅模型可用。`metadata` 原样透传。
 - 叠加应用 `skillOverrides` 设置：`name-only` 折叠描述、`user-invocable-only` 对模型隐藏（仍可人工调用）、`off` 双面关闭。最具体的合法值生效（local > project > user），非法值按文件过滤后回退上一有效层级，与 CodeBuddy Code 一致。
@@ -154,7 +156,7 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 
 ### CODEBUDDY.md 记忆
 
-DSH 核心自行加载 `AGENTS.md` 与根目录 `CLAUDE.md`，但不读 CodeBuddy Code 的记忆文件。本桥接在会话开始时注入（采用 dsh 工作区指令相同的 system-reminder 框架）：
+DeepSeek Harness 核心自行加载 `AGENTS.md` 与根目录 `CLAUDE.md`，但不读 CodeBuddy Code 的记忆文件。本桥接在会话开始时注入（采用 DeepSeek Harness 工作区指令相同的 system-reminder 框架）：
 
 - `~/.codebuddy/CODEBUDDY.md`（用户记忆）与 `~/.codebuddy/rules/**`（用户规则，递归，仅始终应用规则）
 - `<cwd>/CODEBUDDY.md` 与 `<cwd>/.codebuddy/CODEBUDDY.md`（项目记忆；内容相同只保留一份）
@@ -165,9 +167,9 @@ DSH 核心自行加载 `AGENTS.md` 与根目录 `CLAUDE.md`，但不读 CodeBudd
 
 ### Hooks
 
-合并读取 `~/.codebuddy/settings.json` → `.codebuddy/settings.json` → `.codebuddy/settings.local.json` 的 `hooks` 字段（分组叠加合并、相同 handler 去重、`disableAllHooks` 取最具体定义它的层级），并在下列 DSH 生命周期执行 handler：
+合并读取 `~/.codebuddy/settings.json` → `.codebuddy/settings.json` → `.codebuddy/settings.local.json` 的 `hooks` 字段（分组叠加合并、相同 handler 去重、`disableAllHooks` 取最具体定义它的层级），并在下列 DeepSeek Harness 生命周期执行 handler：
 
-| CodeBuddy Code 事件 | DSH 接缝 | 决策映射 |
+| CodeBuddy Code 事件 | DeepSeek Harness 接缝 | 决策映射 |
 | :--- | :--- | :--- |
 | `SessionStart` | `agent/session-start` | `additionalContext`（及退出码 0 的纯文本 stdout）在首个提示词前注入；matcher 收到 `startup`/`resume`/`clear`/`compact` |
 | `UserPromptSubmit` | `agent/pre-step` | 退出码 2 / `continue: false` 擦除提示词并展示原因；上下文追加到本步 |
@@ -181,7 +183,7 @@ DSH 核心自行加载 `AGENTS.md` 与根目录 `CLAUDE.md`，但不读 CodeBudd
 
 兼容性细节：
 
-- hooks 以 CodeBuddy Code 工具名为键。DSH 的命名不同（`bash`、`edit`、`read`……），因此桥接做了翻译：`bash`→`Bash`、`pwsh`→`PowerShell`、`read`→`Read`、`write`→`Write`、`edit`→`Edit`、`glob`→`Glob`、`grep`→`Grep`、`web`/`web_search`→`WebSearch`、`ask_user_question`→`AskUserQuestion`、`exit_plan_mode`→`ExitPlanMode`、`subagent`→`Task`、`todo_write`→`TodoWrite`；未映射的 dsh 工具（MCP 服务器、一方扩展）保留原名。matcher、`if` 规则以及 hook 脚本收到的 `tool_name` 字段都是翻译后的名字，因此为 CodeBuddy Code 写好的 hook 脚本原样可用。
+- hooks 以 CodeBuddy Code 工具名为键。DeepSeek Harness 的命名不同（`bash`、`edit`、`read`……），因此桥接做了翻译：`bash`→`Bash`、`pwsh`→`PowerShell`、`read`→`Read`、`write`→`Write`、`edit`→`Edit`、`glob`→`Glob`、`grep`→`Grep`、`web`/`web_search`→`WebSearch`、`ask_user_question`→`AskUserQuestion`、`exit_plan_mode`→`ExitPlanMode`、`subagent`→`Task`、`todo_write`→`TodoWrite`；未映射的 DeepSeek Harness 工具（MCP 服务器、一方扩展）保留原名。matcher、`if` 规则以及 hook 脚本收到的 `tool_name` 字段都是翻译后的名字，因此为 CodeBuddy Code 写好的 hook 脚本原样可用。
 - matcher 语义遵循 CodeBuddy Code 规范：`*` / 空 / 缺省匹配全部；其余按区分大小写的正则（裸 `Write` 也能命中 `NotebookWrite`，`^Write$` 精确匹配）。
 - 阻塞消息遵循 CodeBuddy Code 的退出码 2 优先级：stdout JSON `reason`/`stopReason` > 纯文本 stdout > stderr 兜底（与 Claude Code 的 stderr 优先相反）。
 - `if` 过滤器支持常见的 `ToolName(glob)` 形态，对已映射的工具各对应一个主参数字段（`Bash(git *)`、`Edit(*.ts)`……）；无法解析的规则以及没有映射字段的工具一律放行。
@@ -194,7 +196,7 @@ DSH 核心自行加载 `AGENTS.md` 与根目录 `CLAUDE.md`，但不读 CodeBudd
 
 - **Skills**：扁平 `.md` 技能、嵌套命令（`group:name` 非 kebab-case）、插件技能；`allowed-tools`、`model`、`context: fork`、`agent`、frontmatter `hooks`；正文内联 Shell 命令执行、`$ARGUMENTS` 替换、`@file` 引用。
 - **Memory**：条件规则（`alwaysApply: false` + `paths`）、`@import` 展开、向上递归查找、嵌套子树动态加载、Auto Memory。
-- **Hooks**：`prompt` / `agent` handler 类型（需要 LLM 判定）；`Notification`、`SubagentStart`/`SubagentStop`、`PreCompact`/`PostCompact`、`PermissionRequest`/`PermissionDenied`、`Elicitation`、`FileChanged`、`Setup` 等事件；frontmatter hooks（及 `allowUntrustedFrontmatterHooks` 闸门）；插件 `hooks/hooks.json`；`transcript_path` 输入字段（桥接没有真实转录文件）；`suppressOutput` / `systemMessage` 仅面向用户的通道（dsh 无此通道）；`modifiedInput` 改写（dsh 在策略执行前就冻结了工具参数）。Windows 上 hook 走系统 shell 而非 CodeBuddy Code 强制的 Git Bash。
+- **Hooks**：`prompt` / `agent` handler 类型（需要 LLM 判定）；`Notification`、`SubagentStart`/`SubagentStop`、`PreCompact`/`PostCompact`、`PermissionRequest`/`PermissionDenied`、`Elicitation`、`FileChanged`、`Setup` 等事件；frontmatter hooks（及 `allowUntrustedFrontmatterHooks` 闸门）；插件 `hooks/hooks.json`；`transcript_path` 输入字段（桥接没有真实转录文件）；`suppressOutput` / `systemMessage` 仅面向用户的通道（DeepSeek Harness 无此通道）；`modifiedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）。Windows 上 hook 走系统 shell 而非 CodeBuddy Code 强制的 Git Bash。
 
 ## 目录结构
 
@@ -207,13 +209,13 @@ src/
     │   ├── index.ts         # 子系统注册：skills、memory、hooks
     │   ├── skills/          # claude-code 技能 provider
     │   ├── memory.ts        # CLAUDE.md 记忆注入
-    │   └── hooks/           # settings 合并、matcher、执行器、DSH 生命周期接线
+    │   └── hooks/           # settings 合并、matcher、执行器、DeepSeek Harness 生命周期接线
     └── codebuddy-code/      # CodeBuddy Code 子系统
         ├── index.ts         # 子系统注册：skills、memory、hooks
         ├── settings.ts      # 共享 settings 加载器（hooks、env、skillOverrides）
         ├── skills/          # codebuddy-code 技能 provider
         ├── memory.ts        # CODEBUDDY.md 记忆 + 规则注入
-        └── hooks/           # matcher、执行器、DSH 生命周期接线
+        └── hooks/           # matcher、执行器、DeepSeek Harness 生命周期接线
 ```
 
 新增一个 agent 工具 = 增加 `src/agents/<tool>/` 目录 + `registerBridgeSubsystems()` 里加一行注册；单条 bundle 行已经把它涵盖在内。
@@ -236,4 +238,4 @@ cd /tmp/codebuddy-fixture   # 任意带 .codebuddy/ 资产的项目
 dsh --profile headless "list the skills available in your catalog"
 ```
 
-各桥接目标的参考资料在 [`docs/reference/`](docs/reference/)，包括一期所用的 Claude Code 与二期所用的 CodeBuddy Code skills/commands/hooks 官方规范。贡献者文档——如何新增一个 agent 工具、DSH 集成面、已知踩坑——在 [`docs/development/`](docs/development/)。
+各桥接目标的参考资料在 [`docs/reference/`](docs/reference/)，包括一期所用的 Claude Code 与二期所用的 CodeBuddy Code skills/commands/hooks 官方规范。贡献者文档——如何新增一个 agent 工具、DeepSeek Harness 集成面、已知踩坑——在 [`docs/development/`](docs/development/)。
