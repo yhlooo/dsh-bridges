@@ -1,20 +1,16 @@
 # Dev container image based on Ubuntu 26.04 with zsh + Oh My Zsh + dsh
 FROM ubuntu:26.04
 
-ENV DEBIAN_FRONTEND=noninteractive \
-    SHELL=/usr/bin/zsh \
-    ZSH=/root/.oh-my-zsh
-
-# Base packages needed for the shell setup.
-# build-essential + python3 are required to compile node-pty (native
-# dependency of dsh) when no prebuilt binary exists for the platform.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        build-essential xz-utils python3 \
+# 安装基础组件
+RUN DEBIAN_FRONTEND=noninteractive apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        tzdata build-essential xz-utils python3 \
         ca-certificates dnsutils \
-        curl git zsh vim
+        curl git zsh vim gpg jq ssh
 
-# Node.js 22 LTS (required by dsh).
+ENV LC_ALL=C.utf8
+
+# 安装 Node.js 22 LTS (required by dsh).
 # Detect the CPU arch with uname so this works with both docker buildx and podman build.
 RUN arch="$(uname -m)" \
     && case "${arch}" in \
@@ -27,17 +23,18 @@ RUN arch="$(uname -m)" \
     && node --version \
     && npm --version
 
-# dsh (DeepSeek Harness) launcher
-RUN npm install -g @deepseek-ai/dsh@0.1.0-rc.6 \
+# 安装 DeepSeek Harness
+RUN npm install -g @deepseek-ai/dsh \
     && dsh --version
 
-# Install Oh My Zsh (unattended: skips prompts and shell change)
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+ENV SHELL=/usr/bin/zsh
+ENV ZSH=/root/.oh-my-zsh
 
-# Install third-party Oh My Zsh plugins into the custom plugins directory
-RUN git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git "${ZSH_CUSTOM:-$ZSH/custom}/plugins/zsh-autosuggestions" \
+# 安装 oh-my-zsh
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
+    && git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git "${ZSH_CUSTOM:-$ZSH/custom}/plugins/zsh-autosuggestions" \
     && git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git "${ZSH_CUSTOM:-$ZSH/custom}/plugins/zsh-syntax-highlighting"
+COPY .zshrc "/root/.zshrc"
 
-# Enable the avit theme and the git / zsh-autosuggestions / zsh-syntax-highlighting plugins
-RUN sed -i 's/^ZSH_THEME=.*/ZSH_THEME="avit"/' /root/.zshrc \
-    && sed -i 's/^plugins=(.*)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/' /root/.zshrc
+COPY entrypoint.sh /entrypoint.sh
+CMD ["/entrypoint.sh"]

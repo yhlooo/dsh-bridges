@@ -4,6 +4,11 @@
     "dockerfile": "Dockerfile"
   },
   "remoteUser": "root",
+  // Run the image CMD (dsh web autostart + keep-alive) as PID 1 instead of
+  // the devcontainer CLI's default keep-alive command. Processes spawned by
+  // lifecycle hooks get killed when their exec session ends, but PID 1's
+  // children survive, which is what keeps dsh running.
+  "overrideCommand": false,
   "containerEnv": {
     "SHELL": "/usr/bin/zsh"
   },
@@ -16,11 +21,6 @@
       "type": "volume"
     }
   ],
-  // Start dsh in the workspace folder every time the container starts.
-  // This is a devcontainer-spec lifecycle hook: it runs inside the container
-  // with the workspace folder as cwd, and is honored by any spec-compliant
-  // tool (VS Code, JetBrains IDEs, devcontainer CLI, Codespaces, ...).
-  "postStartCommand": "sh .devcontainer/post-start.sh",
   // dsh web serves the DeepSeek Harness Web UI on 127.0.0.1:3080
   "forwardPorts": [3080],
   "portsAttributes": {
