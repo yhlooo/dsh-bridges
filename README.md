@@ -4,6 +4,11 @@ English | [中文](README_CN.md)
 
 > This project is implemented by DeepSeek Harness.
 
+[![CI](https://github.com/yhlooo/dsh-bridges/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/yhlooo/dsh-bridges/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/dsh-bridges)](https://www.npmjs.com/package/dsh-bridges)
+[![npm downloads](https://img.shields.io/npm/dm/dsh-bridges)](https://www.npmjs.com/package/dsh-bridges)
+[![license](https://img.shields.io/github/license/yhlooo/dsh-bridges)](LICENSE)
+
 A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin that bridges projects already configured for Claude Code, CodeBuddy Code, opencode, or Codex into DeepSeek Harness, so existing skills, commands, memory, and hooks continue to work without any migration.
 
 ## Quick start
