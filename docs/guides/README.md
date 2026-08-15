@@ -28,6 +28,11 @@ dsh --profile <name> --dump-config   # the row "dsh-bridges" should appear
 
 Then start DeepSeek Harness in a project that has agent assets (`.claude/`, `~/.claude/`, `.codebuddy/`, `~/.codebuddy/`); assets are discovered per session workspace.
 
+A ready-made example project exists for each supported agent tool
+([`examples/`](../../examples/)): open one as the session workspace to see its
+skills, memory, and hooks bridged; each directory's README walks through the
+verification steps.
+
 ## Config
 
 Every tool bridge owns a config section under the `bridges` row; a later patch layer (the profile's `cordis.patch.yml`, a `--patch` overlay) can override any field:

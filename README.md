@@ -23,6 +23,8 @@ dsh --profile <name> "list the skills available in your catalog"
 
 From a checkout of this repository, install with `pnpm install && pnpm build && dsh plugin --profile <name> add .`
 
+Ready-made demo projects for each agent tool live in [`examples/`](examples/) (`claude-code`, `codebuddy-code`, `opencode`, `codex`): open one as the session workspace to see its skills, memory, and hooks bridged.
+
 Every bridge is on by default; tune or disable any of them from a patch layer:
 
 ```yaml
@@ -56,6 +58,7 @@ Full per-bridge configuration and behavior: [`docs/guides/`](docs/guides/README.
 
 ## Resources
 
+- Example projects, one per bridged agent tool: [`examples/`](examples/)
 - Usage guide (per-bridge details, full config reference, what is not bridged yet): [`docs/guides/`](docs/guides/README.md)
 - Bridge-target reference materials (official upstream specs): [`docs/reference/`](docs/reference/)
 - Contributor documentation (how to add a new agent tool, integration surface, pitfalls): [`docs/development/`](docs/development/)

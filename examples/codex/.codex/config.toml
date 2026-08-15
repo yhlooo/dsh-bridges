@@ -1,0 +1,15 @@
+# Codex project-layer config read by the dsh-bridges codex bridge.
+# TOML comments like this one are legal.
+
+# Disable the demo skill so discovery skips it (relative paths resolve
+# against this file's directory, .codex/).
+[[skills.config]]
+path = "../.agents/skills/legacy-helper"
+enabled = false
+
+# Cap the concatenated project AGENTS.md chain (Codex default: 32768).
+project_doc_max_bytes = 32768
+
+# Uncomment to disable every hook from the most specific layer:
+# [features]
+# hooks = false

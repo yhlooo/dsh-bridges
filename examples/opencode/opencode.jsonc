@@ -1,0 +1,22 @@
+{
+  // opencode config accepts JSONC — comments like this one are legal in
+  // both opencode.json and opencode.jsonc, and the bridge strips them.
+  "$schema": "https://opencode.ai/config.json",
+
+  // JSON-defined custom commands: the bridge reads `command.<name>` and
+  // registers each as a skill. A project command with the same name
+  // overrides the global (~/.config/opencode/opencode.json) one.
+  "command": {
+    "greet": {
+      "description": "Greet the user in the style of a friendly pirate (JSON-defined command).",
+      "template": "Reply as a friendly pirate: greet the user, then ask what treasure we hunt today. Keep it under three sentences."
+    }
+  },
+
+  // Instruction files injected at session start by the bridge. Entries
+  // resolve relative to this file; globs like docs/tips/*.md are expanded.
+  "instructions": [
+    "docs/notes.md",
+    "docs/tips/*.md"
+  ]
+}

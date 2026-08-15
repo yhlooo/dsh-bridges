@@ -1,0 +1,66 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CODEBUDDY_PROJECT_DIR}/.codebuddy/hooks/session-start.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CODEBUDDY_PROJECT_DIR}/.codebuddy/hooks/log-prompt.mjs\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CODEBUDDY_PROJECT_DIR}/.codebuddy/hooks/log-tool.mjs\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CODEBUDDY_PROJECT_DIR}/.codebuddy/hooks/guard-destructive.js\"",
+            "if": "Bash(rm *)"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CODEBUDDY_PROJECT_DIR}/.codebuddy/hooks/bash-context.js\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CODEBUDDY_PROJECT_DIR}/.codebuddy/hooks/stop-side-effect.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

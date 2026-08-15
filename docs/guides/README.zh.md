@@ -25,6 +25,10 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 
 然后在带有 agent 资产（`.claude/`、`~/.claude/`、`.codebuddy/`、`~/.codebuddy/`）的项目里启动 DeepSeek Harness；资产按会话工作区发现。
 
+每个受支持的 agent 工具各有一个现成示例项目（[`examples/`](../../examples/)）：
+把示例目录作为会话工作区打开，即可看到它的 skills、memory 与 hooks 如何被
+桥接，各目录 README 说明逐项验证方式。
+
 ## 配置
 
 每个工具桥接在 `bridges` 行下各占一个配置段；后续 patch 层（profile 的 `cordis.patch.yml`、`--patch` 覆盖层）可以覆盖任意字段：

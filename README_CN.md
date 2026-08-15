@@ -23,6 +23,10 @@ dsh --profile <name> "list the skills available in your catalog"
 
 从本仓库 checkout 安装：`pnpm install && pnpm build && dsh plugin --profile <name> add .`
 
+每个受支持的 agent 工具各有一个现成示例项目，位于 [`examples/`](examples/)
+（`claude-code`、`codebuddy-code`、`opencode`、`codex`）：把示例目录作为会话
+工作区打开，即可看到它的 skills、memory 与 hooks 如何被桥接。
+
 每个桥接默认开启，可通过 patch 层调整或关闭任意一个：
 
 ```yaml
@@ -56,6 +60,7 @@ dsh --profile <name> "list the skills available in your catalog"
 
 ## 资源
 
+- 每个桥接目标一个示例项目：[`examples/`](examples/)
 - 使用指南（各桥接细节、完整配置参考、尚未桥接的部分）：[`docs/guides/`](docs/guides/README.zh.md)
 - 各桥接目标的参考资料（官方上游规范）：[`docs/reference/`](docs/reference/)
 - 贡献者文档（如何新增一个 agent 工具、集成面、踩坑）：[`docs/development/`](docs/development/)
