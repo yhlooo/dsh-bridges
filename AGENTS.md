@@ -4,6 +4,40 @@ This file is the shared memory for coding agents working in this repository
 (dsh, Claude Code, Codex, opencode, CodeBuddy, ...). Follow the conventions
 below in all work done here.
 
+## Plugin Conventions
+
+### Layout
+
+- This repository **is the plugin**: the repo root is the `dsh-bridges` dsh
+  bundle, not a monorepo of plugins. `cordis.patch.yml` inserts exactly **one**
+  row; every supported agent tool is a subsystem under `src/agents/<tool>/`,
+  registered from `src/index.ts`. Never add a second bundle, row, or package
+  for a new agent tool.
+- Adding an agent tool means: one directory `src/agents/<tool>/`, one
+  registration line in `registerBridgeSubsystems()`, and one config section on
+  the `bridges` row. Shared code stays in `src/util.ts` / `src/fs-adapter.ts`.
+- Every side effect a subsystem registers (providers, event listeners,
+  watchers, spawned children) must belong to the plugin fiber and be reversible
+  on teardown.
+
+### Naming
+
+- Patch row `name` = the npm package name (what the loader imports); patch row
+  `id` = a short semantic name: the package name minus the `@scope/dsh-`
+  prefix, following the shipped bundles (`dsh-bridges` → `bridges`, like
+  `@deepseek-ai/dsh-skill-filesystem` → `skill-filesystem`). The `id` is the
+  stable key later patch layers override config by — never use the full
+  package name as `id`.
+- Skill providers: one per agent tool, named after the tool (`claude-code`;
+  later `codex`, `opencode`, …). Each provider owns a distinct rank band; lower
+  rank wins within a layer, and inside one band personal assets outrank project
+  assets and skills outrank same-level commands.
+- Config sections on the `bridges` row are named after the tool
+  (`claudeCode`), each with an `enabled` master switch and per-bridge knobs.
+- Injected-message `source.plugin` ids are per subsystem
+  (`claude-code-memory`, `claude-code-hooks`), and hook `tool_name` payloads
+  carry the upstream tool's names (`Bash`, `Edit`, …), never dsh's.
+
 ## Git Commit Convention
 
 This project uses [Conventional Commits](https://www.conventionalcommits.org/).
