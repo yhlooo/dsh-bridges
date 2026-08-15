@@ -1,8 +1,26 @@
 {
   "name": "dsh-bridges",
   "version": "0.1.0",
-  "description": "A dsh plugin that bridges projects configured for other coding agents (Claude Code, Codex, opencode, CodeBuddy, …) into DeepSeek Harness",
+  "description": "A DeepSeek Harness plugin that bridges projects configured for other coding agents (Claude Code, Codex, opencode, CodeBuddy, …) into DeepSeek Harness",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yhlooo/dsh-bridges.git"
+  },
+  "homepage": "https://github.com/yhlooo/dsh-bridges#readme",
+  "bugs": {
+    "url": "https://github.com/yhlooo/dsh-bridges/issues"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "claude-code",
+    "codex",
+    "opencode",
+    "codebuddy-code"
+  ],
+  "author": "yhlooo",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -23,10 +41,16 @@
       "patch": "./cordis.patch.yml"
     }
   },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@11.21.0",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepack": "pnpm build",
+    "prepublishOnly": "pnpm test"
   },
   "dependencies": {
     "chokidar": "^5.0.0",
