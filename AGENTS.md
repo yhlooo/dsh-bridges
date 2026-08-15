@@ -127,9 +127,9 @@ chore: bump dev dependencies
 
 ## 分支与发布约定
 
-- 功能开发在 `dev/...` 分支上进行，通过 PR 合入 `main`；不要直接在 `main` 上
-  提交。PR 与 push 的 CI（`.github/workflows/ci.yml`）跑 typecheck/build/test/
-  pack 检查，合入前应保持全绿。
+- 功能开发在 `dev/...` 分支上进行，通过 PR 合入 `main`；文档等例行改动可直接
+  提交 `main`。PR 与 push 的 CI（`.github/workflows/ci.yml`）跑
+  typecheck/build/test/pack 检查，合入前应保持全绿。
 - 发布在 `main` 主干上进行：先 bump `package.json` 版本
   （`npm version patch|minor|major`）并推送提交，再打 `v<版本>` tag 并推送
   tag。
