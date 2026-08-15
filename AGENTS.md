@@ -67,6 +67,9 @@ CodeBuddy……）。在本仓库的所有工作中请遵守以下约定。
   `README.zh.md`；`.zh.md` 后缀标记中文版本。
 - `docs/reference/` — 各桥接目标的官方上游文档，保持原文不改动。
 - `docs/development/` — 贡献者指南（中文），包括新增桥接的清单。
+- `docs/development/todo.md` — **待办与特性补全计划**：所有"需要做但不立即做"的
+  工作都追加到这里（按优先级分组，完成后勾选并注明 commit）。桥接审计、新增工具
+  后发现的遗留事项一律写入，不要只留在会话记忆里。
 
 ### 新增桥接按此顺序更新文档
 
@@ -75,6 +78,7 @@ CodeBuddy……）。在本仓库的所有工作中请遵守以下约定。
    其配置块，中英两版。
 3. 根 README（两版语言）— 状态 callout、支持的 agent 工具表行、guides/
    reference 链接。
+4. 本轮未做 / 待做的遗留事项写入 `docs/development/todo.md` 并保持更新。
 
 ## Git 提交约定
 
