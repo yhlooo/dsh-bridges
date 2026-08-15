@@ -23,7 +23,7 @@ const DSH_TO_CLAUDE_TOOL: Readonly<Record<string, string>> = {
   ask_user_question: 'AskUserQuestion',
   exit_plan_mode: 'ExitPlanMode',
   subagent: 'Agent',
-  todo: 'TodoWrite',
+  todo_write: 'TodoWrite',
 }
 
 /** Translate a DSH tool name to the Claude Code name hooks expect. */
