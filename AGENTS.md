@@ -1,100 +1,86 @@
 # AGENTS.md
 
-This file is the shared memory for coding agents working in this repository
-(dsh, Claude Code, Codex, opencode, CodeBuddy, ...). Follow the conventions
-below in all work done here.
+本文件是本仓库协作编码智能体的共享记忆（dsh、Claude Code、Codex、opencode、
+CodeBuddy……）。在本仓库的所有工作中请遵守以下约定。
 
-## Plugin Conventions
+## 插件约定
 
-### Layout
+### 布局
 
-- This repository **is the plugin**: the repo root is the `dsh-bridges` dsh
-  bundle, not a monorepo of plugins. `cordis.patch.yml` inserts exactly **one**
-  row; every supported agent tool is a subsystem under `src/agents/<tool>/`,
-  registered from `src/index.ts`. Never add a second bundle, row, or package
-  for a new agent tool.
-- Adding an agent tool means: one directory `src/agents/<tool>/`, one
-  registration line in `registerBridgeSubsystems()`, and one config section on
-  the `bridges` row. Shared code stays in `src/util.ts` / `src/fs-adapter.ts`.
-- Every side effect a subsystem registers (providers, event listeners,
-  watchers, spawned children) must belong to the plugin fiber and be reversible
-  on teardown.
+- 本仓库**本身就是插件**：仓库根目录就是 `dsh-bridges` dsh bundle，不是插件
+  monorepo。`cordis.patch.yml` 恰好插入**一行**；每个受支持的 agent 工具都是
+  `src/agents/<tool>/` 下的一个子系统，从 `src/index.ts` 注册。绝不为新 agent
+  工具新增第二个 bundle、行或包。
+- 新增一个 agent 工具意味着：一个 `src/agents/<tool>/` 目录、
+  `registerBridgeSubsystems()` 里一行注册、`bridges` 行上一个配置段。共享代码
+  放在 `src/util.ts` / `src/fs-adapter.ts`。
+- 子系统注册的每一个副作用（provider、事件监听、watcher、spawn 的子进程）都
+  必须属于插件 fiber，并且在 teardown 时可逆。
 
-### Naming
+### 命名
 
-- Patch row `name` = the npm package name (what the loader imports); patch row
-  `id` = a short semantic name: the package name minus the `@scope/dsh-`
-  prefix, following the shipped bundles (`dsh-bridges` → `bridges`, like
-  `@deepseek-ai/dsh-skill-filesystem` → `skill-filesystem`). The `id` is the
-  stable key later patch layers override config by — never use the full
-  package name as `id`.
-- Skill providers: one per agent tool, named after the tool (`claude-code`,
-  `codebuddy-code`, `opencode`, `codex`). Each provider owns a distinct rank
-  band (claude 105–120, codebuddy 125–140, opencode 145–160, codex 165–175);
-  lower rank wins within a layer, and inside one band assets follow the
-  upstream tool's precedence (Claude Code: personal > project; CodeBuddy
-  Code / opencode / Codex: project > user) and skills outrank same-level
-  commands.
-- Every bridge skill provider registers on the **global** skills layer, so
-  preset-layer native skills (`.dsh/skills`, `.agents/skills`, runtime skills)
-  shadow bridged assets on name conflicts via layer order. Never justify that
-  win with rank numbers — the bridge bands numerically outrank runtime skills
-  (250) within one layer, and only the layer order saves the precedence.
-- Config sections on the `bridges` row are named after the tool
-  (`claudeCode`, `codebuddyCode`, `opencode`, `codex`), each with an `enabled`
-  master switch and per-bridge knobs.
-- Injected-message `source.plugin` ids are per subsystem (`<tool>-memory`,
-  `<tool>-hooks`, e.g. `claude-code-memory`, `codebuddy-code-hooks`), and hook
-  `tool_name` payloads carry the upstream tool's names (`Bash`, `Edit`, …),
-  never dsh's.
+- Patch 行 `name` = npm 包名（loader 导入所用的名字）；patch 行 `id` = 短语义
+  名：包名去掉 `@scope/dsh-` 前缀，与随附 bundle 保持一致（`dsh-bridges` →
+  `bridges`，如同 `@deepseek-ai/dsh-skill-filesystem` → `skill-filesystem`）。
+  `id` 是后续 patch 层覆盖配置所用的稳定键——绝不要用完整包名作 `id`。
+- 技能 provider：每个 agent 工具一个，以工具命名（`claude-code`、
+  `codebuddy-code`、`opencode`、`codex`）。每个 provider 独占一段 rank（claude
+  105–120、codebuddy 125–140、opencode 145–160、codex 165–175）；同层内 rank
+  越小越优先，段内资产遵循上游工具的优先级（Claude Code：个人 > 项目；
+  CodeBuddy Code / opencode / Codex：项目 > 用户），且技能优先于同级同名命令。
+- 每个桥接的技能 provider 都注册在**全局**技能层，因此 preset 层的 DeepSeek
+  Harness 原生技能（`.dsh/skills`、`.agents/skills`、运行时技能）通过层序在
+  同名冲突时遮蔽桥接资产。绝不要用 rank 数字论证这一优先级——同层内桥接段的
+  数字其实高于运行时技能（250），保住该优先级的是层序。
+- `bridges` 行上的配置段以工具命名（`claudeCode`、`codebuddyCode`、`opencode`、
+  `codex`），各自带 `enabled` 总开关和每桥接的具体参数。
+- 注入消息的 `source.plugin` id 按子系统区分（`<tool>-memory`、
+  `<tool>-hooks`，如 `claude-code-memory`、`codebuddy-code-hooks`）；hook 的
+  `tool_name` 载荷携带上游工具的名字（`Bash`、`Edit`……），绝不携带 dsh 的
+  名字。
 
-## Documentation Conventions
+## 文档约定
 
 ### README
 
-- The two root READMEs are the **user-facing entry point**. Keep them short
-  (about one screen) and lead with a quick start that shows the payoff —
-  install, run in an existing agent project, show what the user gets — rather
-  than a feature list.
-- Detailed usage (install & verify, the full config reference, per-bridge
-  skills/memory/hooks behavior, limitations) lives in `docs/guides/`; the
-  README links there. Development details (build/test commands, smoke tests,
-  directory layout) never go into the README — link to `docs/development/`.
-- `README.md` (English) and `README_CN.md` (Chinese) must stay in sync: every
-  change is made to both, and each starts with a language-switcher header
-  (`English | [中文](README_CN.md)` / `[English](README.md) | 中文`) followed
-  by the note `> This project is implemented by DeepSeek Harness.` (CN:
-  `> 该项目由 DeepSeek Harness 实现。`).
-- In prose, always spell out **DeepSeek Harness** — never `dsh`/`DSH`. Keep
-  the short form only where it is an identifier: CLI commands (`dsh plugin`,
-  `dsh --profile`), the package name `dsh-bridges`, config keys
-  (`dsh.profile.bundles`), and paths (`.dsh/skills`).
-- Documented behavior must match the code. Example that bit us: dsh's todo
-  tool is `todo_write`, so the hook name-mapping tables must map
-  `todo_write`→`TodoWrite` — a `todo` entry matches nothing.
+- 两个根 README 是**面向用户的入口**。保持简短（约一屏），开头用能展示收益的
+  快速上手——安装、在已有的 agent 项目里运行、展示用户得到了什么——而不是功能
+  列表。
+- 详细使用说明（安装与验证、完整配置参考、各桥接 skills/memory/hooks 行为、
+  限制）放在 `docs/guides/`；README 链接过去。开发细节（构建/测试命令、冒烟
+  测试、目录结构）绝不进 README——链接到 `docs/development/`。
+- `README.md`（英文）与 `README_CN.md`（中文）必须保持同步：任何改动两版都要
+  做，且都以语言切换头开头（`English | [中文](README_CN.md)` /
+  `[English](README.md) | 中文`），紧跟备注
+  `> This project is implemented by DeepSeek Harness.`（中文版：
+  `> 该项目由 DeepSeek Harness 实现。`）。
+- 正文中一律写全称 **DeepSeek Harness**——绝不用 `dsh`/`DSH`。仅在标识符场合
+  保留短写：CLI 命令（`dsh plugin`、`dsh --profile`）、包名 `dsh-bridges`、
+  配置键（`dsh.profile.bundles`）、路径（`.dsh/skills`）。
+- 文档描述的行为必须与代码一致。曾坑过我们的例子：dsh 的 todo 工具叫
+  `todo_write`，所以 hook 名称映射表必须映射 `todo_write`→`TodoWrite`——
+  `todo` 条目匹配不到任何东西。
 
-### docs/ layout
+### docs/ 布局
 
-- `docs/guides/` — user-facing usage guides. English in `README.md`, Chinese
-  in `README.zh.md`; the `.zh.md` suffix marks Chinese versions.
-- `docs/reference/` — the official upstream docs of each bridge target, kept
-  verbatim.
-- `docs/development/` — contributor guides (in Chinese), including the
-  checklist for adding a new bridge.
+- `docs/guides/` — 面向用户的使用指南。英文在 `README.md`，中文在
+  `README.zh.md`；`.zh.md` 后缀标记中文版本。
+- `docs/reference/` — 各桥接目标的官方上游文档，保持原文不改动。
+- `docs/development/` — 贡献者指南（中文），包括新增桥接的清单。
 
-### Adding a bridge updates docs in this order
+### 新增桥接按此顺序更新文档
 
-1. `docs/reference/<tool>/` — collect the official upstream specs first.
-2. `docs/guides/` — add the tool's section (skills/commands, memory, hooks,
-   limitations) and its config block, in both languages.
-3. Root READMEs (both languages) — status callout, supported-agents table row,
-   and the guides/reference links.
+1. `docs/reference/<tool>/` — 先收集官方上游规范。
+2. `docs/guides/` — 加入该工具的小节（skills/commands、记忆、hooks、限制）与
+   其配置块，中英两版。
+3. 根 README（两版语言）— 状态 callout、支持的 agent 工具表行、guides/
+   reference 链接。
 
-## Git Commit Convention
+## Git 提交约定
 
-This project uses [Conventional Commits](https://www.conventionalcommits.org/).
+本项目使用 [Conventional Commits](https://www.conventionalcommits.org/)。
 
-Commit message format:
+提交消息格式：
 
 ```
 <type>[optional scope]: <description>
@@ -104,34 +90,34 @@ Commit message format:
 [optional footer(s)]
 ```
 
-The description is a short imperative summary (e.g. "add foo bar" instead of
-"added foo bar"), in lowercase, without a trailing period.
+描述是简短的祈使句总结（例如 "add foo bar" 而不是 "added foo bar"），小写，
+结尾不加句号。
 
-### Types
+### 类型
 
-| Type       | Purpose                                                                 |
-| ---------- | ----------------------------------------------------------------------- |
-| `feat`     | A new feature                                                           |
-| `fix`      | A bug fix                                                               |
-| `docs`     | Documentation-only changes                                              |
-| `style`    | Formatting only; no change to code meaning                              |
-| `refactor` | Code change that neither fixes a bug nor adds a feature                 |
-| `perf`     | A change that improves performance                                      |
-| `test`     | Adding or correcting tests                                              |
-| `build`    | Changes to the build system or external dependencies                    |
-| `ci`       | Changes to CI configuration and scripts                                 |
-| `chore`    | Routine tasks that do not touch src or test code (e.g. tooling, deps)   |
-| `revert`   | Reverts a previous commit; reference the reverted commit in the body    |
+| 类型        | 用途                                                              |
+| ----------- | ----------------------------------------------------------------- |
+| `feat`      | 新功能                                                            |
+| `fix`       | 缺陷修复                                                          |
+| `docs`      | 仅文档改动                                                        |
+| `style`     | 仅格式化；不改代码含义                                            |
+| `refactor`  | 既不修 bug 也不加功能的代码改动                                   |
+| `perf`      | 性能改进                                                          |
+| `test`      | 添加或修正测试                                                    |
+| `build`     | 构建系统或外部依赖改动                                            |
+| `ci`        | CI 配置与脚本改动                                                 |
+| `chore`     | 不涉及 src 或测试代码的例行事务（如工具、依赖）                   |
+| `revert`    | 回滚某次提交；在正文中引用被回滚的提交                            |
 
-### Breaking changes
+### 破坏性变更
 
-Append `!` after the type/scope, or add a `BREAKING CHANGE:` footer:
+在 type/scope 后追加 `!`，或加 `BREAKING CHANGE:` 脚注：
 
 ```
 feat(api)!: remove legacy bridge protocol
 ```
 
-### Examples
+### 示例
 
 ```
 feat: add claude code bridge
