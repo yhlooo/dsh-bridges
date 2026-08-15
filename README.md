@@ -1,5 +1,7 @@
 # dsh-bridges
 
+English | [中文](README_CN.md)
+
 A [dsh](https://github.com/deepseek-ai/deepseek-harness) (DeepSeek Harness) plugin that bridges dsh into projects already configured for other coding agents, so a project set up for Claude Code, Codex, opencode, or CodeBuddy keeps working when you run dsh on it.
 
 The whole project **is one plugin** — a single bundle row (`id: bridges`) hosting one bridge subsystem per agent tool. Installing `dsh-bridges` once covers every supported tool; each tool's bridge can be toggled independently through config.
