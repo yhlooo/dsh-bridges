@@ -16,6 +16,7 @@
 | [config-basic.md](config-basic.md) | **config.toml 基础**：位置、优先级、常用选项、feature flags |
 | [config-reference.md](config-reference.md) | **config.toml / requirements.toml 完整参考** |
 | [config-advanced.md](config-advanced.md) | 高级配置：profiles、**hooks**、[agents] 角色、项目根检测 |
+| [hooks.md](hooks.md) | **Hooks 完整规范**：事件全集、输入/输出 JSON、matcher、async、trust 流程 |
 | [environment-variables.md](environment-variables.md) | 环境变量参考 |
 | [customization-overview.md](customization-overview.md) | 定制总览：AGENTS.md / Skills / MCP / Subagents |
 | [plugins.md](plugins.md) | 插件构建（skills-only 插件等） |

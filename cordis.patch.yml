@@ -1,7 +1,7 @@
 # The dsh-bridges bundle patch: one plugin row over the composed tree.
 #
 # The single `dsh-bridges` plugin hosts one bridge subsystem per supported
-# agent tool (claude-code and codebuddy-code today; codex / opencode later).
+# agent tool (claude-code, codebuddy-code, opencode, and codex today).
 # Each subsystem registers a skill provider on the host `skills` registry
 # (global layer) and wires the tool's hooks into DSH agent and tool
 # lifecycles. A preset's nearer skill layer shadows its entries on name

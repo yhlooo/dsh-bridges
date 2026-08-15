@@ -9,8 +9,11 @@
  *   CLAUDE.md memory, settings.json hooks → dsh lifecycle events.
  * - **codebuddy-code** (implemented): skills/commands → `ctx.skills` provider,
  *   CODEBUDDY.md memory + rules, settings.json hooks → dsh lifecycle events.
- * - **codex / opencode**: planned; each will add one directory under
- *   `agents/<tool>/` and one entry in {@link registerBridgeSubsystems}.
+ * - **opencode** (implemented): skills/commands (files + opencode.json) →
+ *   `ctx.skills` provider, AGENTS.md rules + `instructions` memory.
+ * - **codex** (implemented): `.agents/skills` → `ctx.skills` provider,
+ *   AGENTS.md instruction-chain memory, config.toml/hooks.json hooks → dsh
+ *   lifecycle events.
  *
  * A subsystem registers under this plugin's single bundle row (`id: bridges`
  * in `cordis.patch.yml`), so one installation covers every supported tool and
@@ -21,6 +24,8 @@ import { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { registerClaudeCodeBridge, type ClaudeCodeConfig } from './agents/claude-code/index.js'
 import { registerCodebuddyCodeBridge, type CodebuddyCodeConfig } from './agents/codebuddy-code/index.js'
+import { registerCodexBridge, type CodexConfig } from './agents/codex/index.js'
+import { registerOpencodeBridge, type OpencodeConfig } from './agents/opencode/index.js'
 import { createFsAdapter, type FsAdapter } from './fs-adapter.js'
 import type { BridgeLogger } from './util.js'
 
@@ -52,11 +57,35 @@ export const Config = z.object({
     maxHookOutputChars: z.number().default(10_000),
     memoryMaxBytes: z.number().default(32_768),
   }),
+  opencode: z.object({
+    enabled: z.boolean().default(true),
+    skills: z.boolean().default(true),
+    memory: z.boolean().default(true),
+    userOpencodeDir: z.string().default('~/.config/opencode'),
+    userClaudeDir: z.string().default('~/.claude'),
+    claudeCompat: z.boolean().default(true),
+    watch: z.boolean().default(true),
+    memoryMaxBytes: z.number().default(32_768),
+  }),
+  codex: z.object({
+    enabled: z.boolean().default(true),
+    skills: z.boolean().default(true),
+    memory: z.boolean().default(true),
+    hooks: z.boolean().default(true),
+    userCodexDir: z.string().default('~/.codex'),
+    userSkillsDir: z.string().default('~/.agents/skills'),
+    watch: z.boolean().default(true),
+    hookTimeoutMs: z.number().default(600_000),
+    maxHookOutputChars: z.number().default(10_000),
+    memoryMaxBytes: z.number().default(32_768),
+  }),
 })
 
 export interface BridgesConfig {
   claudeCode?: ClaudeCodeConfig
   codebuddyCode?: CodebuddyCodeConfig
+  opencode?: OpencodeConfig
+  codex?: CodexConfig
 }
 
 /**
@@ -67,8 +96,8 @@ export interface BridgesConfig {
 export function registerBridgeSubsystems(ctx: Context, logger: BridgeLogger, fs: FsAdapter, config: BridgesConfig): void {
   registerClaudeCodeBridge(ctx, logger, fs, config.claudeCode)
   registerCodebuddyCodeBridge(ctx, logger, fs, config.codebuddyCode)
-  // Planned: registerCodexBridge(ctx, logger, fs, config.codex)
-  // Planned: registerOpencodeBridge(ctx, logger, fs, config.opencode)
+  registerOpencodeBridge(ctx, logger, fs, config.opencode)
+  registerCodexBridge(ctx, logger, fs, config.codex)
 }
 
 export function apply(ctx: Context, config: BridgesConfig = {}): void {

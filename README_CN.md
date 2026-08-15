@@ -218,7 +218,112 @@ DeepSeek Harness 核心自行加载 `AGENTS.md` 与根目录 `CLAUDE.md`，但�
 - **Memory**：条件规则（`alwaysApply: false` + `paths`）、`@import` 展开、向上递归查找、嵌套子树动态加载、Auto Memory。
 - **Hooks**：`prompt` / `agent` handler 类型（需要 LLM 判定）；`Notification`、`SubagentStart`/`SubagentStop`、`PreCompact`/`PostCompact`、`PermissionRequest`/`PermissionDenied`、`Elicitation`、`FileChanged`、`Setup` 等事件；frontmatter hooks（及 `allowUntrustedFrontmatterHooks` 闸门）；插件 `hooks/hooks.json`；`transcript_path` 输入字段（桥接没有真实转录文件）；`suppressOutput` / `systemMessage` 仅面向用户的通道（DeepSeek Harness 无此通道）；`modifiedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）。Windows 上 hook 走系统 shell 而非 CodeBuddy Code 强制的 Git Bash。
 
+## opencode 桥接（三期）
+
+### Skills 与 Commands
+
+读取 opencode 的资产位置并注册到 DeepSeek Harness 的技能注册表（provider 名 `opencode`）：
+
+| opencode 位置 | 注册为 |
+| :--- | :--- |
+| `.opencode/skills/<name>/SKILL.md` | 项目级技能 |
+| `.opencode/commands/<name>.md` | 项目级命令（即技能） |
+| `opencode.json(c)` 里的 `command.<name>` | 项目级命令（覆盖同名命令文件） |
+| `~/.config/opencode/skills/<name>/SKILL.md` | 用户级技能 |
+| `~/.config/opencode/commands/<name>.md` | 用户级命令（即技能） |
+| `~/.config/opencode/opencode.json(c)` 里的 `command.<name>` | 用户级命令（覆盖同名命令文件） |
+
+映射规则：
+
+- DeepSeek Harness 技能名取目录名 / 文件名，且必须是合法的 opencode 名（`^[a-z0-9]+(-[a-z0-9]+)*$`，小写字母数字 + 单连字符）；不合法则跳过 + 告警。
+- 技能 frontmatter 按 opencode 校验：`name`（必须与目录名一致）与 `description`（1–1,024 字符，超出截断）为必填；缺失或 name 不匹配即丢弃 + 告警，与 opencode 的排查规则一致。`metadata`（字符串到字符串）透传；`license`/`compatibility` 忽略。
+- 命令正文即提示词模板；frontmatter `description`（缺省回退正文首段）作为技能描述。`agent`、`model`、`subtask` 不桥接（DeepSeek Harness 没有按命令路由 agent 的机制）。
+- opencode 的 Claude 兼容（`.claude/skills`、`~/.claude/skills`）与 agent 兼容（`.agents/skills`、`~/.agents/skills`）技能根**不重复读取**：`.claude` 资产已由 claude-code 桥接覆盖、`.agents` 资产已由 DeepSeek Harness 自带 filesystem provider 覆盖，重复注册只会产生重复候选。
+- 优先级：项目资产覆盖用户资产；技能覆盖同名命令；JSON 配置命令覆盖同级同名命令文件。同名冲突时 DeepSeek Harness 原生技能永远胜出。
+- 已存在的资产根目录与 `opencode.json(c)` 文件会被监听；改动无需重启即可生效。
+
+### AGENTS.md / CLAUDE.md 规则与 instructions 记忆
+
+DeepSeek Harness 核心自行加载工作区根 `AGENTS.md` 与 `CLAUDE.md`。本桥接在会话开始时额外注入（system-reminder 框架）：
+
+- `~/.config/opencode/AGENTS.md`（全局规则；缺失时回退 `~/.claude/CLAUDE.md`，与 opencode 一致）
+- 从工作目录向上到 git 根最近的一个 `AGENTS.md`，缺失时回退最近的 `CLAUDE.md`（每类先匹配先胜）；cwd 层的 `AGENTS.md`/`CLAUDE.md` 是 DeepSeek Harness 已加载的文件，跳过
+- `opencode.json(c)` 的 `instructions` 条目：本地文件路径与 `*`/`**` glob（相对配置文件目录解析；远程 URL 跳过，桥接不做网络抓取）
+
+预算 32 KiB：超限先丢弃全部用户级、再截断最具体的项目级。
+
+### 三期限制
+
+尚未桥接（按子系统记录）：
+
+- **Skills / Commands**：嵌套命令目录（opencode 未记载）、命令模板的 `$ARGUMENTS`/`$1`/`!`command``/`@file` 替换、`agent`/`model`/`subtask` 选项、自定义 agents、按权限过滤技能（`permission.skill` 的 `deny`/`ask` 模式）。
+- **Memory**：`OPENCODE_CONFIG` / `OPENCODE_CONFIG_DIR` / `OPENCODE_CONFIG_CONTENT` 覆盖、远程 / 托管配置层、配置文件向上查找（项目 `opencode.json` 仅在 cwd 读取）、配置里的 `{env:…}`/`{file:…}` 替换。
+- **插件 / 权限 / MCP**：opencode 的 JavaScript 插件系统（事件 hook 需要 opencode 运行时）、权限规则、MCP 配置、自定义工具——这些没有文件格式层面的桥接面。
+- **重叠提示**：若同时开启 `claudeCode.memory`，`~/.claude/CLAUDE.md` 回退可能被注入两次（每个桥接各一次）；关闭其一或接受重复块。
+
+## Codex 桥接（四期）
+
+### Skills
+
+读取 Codex 的技能位置并注册到 DeepSeek Harness 的技能注册表（provider 名 `codex`）：
+
+| Codex 位置 | 注册为 |
+| :--- | :--- |
+| `$CWD/.agents/skills/<name>/SKILL.md`，以及向上到仓库根的每一层父目录 | 项目级技能（越靠 cwd 越优先） |
+| `~/.agents/skills/<name>/SKILL.md` | 用户级技能 |
+| `/etc/codex/skills/<name>/SKILL.md` | 系统级技能 |
+
+映射规则：
+
+- DeepSeek Harness 技能名取目录名（必须 kebab-case）。frontmatter 按 agent skills 标准要求 `name`（与目录一致）与 `description`（1,024 字符截断）；不合法的技能丢弃 + 告警。
+- 优先级：项目技能（越靠 cwd 越优先）覆盖用户技能，用户覆盖系统。同名冲突时 DeepSeek Harness 原生技能永远胜出。
+- `config.toml` 里 `[[skills.config]]`（`path` + `enabled = false`）禁用的技能被跳过；相对路径相对配置文件所在 `.codex/` 目录解析。
+- 仓库根用 `project_root_markers`（默认 `['.git']`）判定；找不到标记时只检查当前目录，与 Codex 一致。技能根目录与 settings 文件会被监听。
+
+### AGENTS.md 指令链记忆
+
+DeepSeek Harness 核心自行加载工作区根 `AGENTS.md`。本桥接在会话开始时额外注入 Codex 的指令链（system-reminder 框架）：
+
+- `$CODEX_HOME/AGENTS.override.md`（存在时），否则 `$CODEX_HOME/AGENTS.md`（先非空先胜；`CODEX_HOME` 会被遵守）
+- 从仓库根向下到工作目录，每目录一个文件：`AGENTS.override.md` > `AGENTS.md` > `project_doc_fallback_filenames`；越靠工作目录越靠后、越优先
+- 根目录的普通 `AGENTS.md` 跳过（DeepSeek Harness 已加载）；空文件跳过；项目累计达到 `project_doc_max_bytes`（默认 32 KiB）即停止追加
+
+注入块预算 32 KiB：超限先丢弃全部用户级、再截断最具体的项目级。
+
+### Hooks
+
+从 `hooks.json` 与 `config.toml` 内联 `[hooks]` 表读取 hooks，覆盖每一层激活配置——`/etc/codex/`、`~/.codex/`、以及从仓库根到工作目录之间的每个 `.codex/` 目录（hooks 叠加合并、相同 handler 去重、最具体层的 `[features].hooks = false` 整体禁用），并在下列 DeepSeek Harness 生命周期执行 handler：
+
+| Codex 事件 | DeepSeek Harness 接缝 | 决策映射 |
+| :--- | :--- | :--- |
+| `SessionStart` | `agent/session-start` | `additionalContext` 与退出码 0 的纯文本 stdout 注入；matcher 收到 `startup`/`resume`/`clear`/`compact` |
+| `SubagentStart` | `agent/session-start`（子代理） | 上下文注入子代理；matcher 收到 agent 类型 |
+| `UserPromptSubmit` | `agent/pre-step` | `decision: "block"` / 退出码 2 / `continue: false` 擦除提示词并展示原因；上下文追加到本步 |
+| `PreToolUse` | `tools/pre-execute` | `permissionDecision: "deny"` / 废弃的 `decision: "block"` / 退出码 2 → 拒绝；`permissionDecision: "ask"` 忽略（Codex 自身即不支持）；`additionalContext` 注入；`updatedInput` 忽略 + 告警 |
+| `PostToolUse` | `tools/post-execute` | `decision: "block"` / 退出码 2 / `continue: false` 用 hook 反馈替换工具结果（同 Codex）；`additionalContext` 追加在结果旁 |
+| `Stop` | `agent/turn-stopping` | `decision: "block"` / 退出码 2 以 hook reason 为提示词引导继续（重复时带 `stop_hook_active`）；`continue: false` 优先、停止；桥接侧安全上限连续 8 次 |
+| `SubagentStop` | `agent/turn-stopping`（子代理） | 同 Stop，引导子代理继续 |
+| `SessionEnd` | `agent/disposed` | 仅副作用（1 秒预算，reason 固定 `other`；仅主线程） |
+
+支持的 handler：仅 `type: "command"`（Codex 对 `prompt`/`agent` 需要 LLM 判定、自身即跳过），经 shell 运行、JSON 输入走 stdin、`timeout` 以秒计（默认 600；SessionEnd 1 秒）、`async: true`（后台运行，桥接丢弃其输出）、Windows 用 `commandWindows`；退出码与 JSON 输出按 Codex 协议。
+
+兼容性细节：
+
+- hooks 以 Codex 工具名为键，桥接做翻译：`bash`/`pwsh`→`Bash`、`edit`/`write`→`apply_patch`、`subagent`→`spawn_agent`、`todo_write`→`update_plan`；未映射的 DeepSeek Harness 工具保留原名。matcher 别名同样生效：`Edit`/`Write` 命中 `apply_patch`，`Agent` 命中 `spawn_agent`。
+- matcher 语义遵循 Codex 规范：`*` / 空 / 缺省匹配全部；其余按 JavaScript 正则（不可解析的 matcher 直接不运行）。Codex hooks 没有 `if` 过滤器。
+- 超时与 handler 失败一律放行，同 Codex。
+- 子代理：`SessionStart`/`SessionEnd`/`UserPromptSubmit`/`Stop` 仅主会话，`SubagentStart`/`SubagentStop` 仅子代理，`PreToolUse`/`PostToolUse` 两者皆触发——与 Codex 的事件作用域一致。
+
+### 四期限制
+
+尚未桥接（按子系统记录）：
+
+- **Skills**：`agents/openai.yaml` 元数据（`allow_implicit_invocation`、工具依赖）、插件分发的技能、curated 插件目录。
+- **Memory**：`model_instructions_file`、Codex 的 8,000 字符初始列表预算（DeepSeek Harness 有自己的目录预算）。
+- **Hooks**：`PermissionRequest`（DeepSeek Harness 没有"即将请求审批"的接缝）、`PreCompact`/`PostCompact`（无压缩前接缝；`compact` 会话来源会触发 SessionStart hooks 代替）、Codex 的 hook trust 审核流程（`/hooks`——桥接与其他桥接一致、无 trust 闸门运行）、后台 hook 输出在下个安全点投递、`systemMessage`/`suppressOutput` 仅用户通道、`additionalContextLimit` 溢出落盘（桥接按字符截断替代）、插件捆绑与托管 `requirements.toml` hooks、`transcript_path`（桥接没有真实转录文件）、`updatedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）。
+- **Rules / 配置**：`rules/*.rules`（实验性 Python DSL）、`notify`、`[agents]` 子代理角色、`requirements.toml`、profile 文件（`--profile`）、未信任项目门禁（项目 `.codex/` 层无条件读取——桥接没有 trust 状态）。
+
 ## 资源
 
-- 各桥接目标的参考资料（一期 Claude Code、二期 CodeBuddy Code 的 skills/commands/hooks 官方规范）：[`docs/reference/`](docs/reference/)
+- 各桥接目标的参考资料（一期 Claude Code、二期 CodeBuddy Code、三期 opencode、四期 Codex 的 skills/commands/hooks 官方规范）：[`docs/reference/`](docs/reference/)
 - 贡献者文档（如何新增一个 agent 工具、DeepSeek Harness 集成面、已知踩坑、构建与测试）：[`docs/development/`](docs/development/)

@@ -154,3 +154,23 @@ codebuddy-code 复用 claude-code 的骨架时，以下四处语义不同，照�
 **原因**：用户级资产在 `~/.codebuddy` / `~/.claude`，冒烟 fixture 往往往 HOME 里写过用户级资产，空项目自然还能发现它们。
 
 **正确做法**：零开销验证用 `HOME=/tmp/cleanhome dsh --profile headless ...` 隔离 HOME；冒烟用完的用户级 fixture（`~/.codebuddy` 等）要及时清理，否则会污染后续所有项目的目录。
+
+## 18. opencode 的技能名规则比 DSH 的 kebab-case 更严
+
+DSH 的 `isSkillName`（kebab-case）允许下划线；opencode 的规则是 `^[a-z0-9]+(-[a-z0-9]+)*$`（仅小写字母数字 + 单连字符），且 frontmatter `name` 必须与目录名**逐字一致**、`description` 必填（1–1024 字符）。接 opencode 时两套校验都要做：先 `isSkillName`（DSH 要求）、再 opencode 正则，`name` 不一致 / `description` 缺失按"跳过 + warn"处理（opencode 的排查规则即 fail-closed），不要像 claude-code 那样回退正文首段。
+
+## 19. 同一配置源里"合并后集合 + 层级来源"要一起存，否则重复注册
+
+opencode 的 JSON 命令在 provider 里按"用户层根 / 项目层根"两次遍历时，如果 loader 只暴露**合并后**的 `command` map，每个命令会被注册两次（rank 147 与 157 各一份）。正确做法：loader 同时返回合并 map 与**项目层子集**（`projectCommands`），用户根只遍历"不在项目层"的条目。凡是"按层排序的根 + 合并覆盖语义"的组合都要警惕这个坑。
+
+## 20. Codex 的 project 配置层是 root→cwd 的整条链，不是只有 cwd
+
+Codex 文档里的四个常用 hooks 位置之一是 `<repo>/.codex/hooks.json`——repo 根，不一定是 cwd。`.codex/config.toml` / `hooks.json` 要从仓库根（`project_root_markers`，默认 `.git`）向下逐目录加载（最近层标量胜、hooks 全量叠加），cwd 只是链上最后一层。只读 `<cwd>/.codex/` 会漏掉最常见的仓库级 hooks。`project_root_markers` 本身来自 system/user 层（鸡生蛋：先按默认 `.git` 找根，才能读项目配置），桥接实现里两处走查（settings 的层链、skills 的技能根）要共用同一判定逻辑。
+
+## 21. Codex 的用户技能目录与 CODEX_HOME 无关
+
+Codex 的用户技能固定是 `$HOME/.agents/skills`（与 `~/.codex`、`CODEX_HOME` 无关），而用户 AGENTS.md / config.toml 在 `$CODEX_HOME`（默认 `~/.codex`）。桥接里这两条路径要分开配置（`userCodexDir` / `userSkillsDir`），别想当然地 `join(userCodexDir, 'skills')`。
+
+## 22. 记忆去重要用"路径级"判断，别用内容比对
+
+opencode / codex 的规则文件去重：DSH 核心已加载的只有**工作区根**的 `AGENTS.md` 与 `CLAUDE.md`（即 session cwd 下的这两个文件）。判断"该不该注入"要按**路径**（找到的项目规则文件 === `cwd/AGENTS.md` / `cwd/CLAUDE.md` 就跳过），而不是按内容比对——内容比对会把"父目录规则恰好与根文件同文"误判为重复而漏注入（父目录文件 DSH 并没有加载）。
