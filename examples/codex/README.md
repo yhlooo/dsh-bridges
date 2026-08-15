@@ -1,10 +1,10 @@
 # Codex 桥接示例项目
 
-用 DeepSeek Harness 打开本项目，即可看到 dsh-bridges 的 codex 桥接
-（四期）如何把为 Codex 配置的资产桥接进来。
+以本项目作为 DeepSeek Harness 的会话工作区打开，即可查看 dsh-bridges 的
+codex 桥接（四期）如何将 Codex 的资产桥接进来。
 
-> 只含**项目级**资产。用户级资产（`~/.agents/skills`、`~/.codex/`）会影响
-> 整台机器，示例故意不提供；如需体验可自行把文件复制到对应位置。
+> 只含**项目级**资产。用户级资产（`~/.agents/skills`、`~/.codex/`）作用于
+> 整台机器，示例有意不提供；如需体验可自行将文件复制到对应位置。
 
 ## 目录结构
 
@@ -19,7 +19,7 @@
     ├── hooks.json                 hooks 配置（description + hooks 包装）
     └── hooks/                     每个 hook 事件一个处理器（node 脚本，cwd 即会话目录）
         ├── session-start.js       SessionStart：纯文本 stdout → 首条提示词前注入
-        ├── log-prompt.mjs          UserPromptSubmit：把提示词写进 hook-logs/
+        ├── log-prompt.mjs          UserPromptSubmit：将提示词写入 hook-logs/
         ├── log-tool.mjs            PreToolUse（matcher: ^Bash$）：记录每次 Bash 调用
         ├── guard-destructive.js   PreToolUse：退出码 2 拒绝 rm -rf（reason 优先）
         ├── bash-context.js        PostToolUse：additionalContext 附加到结果旁

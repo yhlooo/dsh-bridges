@@ -2,7 +2,7 @@
 
 [中文](README.zh.md)
 
-The detailed usage documentation for every bridge: install & verify, the full
+The detailed usage documentation for every bridge: install and verify, the full
 configuration reference, and per-tool behavior (skills/commands, memory,
 hooks) with its limitations. For a quick start, see the
 [root README](../../README.md).
@@ -28,10 +28,10 @@ dsh --profile <name> --dump-config   # the row "dsh-bridges" should appear
 
 Then start DeepSeek Harness in a project that has agent assets — `.claude/`, `.codebuddy/`, `.opencode/`, `.agents/skills/`, or `.codex/` (plus their user-level counterparts, e.g. `~/.claude/`); assets are discovered per session workspace.
 
-A ready-made example project exists for each supported agent tool
-([`examples/`](../../examples/)): open one as the session workspace to see its
-skills, memory, and hooks bridged; each directory's README walks through the
-verification steps.
+A complete example project exists for each supported agent tool
+([`examples/`](../../examples/)): open one as the session workspace to observe
+its skills, memory, and hooks being bridged; each directory's README describes
+the verification steps.
 
 ## Config
 

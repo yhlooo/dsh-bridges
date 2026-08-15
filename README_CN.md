@@ -4,9 +4,9 @@
 
 > 该项目由 DeepSeek Harness 实现。
 
-一个 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 插件：把已经为 Claude Code、CodeBuddy Code、opencode、Codex 配置好的项目桥接进 DeepSeek Harness——skills、commands、记忆、hooks 零迁移继续生效。
+一个 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 插件：把已经为 Claude Code、CodeBuddy Code、opencode、Codex 配置好的项目桥接进 DeepSeek Harness——skills、commands、记忆、hooks 无需任何迁移即可继续生效。
 
-> 🚧 **状态。** 一至四期：Claude Code、CodeBuddy Code、opencode、Codex（已交付）。更多 agent 计划中。
+> 🚧 **状态。** 一至四期：Claude Code、CodeBuddy Code、opencode、Codex（已发布）。更多 agent 的支持正在规划。
 
 ## 快速上手
 
@@ -14,20 +14,20 @@
 # 1. 安装一次到某个 DeepSeek Harness profile
 dsh plugin --profile <name> add dsh-bridges
 
-# 2. 在已经为其他 agent 配置好的项目里启动 DeepSeek Harness——完事
+# 2. 在已经为其他 agent 配置好的项目里启动 DeepSeek Harness
 cd my-claude-project        # 已有 .claude/ 资产
 dsh --profile <name> "list the skills available in your catalog"
-# → 每个 .claude 技能 / 命令都变成 /名字 技能，CLAUDE.md 自动注入，
-#   项目里的 settings.json hooks 原样运行。零迁移。
+# → .claude 技能与命令注册为 /名字 技能，CLAUDE.md 被注入，
+#   项目中的 settings.json hooks 原样运行。
 ```
 
-从本仓库 checkout 安装：`pnpm install && pnpm build && dsh plugin --profile <name> add .`
+从本仓库源码安装（需先编译）：`pnpm install && pnpm build && dsh plugin --profile <name> add .`
 
-每个受支持的 agent 工具各有一个现成示例项目，位于 [`examples/`](examples/)
-（`claude-code`、`codebuddy-code`、`opencode`、`codex`）：把示例目录作为会话
-工作区打开，即可看到它的 skills、memory 与 hooks 如何被桥接。
+每个受支持的 agent 工具在 [`examples/`](examples/) 下各有一个完整示例项目
+（`claude-code`、`codebuddy-code`、`opencode`、`codex`）；以示例目录作为会话
+工作区打开，即可观察其 skills、memory 与 hooks 的桥接效果。
 
-每个桥接默认开启，可通过 patch 层调整或关闭任意一个：
+所有桥接默认启用，并可通过 patch 层逐一调整或禁用：
 
 ```yaml
 - id: bridges
@@ -43,11 +43,11 @@ dsh --profile <name> "list the skills available in your catalog"
 
 ## 桥接了什么
 
-| 你的项目里已有 | 在 DeepSeek Harness 中变为 |
+| 项目里已有的资产 | DeepSeek Harness 提供的桥接 |
 | :--- | :--- |
 | `.claude/` `.codebuddy/` `.opencode/` `.agents/` 技能与命令 | 模型技能目录 + `/名字` 调用 |
 | `CLAUDE.md`、`CODEBUDDY.md`、`AGENTS.md` 链与规则 | 会话开始时的记忆注入 |
-| `settings.json`、`hooks.json`、`config.toml` hooks | 同样的 hooks 跑在 DeepSeek Harness 生命周期 |
+| `settings.json`、`hooks.json`、`config.toml` hooks | 同样的 hooks 运行在 DeepSeek Harness 生命周期 |
 
 ## 支持的 agent 工具
 

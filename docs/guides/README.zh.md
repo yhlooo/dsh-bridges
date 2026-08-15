@@ -25,9 +25,9 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 
 然后在带有 agent 资产（`.claude/`、`.codebuddy/`、`.opencode/`、`.agents/skills/`、`.codex/`，以及它们 `~/` 下的用户级对应目录，如 `~/.claude/`）的项目里启动 DeepSeek Harness；资产按会话工作区发现。
 
-每个受支持的 agent 工具各有一个现成示例项目（[`examples/`](../../examples/)）：
-把示例目录作为会话工作区打开，即可看到它的 skills、memory 与 hooks 如何被
-桥接，各目录 README 说明逐项验证方式。
+每个受支持的 agent 工具在 [`examples/`](../../examples/) 下各有一个完整示例
+项目：以示例目录作为会话工作区打开，即可观察其 skills、memory 与 hooks 的
+桥接效果，各目录 README 说明逐项验证方式。
 
 ## 配置
 

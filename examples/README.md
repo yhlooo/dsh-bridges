@@ -1,7 +1,7 @@
 # dsh-bridges 示例项目
 
-每个受支持的 agent 工具对应一个示例项目：把它当作 DeepSeek Harness 的
-会话工作区打开（先安装插件），即可看到该工具的资产如何被桥接。
+每个受支持的 agent 工具对应一个示例项目：以它作为 DeepSeek Harness 的
+会话工作区打开（先安装插件），即可查看该工具的资产如何被桥接。
 
 | 工具 | 目录 | 演示内容 |
 | :--- | :--- | :--- |
@@ -16,13 +16,13 @@
 # 在仓库根安装插件（先 pnpm install && pnpm build）
 dsh plugin --profile <name> add .
 
-# 进入任一示例目录，把它作为会话工作区启动
+# 进入任一示例目录，以它作为会话工作区启动
 cd examples/<tool>
 dsh --profile <name>
 ```
 
 每个示例只含**项目级**资产；用户级资产（`~/.claude/`、
-`~/.codebuddy/`、`~/.config/opencode/`、`~/.agents/`、`~/.codex/`）会影响
-整台机器，示例刻意不含，各目录 README 会说明如何按需复制。
+`~/.codebuddy/`、`~/.config/opencode/`、`~/.agents/`、`~/.codex/`）作用于
+整台机器，示例有意不包含，各目录 README 会说明如何按需复制。
 
 各目录内的 README 说明了目录结构、桥接映射关系与逐项验证方式。

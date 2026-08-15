@@ -1,10 +1,10 @@
 # opencode 桥接示例项目
 
-用 DeepSeek Harness 打开本项目，即可看到 dsh-bridges 的 opencode 桥接
-（三期）如何把为 opencode 配置的资产桥接进来。
+以本项目作为 DeepSeek Harness 的会话工作区打开，即可查看 dsh-bridges 的
+opencode 桥接（三期）如何将 opencode 的资产桥接进来。
 
-> 只含**项目级**资产。用户级资产（`~/.config/opencode/`）会影响整台
-> 机器，示例故意不提供；如需体验可自行把文件复制到
+> 只含**项目级**资产。用户级资产（`~/.config/opencode/`）作用于整台
+> 机器，示例有意不提供；如需体验可自行将文件复制到
 > `~/.config/opencode/`。
 
 ## 目录结构
@@ -37,8 +37,9 @@
 | `opencode.json(c)` 的 `instructions` | 本地文件与 `*`/`**` glob（相对配置文件目录解析），会话开始注入 |
 | `AGENTS.md`（向上到 git 根最近的） | 注入；cwd 层的 `AGENTS.md` 是 DeepSeek Harness 已加载文件，跳过 |
 
-opencode 没有 hooks 文件格式，因此本示例不含 hooks——那是 opencode
-插件 API 的范畴，不在桥接范围内（见 README 三期限制）。
+opencode 没有 hooks 文件格式，因此本示例不含 hooks——它属于 opencode
+插件 API 的范畴，不在桥接范围内（见[使用指南](../../docs/guides/README.zh.md)
+三期限制）。
 
 ## 如何验证
 
