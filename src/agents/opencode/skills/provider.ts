@@ -142,14 +142,30 @@ export class OpencodeSkillProvider implements SkillProvider {
         case 'user-json-commands': {
           for (const command of jsonCommands.all) {
             if (jsonCommands.project.has(command.name)) continue // project layer overrides
-            candidates.push(this.jsonCommandSummary(root, command.name, command.template, command.description))
+            try {
+              candidates.push(this.jsonCommandSummary(root, command.name, command.template, command.description))
+            } catch (error) {
+              if (error instanceof FrontmatterError) {
+                this.logger.warn(`opencode: skipping invalid JSON command ${JSON.stringify(command.name)}: ${error.message}`)
+                continue
+              }
+              throw error
+            }
           }
           break
         }
         case 'project-json-commands': {
           for (const command of jsonCommands.all) {
             if (!jsonCommands.project.has(command.name)) continue
-            candidates.push(this.jsonCommandSummary(root, command.name, command.template, command.description))
+            try {
+              candidates.push(this.jsonCommandSummary(root, command.name, command.template, command.description))
+            } catch (error) {
+              if (error instanceof FrontmatterError) {
+                this.logger.warn(`opencode: skipping invalid JSON command ${JSON.stringify(command.name)}: ${error.message}`)
+                continue
+              }
+              throw error
+            }
           }
           break
         }
@@ -296,6 +312,9 @@ export class OpencodeSkillProvider implements SkillProvider {
   }
 
   private jsonCommandSummary(root: SkillRoot, name: string, template: string, description?: string): SkillCandidate {
+    if (!isSkillName(name)) {
+      throw new FrontmatterError(`JSON command name ${JSON.stringify(name)} is not kebab-case; DSH skills require kebab-case names`)
+    }
     const locator: CandidateLocator = { root: root.path, rootKind: root.kind, entry: name, kind: 'json-command' }
     return {
       name,

@@ -133,6 +133,20 @@ describe('OpencodeSkillProvider.list', () => {
     expect(byName.get('useronly')!.rank).toBe(157)
   })
 
+  it('skips JSON-configured commands whose name is not kebab-case', async () => {
+    const warnings: string[] = []
+    const logger = { debug: () => {}, info: () => {}, error: () => {}, warn: (message: string) => { warnings.push(message) } }
+    const files = new Map<string, string>([
+      ['/proj/opencode.json', JSON.stringify({ command: { 'Not-Kebab': { template: 'bad' }, good: { template: 'ok' } } })],
+    ])
+    const fs = new TreeFs(files)
+    const settings = new OpencodeSettingsLoader(logger, fs, { userOpencodeDir: '/home/u/.config/opencode' })
+    const provider = new OpencodeSkillProvider(logger, fs, { userOpencodeDir: '/home/u/.config/opencode', watch: false }, settings, () => {})
+    const result = await provider.list(options)
+    expect(result.candidates.map((candidate) => candidate.name)).toEqual(['good'])
+    expect(warnings.some((message) => message.includes('Not-Kebab'))).toBe(true)
+  })
+
   it('derives the description from the first paragraph when a command omits it', async () => {
     const files = new Map<string, string>([
       ['/proj/.opencode/commands/plain.md', '# Title\n\nDerived description.\n'],
