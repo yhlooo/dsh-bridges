@@ -6,8 +6,6 @@
 
 一个 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 插件：把已经为 Claude Code、CodeBuddy Code、opencode、Codex 配置好的项目桥接进 DeepSeek Harness——skills、commands、记忆、hooks 无需任何迁移即可继续生效。
 
-> 🚧 **状态。** 一至四期：Claude Code、CodeBuddy Code、opencode、Codex（已发布）。更多 agent 的支持正在规划。
-
 ## 快速上手
 
 ```sh
