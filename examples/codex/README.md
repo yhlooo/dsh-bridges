@@ -32,7 +32,7 @@
 | :--- | :--- |
 | `.agents/skills/<name>/SKILL.md`（cwd → 仓库根每层） | 注册为 DeepSeek Harness 技能（provider `codex`）；越靠近 cwd 越优先 |
 | `.codex/config.toml` 的 `[[skills.config]]`（`enabled = false`） | 相应技能跳过发现 |
-| `AGENTS.md` / `AGENTS.override.md` 链（仓库根 → cwd） | 会话开始注入（system-reminder 框架）；根目录普通 `AGENTS.md` 跳过（核心已加载） |
+| `AGENTS.md` / `AGENTS.override.md` 链（仓库根 → cwd） | 会话开始注入（system-reminder 框架）；**仓库根**的普通 `AGENTS.md` 跳过（核心已加载） |
 | `.codex/hooks.json`、`config.toml` 内联 `[hooks]` | 映射到 DeepSeek Harness 生命周期；`timeout` 以秒计、默认 600；`async: true` 后台运行 |
 
 hook 脚本收到的 JSON 里，工具名是 **Codex 的名字**（`Bash`、
@@ -54,9 +54,11 @@ dsh --profile <name>
 - **Skills**：让模型 `skill json-validator` 校验某个 JSON 文件；
   `legacy-helper` 已被 `config.toml` 禁用，不会出现在技能目录里。
 - **Memory（指令链）**：会话开始注入 `AGENTS.md`；`cd packages/api` 再开
-  会话时，`packages/api/AGENTS.md` 追加注入、优先级更高。示例目录位于
-  本仓库内部，仓库根会向上解析到外层 checkout 的 `.git`——把本目录复制
-  进你自己的 git 仓库即可看到独立的仓库根行为。
+  会话时，`packages/api/AGENTS.md` 追加注入、优先级更高。注意：示例目录
+  没有自己的 `.git`，仓库根会向上解析到外层 checkout——此时本目录的
+  `AGENTS.md` 处于指令链中间，桥接会注入，而 DeepSeek Harness 核心也会
+  加载它，因此会出现重复块；把本目录复制进你自己的 git 仓库后，它成为
+  仓库根，桥接跳过根级 `AGENTS.md`、只注入一次。
 - **Hooks**：会话开始注入 "Session started …"；每次 Bash 调用后
   `.codex/hook-logs/tools.jsonl` 追加一行、`prompts.jsonl` 记录提示词；
   让模型运行 `rm -rf /tmp/xxx` 会被 guard 以退出码 2 拒绝；
