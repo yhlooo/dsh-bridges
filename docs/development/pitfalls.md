@@ -1,6 +1,6 @@
 # 踩坑记录
 
-claude-code 一期与 codebuddy-code 二期真实踩过的坑，按"现象 → 原因 → 正确写法"记录。实现中报错先来这里找；解决新坑后补一条。
+claude-code 一期、codebuddy-code 二期、opencode 三期、codex 四期真实踩过的坑，按"现象 → 原因 → 正确写法"记录。实现中报错先来这里找；解决新坑后补一条。
 
 ## 1. patch 新行报 `patch: entry "x" not found`
 
