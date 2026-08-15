@@ -6,7 +6,7 @@ English | [中文](README_CN.md)
 
 A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin that bridges projects already configured for Claude Code, CodeBuddy Code, opencode, or Codex into DeepSeek Harness — your skills, commands, memory, and hooks keep working with zero migration.
 
-> 🚧 **Under construction.** Phase 1: Claude Code. Phase 2: CodeBuddy Code. Phase 3 (current): opencode. Phase 4 (current): Codex.
+> 🚧 **Status.** Phases 1–4: Claude Code, CodeBuddy Code, opencode, Codex (shipped). More agents planned.
 
 ## Quick start
 

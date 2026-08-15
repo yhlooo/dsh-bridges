@@ -23,7 +23,7 @@ dsh plugin --profile <name> add dsh-bridges
 dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 ```
 
-然后在带有 agent 资产（`.claude/`、`~/.claude/`、`.codebuddy/`、`~/.codebuddy/`）的项目里启动 DeepSeek Harness；资产按会话工作区发现。
+然后在带有 agent 资产（`.claude/`、`.codebuddy/`、`.opencode/`、`.agents/skills/`、`.codex/`，以及它们 `~/` 下的用户级对应目录，如 `~/.claude/`）的项目里启动 DeepSeek Harness；资产按会话工作区发现。
 
 每个受支持的 agent 工具各有一个现成示例项目（[`examples/`](../../examples/)）：
 把示例目录作为会话工作区打开，即可看到它的 skills、memory 与 hooks 如何被
@@ -105,7 +105,7 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 
 ### CLAUDE.md 记忆
 
-根目录 `CLAUDE.md` 由 DeepSeek Harness 核心自行加载。本桥接在会话开始时额外注入 `~/.claude/CLAUDE.md`（用户级）与 `.claude/CLAUDE.md`（项目级），采用 DeepSeek Harness 工作区指令相同的 system-reminder 框架，预算 32 KiB（超限先丢弃更宽的用户级文件，仍超限则截断项目级文件）。
+根目录 `CLAUDE.md` 由 DeepSeek Harness 核心自行加载。本桥接在会话开始时额外注入 `~/.claude/CLAUDE.md`（用户级）与 `.claude/CLAUDE.md`（项目级），采用 DeepSeek Harness 工作区指令相同的 system-reminder 框架，预算 32 KiB（超限先丢弃更宽的用户级文件，仍超限则截断项目级文件）。与根目录 `CLAUDE.md` 内容一致的 `.claude/CLAUDE.md` 会被跳过（该内容核心已加载）。
 
 ### Hooks
 
@@ -115,7 +115,7 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 | :--- | :--- | :--- |
 | `SessionStart` | `agent/session-start` | `additionalContext`（及退出码 0 的纯文本 stdout）在首个提示词前注入 |
 | `UserPromptSubmit` | `agent/pre-step` | `decision: "block"` / 退出码 2 / `continue: false` 擦除提示词并展示原因；上下文追加到本步 |
-| `PreToolUse` | `tools/pre-execute` | `permissionDecision`：`deny` → 拒绝、`ask` → 走审批、`allow` → 放行、`defer` → 拒绝（不支持）；退出码 2 → 以 stderr 拒绝 |
+| `PreToolUse` | `tools/pre-execute` | `permissionDecision`：`deny` → 拒绝、`ask` → 走审批、`allow` → 放行、`defer` → 拒绝（不支持）；退出码 2 → 以 stderr 拒绝；`additionalContext` 注入 |
 | `PostToolUse` | `tools/post-execute` | `additionalContext` / `decision: "block"` 的 reason / 退出码 2 的 stderr → 结果旁注入上下文；`updatedToolOutput` 替换渲染内容 |
 | `PostToolUseFailure` | `tools/post-execute`（失败结果） | 同 PostToolUse |
 | `Stop` | `agent/turn-stopping` | `decision: "block"` / 退出码 2 / `additionalContext` 引导继续，最多连续 8 次（同 Claude Code 上限） |
@@ -182,7 +182,7 @@ DeepSeek Harness 核心自行加载 `AGENTS.md` 与根目录 `CLAUDE.md`，但�
 | :--- | :--- | :--- |
 | `SessionStart` | `agent/session-start` | `additionalContext`（及退出码 0 的纯文本 stdout）在首个提示词前注入；matcher 收到 `startup`/`resume`/`clear`/`compact` |
 | `UserPromptSubmit` | `agent/pre-step` | 退出码 2 / `continue: false` 擦除提示词并展示原因；上下文追加到本步 |
-| `PreToolUse` | `tools/pre-execute` | `permissionDecision`：`deny` → 拒绝、`ask` → 走审批、`allow` → 放行；退出码 2 → 拒绝（消息 stdout 优先）；`modifiedInput` 忽略 + 告警 |
+| `PreToolUse` | `tools/pre-execute` | `permissionDecision`：`deny` → 拒绝、`ask` → 走审批、`allow` → 放行；退出码 2 → 拒绝（消息 stdout 优先）；`modifiedInput` 忽略 + 告警；`additionalContext` 注入 |
 | `PostToolUse` | `tools/post-execute` | `additionalContext` / 退出码 2 消息 / 废弃的 `decision: "block"` reason → 结果旁注入上下文；`updatedToolOutput` 替换渲染内容 |
 | `PostToolUseFailure` | `tools/post-execute`（失败结果） | 同 PostToolUse |
 | `Stop` | `agent/turn-stopping` | 退出码 2 / `continue: false` / `additionalContext` 引导继续（重复时带 `stop_hook_active`；桥接侧安全上限连续 8 次） |
@@ -307,7 +307,7 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md`。本桥接在会话
 
 尚未桥接（按子系统记录）：
 
-- **Skills**：`agents/openai.yaml` 元数据（`allow_implicit_invocation`、工具依赖）、插件分发的技能、curated 插件目录。
+- **Skills**：`agents/openai.yaml` 元数据（`allow_implicit_invocation`、工具依赖）、插件分发的技能、符号链接的技能目录（桥接经文件系统读取，但不解析符号链接身份）、curated 插件目录。
 - **Memory**：`model_instructions_file`、Codex 的 8,000 字符初始列表预算（DeepSeek Harness 有自己的目录预算）。
 - **Hooks**：`PermissionRequest`（DeepSeek Harness 没有"即将请求审批"的接缝）、`PreCompact`/`PostCompact`（无压缩前接缝；`compact` 会话来源会触发 SessionStart hooks 代替）、Codex 的 hook trust 审核流程（`/hooks`——桥接与其他桥接一致、无 trust 闸门运行）、后台 hook 输出在下个安全点投递、`systemMessage`/`suppressOutput` 仅用户通道、`additionalContextLimit` 溢出落盘（桥接按字符截断替代）、插件捆绑与托管 `requirements.toml` hooks、`transcript_path`（桥接没有真实转录文件）、`updatedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）。
 - **Rules / 配置**：`rules/*.rules`（实验性 Python DSL）、`notify`、`[agents]` 子代理角色、`requirements.toml`、profile 文件（`--profile`）、未信任项目门禁（项目 `.codex/` 层无条件读取——桥接没有 trust 状态）。

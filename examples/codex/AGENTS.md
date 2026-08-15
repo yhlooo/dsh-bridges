@@ -1,8 +1,8 @@
 # Example project instructions (Codex)
 
 Workspace-level instructions for the codex example. When a DeepSeek Harness
-session starts here, this file is part of the instruction chain the codex
-bridge injects (see README).
+session starts here, DeepSeek Harness loads this file itself; the codex bridge
+skips the root-level `AGENTS.md` to avoid a duplicate block (see README).
 
 - This project has no application code — it exists to demo the codex bridge
   of the dsh-bridges plugin.

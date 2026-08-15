@@ -16,7 +16,7 @@ Plugins install into a DeepSeek Harness profile with the profile plugin manager 
 pnpm install && pnpm build
 dsh plugin --profile <name> add .
 
-# or, once published, from the registry package:
+# or, once published, from a tarball / registry package:
 dsh plugin --profile <name> add dsh-bridges
 ```
 
@@ -26,7 +26,7 @@ The plugin manager appends the package to the profile's `dsh.profile.bundles`, a
 dsh --profile <name> --dump-config   # the row "dsh-bridges" should appear
 ```
 
-Then start DeepSeek Harness in a project that has agent assets (`.claude/`, `~/.claude/`, `.codebuddy/`, `~/.codebuddy/`); assets are discovered per session workspace.
+Then start DeepSeek Harness in a project that has agent assets — `.claude/`, `.codebuddy/`, `.opencode/`, `.agents/skills/`, or `.codex/` (plus their user-level counterparts, e.g. `~/.claude/`); assets are discovered per session workspace.
 
 A ready-made example project exists for each supported agent tool
 ([`examples/`](../../examples/)): open one as the session workspace to see its
@@ -109,7 +109,7 @@ Mapping rules:
 
 ### CLAUDE.md memory
 
-DeepSeek Harness already loads root-level `CLAUDE.md`. The bridge additionally injects `~/.claude/CLAUDE.md` (user) and `.claude/CLAUDE.md` (project) at session start, in the same system-reminder framing DeepSeek Harness uses for workspace instructions, with a 32 KiB budget (the broader user-level file is dropped first; the project file is then truncated if still over budget).
+DeepSeek Harness already loads root-level `CLAUDE.md`. The bridge additionally injects `~/.claude/CLAUDE.md` (user) and `.claude/CLAUDE.md` (project) at session start, in the same system-reminder framing DeepSeek Harness uses for workspace instructions, with a 32 KiB budget (the broader user-level file is dropped first; the project file is then truncated if still over budget). A `.claude/CLAUDE.md` identical to the root `CLAUDE.md` is skipped, since DeepSeek Harness already loaded that content.
 
 ### Hooks
 
@@ -119,7 +119,7 @@ Loads the merged `hooks` field from `~/.claude/settings.json` → `.claude/setti
 | :--- | :--- | :--- |
 | `SessionStart` | `agent/session-start` | `additionalContext` (and exit-0 plain stdout) injected before the first prompt |
 | `UserPromptSubmit` | `agent/pre-step` | `decision: "block"` / exit 2 / `continue: false` erase the prompt and show the reason; context is appended to the step |
-| `PreToolUse` | `tools/pre-execute` | `permissionDecision` `deny` → deny, `ask` → approval, `allow` → allow, `defer` → deny (not supported); exit 2 → deny with stderr |
+| `PreToolUse` | `tools/pre-execute` | `permissionDecision` `deny` → deny, `ask` → approval, `allow` → allow, `defer` → deny (not supported); exit 2 → deny with stderr; `additionalContext` is injected |
 | `PostToolUse` | `tools/post-execute` | `additionalContext`/`decision: "block"` reason/exit-2 stderr → context next to the result; `updatedToolOutput` replaces the rendered content |
 | `PostToolUseFailure` | `tools/post-execute` (error results) | same as PostToolUse |
 | `Stop` | `agent/turn-stopping` | `decision: "block"` / exit 2 / `additionalContext` steer a continuation, capped at Claude Code's 8 consecutive continuations |
@@ -186,7 +186,7 @@ Loads the merged `hooks` field from `~/.codebuddy/settings.json` → `.codebuddy
 | :--- | :--- | :--- |
 | `SessionStart` | `agent/session-start` | `additionalContext` (and exit-0 plain stdout) injected before the first prompt; matcher sees `startup`/`resume`/`clear`/`compact` |
 | `UserPromptSubmit` | `agent/pre-step` | exit 2 / `continue: false` erase the prompt and show the reason; context is appended to the step |
-| `PreToolUse` | `tools/pre-execute` | `permissionDecision` `deny` → deny, `ask` → approval, `allow` → allow; exit 2 → deny with the stdout-first message; `modifiedInput` is logged and ignored |
+| `PreToolUse` | `tools/pre-execute` | `permissionDecision` `deny` → deny, `ask` → approval, `allow` → allow; exit 2 → deny with the stdout-first message; `modifiedInput` is logged and ignored; `additionalContext` is injected |
 | `PostToolUse` | `tools/post-execute` | `additionalContext`/exit-2 message/legacy `decision: "block"` reason → context next to the result; `updatedToolOutput` replaces the rendered content |
 | `PostToolUseFailure` | `tools/post-execute` (error results) | same as PostToolUse |
 | `Stop` | `agent/turn-stopping` | exit 2 / `continue: false` / `additionalContext` steer a continuation (`stop_hook_active` set on repeats; capped at 8 consecutive continuations as a bridge safety valve) |
