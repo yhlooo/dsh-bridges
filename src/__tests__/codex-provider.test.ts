@@ -148,6 +148,23 @@ describe('CodexSkillProvider.list', () => {
 })
 
 describe('CodexSkillProvider.get', () => {
+  it('rejects [agents] config_file paths escaping their directory', async () => {
+    const files = new Map<string, string>([
+      [fx('proj', '.git', 'HEAD'), 'x'],
+      [fx('proj', 'sub', '.codex', 'config.toml'), `[agents.helper]\ndescription = 'Helper role'\nconfig_file = '../../../outside.txt'\n`],
+      // Three levels above .codex is the filesystem root; the escape target.
+      [fx('outside.txt'), 'SECRET CONTENT'],
+    ])
+    const provider = makeProvider(files)
+    const result = await provider.list(options)
+    const helper = result.candidates.find((candidate) => candidate.name === 'helper')
+    expect(helper).toBeDefined()
+    const definition = await provider.get(helper!, options)
+    // The escaping config_file is skipped (warn); the body falls back to the description.
+    expect(definition?.content).toContain('Helper role')
+    expect(definition?.content).not.toContain('SECRET CONTENT')
+  })
+
   it('loads the body of a skill bundle', async () => {
     const files = new Map<string, string>([
       [fx('proj', '.git', 'HEAD'), 'x'],

@@ -75,6 +75,18 @@ describe('collectMemorySections', () => {
     expect(sections.map((section) => section.label)).toEqual([])
   })
 
+  it('rejects path-like outputStyle names instead of reading outside the style roots', async () => {
+    const files = new Map<string, string>([
+      [fx('repo', '.claude', 'settings.json'), JSON.stringify({ outputStyle: '../../outside' })],
+      // The traversal would resolve to <repo>/outside.md via
+      // .claude/output-styles/../../outside.md; it must never be read.
+      [fx('repo', 'outside.md'), 'SECRET OUTSIDE'],
+    ])
+    const sections = await collectMemorySections(fx('repo'), silent, new TreeFs(files), { ...config, settingsLoader: makeLoader(files) })
+    expect(sections.find((section) => section.kind === 'output-style')).toBeUndefined()
+    expect(JSON.stringify(sections)).not.toContain('SECRET OUTSIDE')
+  })
+
   it('loads memory files from permissions.additionalDirectories', async () => {
     const files = new Map<string, string>([
       [fx('other', 'CLAUDE.md'), 'other memory'],

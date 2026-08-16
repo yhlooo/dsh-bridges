@@ -137,10 +137,17 @@ export async function collectMemorySections(
     const loadedSettings = await config.settingsLoader.load(cwd)
     const styleName = loadedSettings.outputStyle
     if (styleName !== undefined) {
-      const styleText =
-        (await readOptional(fs, join(cwd, '.claude', 'output-styles', `${styleName}.md`))) ??
-        (await readOptional(fs, join(userClaudeDir, 'output-styles', `${styleName}.md`)))
-      if (styleText !== undefined) sections.push({ kind: 'output-style', label: `outputStyle: ${styleName}`, content: styleText })
+      // Upstream looks the style up as a plain file name in a fixed
+      // directory; reject anything path-like so a hostile settings.json
+      // cannot read arbitrary files outside the style roots.
+      if (!/^[\w-]+$/.test(styleName)) {
+        logger.warn(`claude-code: ignoring outputStyle ${JSON.stringify(styleName)}: style names must be plain file names`)
+      } else {
+        const styleText =
+          (await readOptional(fs, join(cwd, '.claude', 'output-styles', `${styleName}.md`))) ??
+          (await readOptional(fs, join(userClaudeDir, 'output-styles', `${styleName}.md`)))
+        if (styleText !== undefined) sections.push({ kind: 'output-style', label: `outputStyle: ${styleName}`, content: styleText })
+      }
     }
     // Auto memory: with an explicit `autoMemoryDirectory`, the MEMORY.md
     // index (plus topic files it references are loaded by the agent's reads)

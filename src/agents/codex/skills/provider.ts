@@ -19,7 +19,7 @@
  * (`allow_implicit_invocation`) is not bridged yet.
  * @module dsh-bridges/agents/codex/skills/provider
  */
-import { dirname, isAbsolute, join, resolve } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { watch } from 'chokidar'
 import { parse as parseToml } from 'smol-toml'
 import type { SkillCandidate, SkillDefinition, SkillLookupOptions, SkillProvider, SkillProviderControl } from '@deepseek-ai/dsh-skill'
@@ -234,15 +234,26 @@ export class CodexSkillProvider implements SkillProvider {
     let body = ''
     let model: string | undefined
     if (agent.configFile !== undefined) {
-      const file = isAbsolute(agent.configFile) ? agent.configFile : join(agent.baseDir, agent.configFile)
-      try {
-        const text = await this.fs.readText(file, signal)
-        body = text
-        const parsed = parseToml(text)
-        if (isPlainObject(parsed) && typeof parsed['model'] === 'string') model = parsed['model']
-      } catch (error) {
-        if (isAbort(error)) throw error
-        this.logger.warn(`codex: cannot read [agents.${locator.entry}] config file: ${errorMessage(error)}`)
+      // `config_file` is resolved against the declaring config file's
+      // directory and must stay inside it; a hostile config.toml could
+      // otherwise point at arbitrary files (e.g. `../../.env`) whose content
+      // would land in the model context via this skill body.
+      const resolvedFile = resolve(agent.baseDir, agent.configFile)
+      const relativeFile = relative(agent.baseDir, resolvedFile)
+      if (relativeFile.startsWith('..') || isAbsolute(relativeFile)) {
+        this.logger.warn(
+          `codex: skipping [agents.${locator.entry}] config file ${JSON.stringify(agent.configFile)}: path escapes its directory`,
+        )
+      } else {
+        try {
+          const text = await this.fs.readText(resolvedFile, signal)
+          body = text
+          const parsed = parseToml(text)
+          if (isPlainObject(parsed) && typeof parsed['model'] === 'string') model = parsed['model']
+        } catch (error) {
+          if (isAbort(error)) throw error
+          this.logger.warn(`codex: cannot read [agents.${locator.entry}] config file: ${errorMessage(error)}`)
+        }
       }
     }
     const definition: AgentDefinition = {

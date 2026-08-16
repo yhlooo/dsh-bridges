@@ -76,6 +76,19 @@ describe('gemini GEMINI.md memory', () => {
     expect(sections.map((section) => section.content.trim())).toEqual(['# global ctx', '# proj ctx'])
   })
 
+  it('drops path-like context.fileName entries instead of reading outside the walk dirs', async () => {
+    const files = new Map<string, string>([
+      [fx('home', 'u', '.gemini', 'settings.json'), JSON.stringify({ context: { fileName: ['../../../.env', 'CTX.md'] } })],
+      [fx('home', 'u', '.gemini', 'CTX.md'), '# global ctx'],
+      // join(userDir, '../../../.env') escapes to the filesystem root.
+      [fx('.env'), 'SECRET ENV'],
+      [fx('proj', 'CTX.md'), '# proj ctx'],
+    ])
+    const sections = await collect(files)
+    expect(sections.map((section) => section.content.trim())).toEqual(['# global ctx', '# proj ctx'])
+    expect(JSON.stringify(sections)).not.toContain('SECRET ENV')
+  })
+
   it('does not inject anything when neither scope has a context file', async () => {
     const files = new Map<string, string>([[fx('proj', '.git', 'HEAD'), 'x']])
     expect(await collect(files)).toEqual([])

@@ -97,7 +97,14 @@ export async function collectMemorySections(
 ): Promise<MemorySection[]> {
   const sections: MemorySection[] = []
   const settings = await loader.load(cwd)
-  const fileNames = settings.contextFileName.length > 0 ? settings.contextFileName : ['GEMINI.md']
+  // `context.fileName` must be a plain basename: it is joined onto the user
+  // directory and every walked ancestor, so anything path-like could read
+  // arbitrary files (fail closed — drop with a warning).
+  const configured = settings.contextFileName.filter(isSafeContextFileName)
+  if (configured.length !== settings.contextFileName.length) {
+    logger.warn('gemini-cli: ignoring path-like context.fileName entries; only plain file names are supported')
+  }
+  const fileNames = configured.length > 0 ? configured : ['GEMINI.md']
 
   const userDir = loader.userDir()
   const globalContent = await readFirstOptional(
@@ -250,6 +257,11 @@ function relativeLabel(cwd: string, path: string): string {
   const normalized = normalize(path)
   const base = normalize(cwd)
   return normalized.startsWith(base + '/') ? normalized.slice(base.length + 1) : normalized
+}
+
+/** A context file name may be any basename, but never a path (`..`, separators, absolute). */
+function isSafeContextFileName(name: string): boolean {
+  return name !== '' && name !== '.' && name !== '..' && !name.includes('/') && !name.includes('\\') && !isAbsolute(name)
 }
 
 function renderSections(sections: MemorySection[]): string {
