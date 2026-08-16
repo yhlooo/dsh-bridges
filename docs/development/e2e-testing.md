@@ -39,11 +39,14 @@ devDependencies 已备齐全套 `@deepseek-ai/dsh-*`，可以在测试里启动�
 
 真实 `npm pack` 产物装进 scratch 项目，用真实 dsh CLI 挂载（`dsh plugin add` / profile bundles 机制），断言加载链路：插件加载成功、patch 生效、桥接资产出现在列表中。**只断言不需要 LLM 的部分**；需要模型的部分留给环 A 的 mock 和环 C。
 
-## 4. 环 C：上游对标 e2e（哨兵）
+## 4. 环 C：上游对标哨兵
 
-同一个 fixture 项目跑**两边**：真实上游 CLI（claude / codebuddy / opencode / codex 的 headless 模式）vs 我们的桥，oracle 就是上游输出。价值在于：我们的解析器是"假设的上游格式"，环 C 用**真实工具的当前真实输出**校验它。上游某天改了输出格式、hook 语义，scheduled job 先报警，而不是用户先踩到。
+上游 CLI 的**深层行为**（真实 agent 会话、hook 载荷、权限流）需要凭据，无法无感自动化；已落地的哨兵层（`.github/workflows/conformance.yml`，weekly + 手动，`pnpm probe:upstream`）覆盖自动化可行的部分：
 
-成本控制：固定版本安装 + CI 缓存、仅 weekly + 手动触发、未装 CLI 时 skip 而非 fail。
+- **安装与可运行性**：CI 安装固定版本（`scripts/upstream-tools.json` 里的 pin）的 claude / codex / opencode / codebuddy 四个 CLI，断言 `--version` 与 pin 一致。
+- **离线健康探针**：`claude doctor`、`codex doctor`（在 `examples/codex` 上跑），按**稳定输出标记**断言而非退出码（doctor 的退出码受 auth/网络状态影响，不可靠）。
+- **版本漂移报警**：`npm view <pkg> version` 与 pin 比对，任何上游发布新版本即让 scheduled job 变红，报告里附评审清单（diff `docs/reference/<tool>/` → 重跑 e2e → bump pin）。
+- **保留人工的部分**：双跑同一 fixture（真实 CLI vs 我们的桥）的行为对标仍按需人工执行——上游发布后由漂移报警触发，见报告的 checklist。
 
 ## 5. 工程机制（防止 e2e 变成负担）
 
@@ -58,7 +61,7 @@ devDependencies 已备齐全套 `@deepseek-ai/dsh-*`，可以在测试里启动�
 1. ~~先搭环 A 骨架：boot helper + 3 个场景（技能发现、记忆注入、hook 阻断）进 CI~~ ✅
 2. ~~补全 7 类场景矩阵~~ ✅；Windows job 已接入（fixtures 用 `node <脚本>.cjs` 跨平台驱动），teardown 组杀断言在 Windows 跳过（无进程组 kill，见 [pitfalls.md](pitfalls.md) #23）。
 3. ~~环 B 打包冒烟挂 main push~~ ✅：`scripts/pack-smoke.mjs`（`pnpm smoke`）——npm pack → 装进 scratch profile → `dsh --dump-config` 断言 `bridges` 行；CI 固定安装 `@deepseek-ai/dsh@0.1.0-rc.6`，本机无 dsh CLI 时自动跳过。
-4. 环 C 上游对标 weekly（待做）。
+4. ~~环 C 上游对标哨兵~~ ✅（weekly `conformance.yml` + 手动触发；深层行为对标仍需凭据，见 §4）。
 
 ## 7. 实施状态
 
@@ -68,5 +71,5 @@ devDependencies 已备齐全套 `@deepseek-ai/dsh-*`，可以在测试里启动�
 - **与设计的一处偏差**：agent 侧用记录式 `E2eAgent` 桩（实现 `session.header.cwd` / `session.id` / `inject()` / `steer()`）而非完整 mock-LLM 驱动循环——dsh 的 agent 循环包不在 devDependencies 里。桩站在真实循环驱动事件的那条接缝上，断言的是"桥会注入什么、会拦下什么"；未来若循环包可引入，替换桩即可，断言不变。
 - **fixtures**：`e2e/fixtures/claude-code/` 下按场景分目录（skills / user / memory / memory-dedup / hooks / hooks-live / hooks-timeout / broken-settings / hooks-prompt / hooks-post），测试先复制到临时目录再运行，保证不可变与并行安全。注意 `userClaudeDir` 参数就是 `.claude` 目录本身（provider 直接在其下扫 `skills/`）。fixtures 目录对 prettier/eslint 豁免（`broken-settings` 故意包含非法 JSON）。
 - **场景覆盖（7 类矩阵已齐）**：技能发现与同名遮蔽（用户级胜出，按加载出的正文断言而非 rank 数字）、记忆注入与去重坍缩、hook 放行（matcher 未命中）、hook 阻断（真实子进程、stdin 真实载荷、exit 2 → deny；UserPromptSubmit 阻断会擦除原提示词并进入可见的 block notice）、超时 fail-open、坏配置 fail-soft、teardown 杀死存活 hook 子进程（含孙进程——此断言曾暴露并修复了 [pitfalls.md](pitfalls.md) #23 的孤儿进程 bug）。
-- **工程机制**：vitest projects 拆分（`unit` / `e2e`），`pnpm test` 只跑单元，`pnpm test:e2e` 显式跑，`pnpm test:coverage` 出合并报告；e2e 串行执行（`fileParallelism: false`）；覆盖率门槛 60/70（行与语句 60、分支与函数 70，当前基线 63/76/72）。
+- **工程机制**：vitest projects 拆分（`unit` / `e2e`），`pnpm test` 只跑单元，`pnpm test:e2e` 显式跑，`pnpm test:coverage` 出合并报告；e2e 串行执行（`fileParallelism: false`）；覆盖率门槛 60/70（行与语句 60、分支与函数 70，当前基线 63/76/72）；环 B `pnpm smoke`、环 C `pnpm probe:upstream`。
 - **已知限制**：hook fixtures 通过 `node <脚本>.cjs` 命令跨平台运行，CI 矩阵含 windows-latest；Windows 无进程组 kill，teardown 组杀断言在 win32 跳过（孙进程泄漏是已知平台限制）。
