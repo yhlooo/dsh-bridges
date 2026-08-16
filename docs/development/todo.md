@@ -244,6 +244,10 @@
 - [ ] **cursor 无头 hooks 证据**：官方文档未明确 `agent -p` 无头模式是否
   执行 hooks（交互 CLI 确认执行）——桥接按执行处理；上游文档明确后在
   guides 中补注（2026-08-16，cursor 桥接遗留）。
+- [ ] **cursor 第三方 Claude hooks 兼容层**：Cursor 自行读取
+  `.claude/settings*.json` hooks 并做事件/工具名翻译（Bash→Shell、
+  Edit→Write）——目前由 claude-code 桥接以 Claude 语义覆盖原文件；评估是否
+  镜像 Cursor 的翻译（2026-08-16，cursor 桥接遗留，guides 已记限制）。
 
 - [x] **claude-code**：Auto memory（`autoMemoryEnabled`/`autoMemoryDirectory`、
   `~/.claude/projects/<project>/memory/`；降级映射 = 注入 MEMORY.md 索引）。

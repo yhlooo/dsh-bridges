@@ -84,7 +84,13 @@ export function parseSkillFile(text: string, fallbackName: string): ParsedSkillF
   }
   if (!isPlainObject(frontmatter)) throw new FrontmatterError('frontmatter must be a YAML mapping')
   const name = readStringField(frontmatter, 'name')
-  const effectiveName = name && name.trim() !== '' ? name.trim() : fallbackName
+  if (name === undefined || name.trim() === '') {
+    throw new FrontmatterError('frontmatter is missing the required `name` field')
+  }
+  // Cursor requires the skill name to equal its folder name (unlike pi).
+  if (name.trim() !== fallbackName) {
+    throw new FrontmatterError(`frontmatter name ${JSON.stringify(name)} does not match the folder name ${JSON.stringify(fallbackName)}`)
+  }
   const description = readStringField(frontmatter, 'description')
   if (description === undefined || description.trim() === '') {
     throw new FrontmatterError('frontmatter is missing the required `description` field')
@@ -101,7 +107,7 @@ export function parseSkillFile(text: string, fallbackName: string): ParsedSkillF
   }
   return {
     frontmatter: {
-      name: effectiveName,
+      name: name.trim(),
       description,
       disableModelInvocation: readBooleanField(frontmatter, 'disable-model-invocation', false),
       userInvocable: readBooleanField(frontmatter, 'user-invocable', true),
