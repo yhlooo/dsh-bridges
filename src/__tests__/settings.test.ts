@@ -112,7 +112,7 @@ describe('SettingsLoader', () => {
         JSON.stringify({ permissions: { deny: ['Bash(rm *)', 'Read(./secrets/**)'] } }),
         JSON.stringify({ permissions: { allow: ['Read(./.env.local)'] } }),
       )
-      const { permissions } = await loader.load('/proj')
+      const { permissions } = await loader.load(fx('proj'))
       expect(permissions.deny.map((rule) => rule.raw)).toEqual(['Bash(rm *)', 'Read(./.env)', 'Read(./secrets/**)'])
       expect(permissions.allow.map((rule) => rule.raw)).toEqual(['Read(./.env.local)'])
       expect(permissions.ask).toEqual([])
@@ -124,7 +124,7 @@ describe('SettingsLoader', () => {
         JSON.stringify({ permissions: { defaultMode: 'bypassPermissions' } }),
         JSON.stringify({ permissions: { disableBypassPermissionsMode: true } }),
       )
-      const { permissions } = await loader.load('/proj')
+      const { permissions } = await loader.load(fx('proj'))
       expect(permissions.defaultMode).toBe('bypassPermissions')
       expect(permissions.disableBypassPermissionsMode).toBe(true)
     })
@@ -134,13 +134,13 @@ describe('SettingsLoader', () => {
         JSON.stringify({ permissions: { additionalDirectories: ['../docs/'] } }),
         JSON.stringify({ permissions: { additionalDirectories: ['../shared', '../docs/'] } }),
       )
-      const { permissions } = await loader.load('/proj')
+      const { permissions } = await loader.load(fx('proj'))
       expect(permissions.additionalDirectories).toEqual(['../docs/', '../shared'])
     })
 
     it('ignores a malformed permissions field with a warning', async () => {
       const loader = makeLoader(JSON.stringify({ permissions: 'nope' }))
-      const { permissions } = await loader.load('/proj')
+      const { permissions } = await loader.load(fx('proj'))
       expect(permissions.deny).toEqual([])
       expect(permissions.allow).toEqual([])
       expect(permissions.ask).toEqual([])
@@ -148,7 +148,7 @@ describe('SettingsLoader', () => {
 
     it('drops unparseable rule strings', async () => {
       const loader = makeLoader(JSON.stringify({ permissions: { deny: ['Bash(rm *)', 'Bad Rule', ''] } }))
-      const { permissions } = await loader.load('/proj')
+      const { permissions } = await loader.load(fx('proj'))
       expect(permissions.deny.map((rule) => rule.raw)).toEqual(['Bash(rm *)'])
     })
   })

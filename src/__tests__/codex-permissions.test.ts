@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { fx } from './fixture-paths.js'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { BridgeDirEntry, FsAdapter } from '../fs-adapter.js'
 import { applySettings } from '../agents/codex/permissions.js'
@@ -10,18 +11,18 @@ class TreeFs implements FsAdapter {
   constructor(public files: Map<string, string>) {}
 
   private children(path: string): BridgeDirEntry[] {
-    const prefix = path.endsWith('/') ? path : `${path}/`
+    const prefix = path.endsWith(sep) ? path : `${path}${sep}`
     const names = new Set<string>()
     for (const key of this.files.keys()) {
       if (!key.startsWith(prefix)) continue
       const rest = key.slice(prefix.length)
       if (rest === '') continue
-      names.add(rest.split('/')[0]!)
+      names.add(rest.split(sep)[0]!)
     }
     return [...names].map((name) => ({
       name,
-      isDir: [...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}/`)),
-      isFile: ![...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}/`)),
+      isDir: [...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}${sep}`)),
+      isFile: ![...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}${sep}`)),
     }))
   }
 
@@ -48,14 +49,14 @@ class TreeFs implements FsAdapter {
 }
 
 function makeLoader(files: Map<string, string>): CodexSettingsLoader {
-  return new CodexSettingsLoader(silent, new TreeFs(files), { userCodexDir: '/home/u/.codex' })
+  return new CodexSettingsLoader(silent, new TreeFs(files), { userCodexDir: fx('home', 'u', '.codex') })
 }
 
 function makeAgent(): { agent: Agent; events: [string, Record<string, unknown>][] } {
   const events: [string, Record<string, unknown>][] = []
   const agent = {
     session: {
-      header: { cwd: '/proj' },
+      header: { cwd: fx('proj') },
       append: (name: string, payload: Record<string, unknown>) => events.push([name, payload]),
     },
   } as unknown as Agent
@@ -64,22 +65,22 @@ function makeAgent(): { agent: Agent; events: [string, Record<string, unknown>][
 
 describe('codex approval/sandbox config parsing', () => {
   it('reads approval_policy strings and maps on-failure to on-request', async () => {
-    const loader = makeLoader(new Map([['/home/u/.codex/config.toml', 'approval_policy = "never"']]))
-    expect((await loader.load('/proj')).approvalPolicy).toEqual({ kind: 'never' })
-    const deprecated = makeLoader(new Map([['/home/u/.codex/config.toml', 'approval_policy = "on-failure"']]))
-    expect((await deprecated.load('/proj')).approvalPolicy).toEqual({ kind: 'on-request' })
+    const loader = makeLoader(new Map([[fx('home', 'u', '.codex', 'config.toml'), 'approval_policy = "never"']]))
+    expect((await loader.load(fx('proj'))).approvalPolicy).toEqual({ kind: 'never' })
+    const deprecated = makeLoader(new Map([[fx('home', 'u', '.codex', 'config.toml'), 'approval_policy = "on-failure"']]))
+    expect((await deprecated.load(fx('proj'))).approvalPolicy).toEqual({ kind: 'on-request' })
   })
 
   it('reads granular approval_policy tables', async () => {
     const loader = makeLoader(
-      new Map([['/home/u/.codex/config.toml', 'approval_policy = { granular = { sandbox_approval = true, rules = false } }']]),
+      new Map([[fx('home', 'u', '.codex', 'config.toml'), 'approval_policy = { granular = { sandbox_approval = true, rules = false } }']]),
     )
-    expect((await loader.load('/proj')).approvalPolicy).toEqual({ kind: 'granular', granular: { sandbox_approval: true, rules: false } })
+    expect((await loader.load(fx('proj'))).approvalPolicy).toEqual({ kind: 'granular', granular: { sandbox_approval: true, rules: false } })
   })
 
   it('drops unsupported approval_policy values and sandbox modes', async () => {
-    const loader = makeLoader(new Map([['/home/u/.codex/config.toml', 'approval_policy = "bogus"\nsandbox_mode = "jail"']]))
-    const loaded = await loader.load('/proj')
+    const loader = makeLoader(new Map([[fx('home', 'u', '.codex', 'config.toml'), 'approval_policy = "bogus"\nsandbox_mode = "jail"']]))
+    const loaded = await loader.load(fx('proj'))
     expect(loaded.approvalPolicy).toBeUndefined()
     expect(loaded.sandboxMode).toBeUndefined()
   })
@@ -87,11 +88,11 @@ describe('codex approval/sandbox config parsing', () => {
   it('takes sandbox_mode and default_permissions from the most specific layer', async () => {
     const loader = makeLoader(
       new Map([
-        ['/home/u/.codex/config.toml', 'sandbox_mode = "read-only"\napproval_policy = "on-request"'],
-        ['/proj/.codex/config.toml', 'sandbox_mode = "workspace-write"\ndefault_permissions = ":read-only"'],
+        [fx('home', 'u', '.codex', 'config.toml'), 'sandbox_mode = "read-only"\napproval_policy = "on-request"'],
+        [fx('proj', '.codex', 'config.toml'), 'sandbox_mode = "workspace-write"\ndefault_permissions = ":read-only"'],
       ]),
     )
-    const loaded = await loader.load('/proj')
+    const loaded = await loader.load(fx('proj'))
     expect(loaded.sandboxMode).toBe('workspace-write')
     expect(loaded.approvalPolicy).toEqual({ kind: 'on-request' })
     expect(loaded.defaultPermissionsProfile).toBe(':read-only')

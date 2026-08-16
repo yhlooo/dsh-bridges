@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { evaluateRules, splitCompoundCommand } from '../permissions/engine.js'
+import { fx } from './fixture-paths.js'
 import { parseToolSpecifierRules } from '../permissions/parse.js'
 import type { RuleSet } from '../permissions/types.js'
 
-const ctx = { cwd: '/proj', home: '/home/u', dialect: 'codebuddy' as const }
+const ctx = { cwd: fx('proj'), home: fx('home', 'u'), dialect: 'codebuddy' as const }
 
 function rules(entries: Partial<Record<'allow' | 'ask' | 'deny', string[]>>): RuleSet {
   return {
@@ -67,18 +68,18 @@ describe('codebuddy Bash rules', () => {
 describe('codebuddy file rules', () => {
   it('matches case-insensitively', () => {
     const set = rules({ deny: ['Read(./.env)'] })
-    expect(evaluateRules(set, 'Read', { file_path: '/proj/.ENV' }, ctx)?.kind).toBe('deny')
+    expect(evaluateRules(set, 'Read', { file_path: fx('proj', '.ENV') }, ctx)?.kind).toBe('deny')
   })
 
   it('matches a bare filename at any depth', () => {
     const set = rules({ deny: ['Read(.env)'] })
-    expect(evaluateRules(set, 'Read', { file_path: '/proj/a/b/.env' }, ctx)?.kind).toBe('deny')
+    expect(evaluateRules(set, 'Read', { file_path: fx('proj', 'a', 'b', '.env') }, ctx)?.kind).toBe('deny')
   })
 
   it('matches full-path globs with project-relative /', () => {
     const set = rules({ deny: ['Edit(/src/**/*.ts)'] })
-    expect(evaluateRules(set, 'Edit', { file_path: '/proj/src/foo/bar.ts' }, ctx)?.kind).toBe('deny')
-    expect(evaluateRules(set, 'Edit', { file_path: '/proj/test/foo.ts' }, ctx)).toBeUndefined()
+    expect(evaluateRules(set, 'Edit', { file_path: fx('proj', 'src', 'foo', 'bar.ts') }, ctx)?.kind).toBe('deny')
+    expect(evaluateRules(set, 'Edit', { file_path: fx('proj', 'test', 'foo.ts') }, ctx)).toBeUndefined()
   })
 })
 
