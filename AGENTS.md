@@ -150,6 +150,9 @@ chore: bump dev dependencies
   明确标注，如 windows-latest 腿）、**Notes**（提交清单与文档同步情况）。
 - 建 PR 后用 `gh pr checks <number>` 确认 CI（ubuntu + windows 双腿）状态；
   红项修完追加提交即自动重跑，全绿后再合入 `main`，不要在红灯时合并。
+- **合入必须由用户确认**：CI 全绿后只向用户报告状态并给出合并建议，
+  **绝不自动执行 merge**——是否合入、用哪种策略（merge / squash / rebase）
+  都由用户明确拍板后再动手。
 
 - 发布在 `main` 主干上进行：先 bump `package.json` 版本
   （`npm version patch|minor|major`）并推送提交，再打 `v<版本>` tag 并推送
