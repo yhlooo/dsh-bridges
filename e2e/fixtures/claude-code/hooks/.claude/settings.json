@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat > .e2e-hook-input.json; printf 'denied by e2e fixture policy' >&2; exit 2"
+            "command": "node .claude/hook-stdin-recorder.cjs"
           }
         ]
       }

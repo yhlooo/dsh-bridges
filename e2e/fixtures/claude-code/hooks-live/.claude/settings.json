@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo $$ > .e2e-hook.pid; sleep 30"
+            "command": "node .claude/hook-sleep.cjs"
           }
         ]
       }

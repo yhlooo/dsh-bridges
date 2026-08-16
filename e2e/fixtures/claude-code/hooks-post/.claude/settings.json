@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "printf '{\"hookSpecificOutput\":{\"additionalContext\":\"extra context from fixture\"}}'"
+            "command": "node .claude/hook-context.cjs"
           }
         ]
       }

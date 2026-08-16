@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sleep 30"
+            "command": "node .claude/hook-sleep.cjs"
           }
         ]
       }
