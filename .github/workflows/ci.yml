@@ -3,7 +3,32 @@ name: ci
 on:
   push:
     branches: [main]
+    # Skip the full matrix for pushes that only touch docs or meta files
+    # (routine doc updates go straight to main per AGENTS.md). Any other
+    # changed file still triggers the run.
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.devcontainer/**'
+      - '.github/**'
+      - 'examples/**'
+      - '.gitattributes'
+      - '.gitignore'
+      - '.prettierignore'
+      - '.prettierrc.json'
   pull_request:
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.devcontainer/**'
+      - '.github/**'
+      - 'examples/**'
+      - '.gitattributes'
+      - '.gitignore'
+      - '.prettierignore'
+      - '.prettierrc.json'
 
 permissions:
   contents: read
