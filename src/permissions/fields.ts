@@ -40,7 +40,11 @@ export const DEFAULT_TOOL_FIELDS: Readonly<Record<string, ToolFieldSpec>> = {
 }
 
 /** Read the primary argument field of a tool call for rule matching. */
-export function primaryField(toolName: string, args: unknown, fields: Readonly<Record<string, ToolFieldSpec>> = DEFAULT_TOOL_FIELDS): string | undefined {
+export function primaryField(
+  toolName: string,
+  args: unknown,
+  fields: Readonly<Record<string, ToolFieldSpec>> = DEFAULT_TOOL_FIELDS,
+): string | undefined {
   const spec = fields[toolName]
   if (spec === undefined || !isPlainObject(args)) return undefined
   const value = args[spec.field]

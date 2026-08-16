@@ -90,7 +90,8 @@ export function createHookBridge(
   ctx.on('agent/turn-stopping', (payload) =>
     payload.agent.session.header.delegationDepth !== undefined
       ? onSubagentStop(payload.agent, payload.signal, stopStates, onceStates, loader, logger, config, onSpawn)
-      : onStop(payload.agent, payload.signal, stopStates, onceStates, loader, logger, config, onSpawn))
+      : onStop(payload.agent, payload.signal, stopStates, onceStates, loader, logger, config, onSpawn),
+  )
 
   ctx.on('agent/disposed', (payload) => {
     void onSessionEnd(payload.agent, onceStates, loader, logger, config, onSpawn)

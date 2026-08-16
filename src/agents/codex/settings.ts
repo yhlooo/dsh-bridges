@@ -298,7 +298,9 @@ export class CodexSettingsLoader {
     }
     const untrusted = cwd !== undefined && trustLevels.get(cwd) === 'untrusted'
     if (untrusted) {
-      this.logger.warn(`codex: the working directory is marked untrusted (projects["${cwd}"].trust_level = "untrusted"); skipping project .codex/ layers`)
+      this.logger.warn(
+        `codex: the working directory is marked untrusted (projects["${cwd}"].trust_level = "untrusted"); skipping project .codex/ layers`,
+      )
     }
 
     const layers: RawLayer[] = []
@@ -426,9 +428,23 @@ function normalizeLayer(value: Record<string, unknown>, source: SettingsSource, 
     for (const [name, entry] of Object.entries(agentsValue)) {
       if (!isPlainObject(entry)) continue
       // Scalar setting names are reserved; skip them.
-      if (['enabled', 'max_concurrent_threads', 'max_concurrent_threads_per_session', 'default_subagent_model', 'default_subagent_reasoning_effort', 'interrupt_message', 'allow_task_tool'].includes(name)) continue
-      const agent: RawCodexAgent = { baseDir: source.dir }
-      if (typeof entry['description'] === 'string' && entry['description'].trim() !== '') agent.description = entry['description'].trim()
+      if (
+        [
+          'enabled',
+          'max_concurrent_threads',
+          'max_concurrent_threads_per_session',
+          'default_subagent_model',
+          'default_subagent_reasoning_effort',
+          'interrupt_message',
+          'allow_task_tool',
+        ].includes(name)
+      )
+        continue
+      if (typeof entry['description'] !== 'string' || entry['description'].trim() === '') {
+        logger.warn(`codex: skipping [agents.${name}] role: description is required`)
+        continue
+      }
+      const agent: RawCodexAgent = { baseDir: source.dir, description: entry['description'].trim() }
       if (typeof entry['config_file'] === 'string' && entry['config_file'].trim() !== '') agent.configFile = entry['config_file'].trim()
       parsed.set(name, agent)
     }
@@ -459,7 +475,8 @@ function normalizeLayer(value: Record<string, unknown>, source: SettingsSource, 
         }
         server.http_headers = headers
       }
-      if (typeof entry['bearer_token_env_var'] === 'string' && entry['bearer_token_env_var'].trim() !== '') server.bearer_token_env_var = entry['bearer_token_env_var']
+      if (typeof entry['bearer_token_env_var'] === 'string' && entry['bearer_token_env_var'].trim() !== '')
+        server.bearer_token_env_var = entry['bearer_token_env_var']
       if (typeof entry['enabled'] === 'boolean') server.enabled = entry['enabled']
       if (typeof entry['required'] === 'boolean') server.required = entry['required']
       parsed.set(id, server)

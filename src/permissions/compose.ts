@@ -19,10 +19,7 @@ export type PermissionEvaluator = (exec: ToolExecution) => Promise<RuleVerdict>
 
 /** One hook's PreToolUse resolution, before rule composition. */
 export type HookToolDecision =
-  | { kind: 'deny'; reason: string }
-  | { kind: 'ask'; reason?: string }
-  | { kind: 'allow' }
-  | { kind: 'undecided' }
+  { kind: 'deny'; reason: string } | { kind: 'ask'; reason?: string } | { kind: 'allow' } | { kind: 'undecided' }
 
 /**
  * Compose a hook decision with the permission-rule verdict. Exported for unit

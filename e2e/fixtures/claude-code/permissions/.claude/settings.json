@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "deny": ["Bash(rm -rf *)"],
+    "ask": ["Bash(git push *)"],
+    "allow": ["Read(./README.md)"]
+  }
+}

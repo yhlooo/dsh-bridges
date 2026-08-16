@@ -113,7 +113,12 @@ describe('ClaudeSkillProvider agent discovery', () => {
       ['/proj/.claude/agents/reviewer.md', AGENT_FILE],
       ['/home/u/.claude/agents/personal-agent.md', '---\nname: personal-agent\ndescription: Personal helper\n---\nBe helpful.\n'],
     ])
-    const provider = new ClaudeSkillProvider(silent, new TreeFs(files), { userClaudeDir: '/home/u/.claude', watch: false, agents: true }, () => {})
+    const provider = new ClaudeSkillProvider(
+      silent,
+      new TreeFs(files),
+      { userClaudeDir: '/home/u/.claude', watch: false, agents: true },
+      () => {},
+    )
     const result = await provider.list(options)
     expect(Array.isArray(result)).toBe(false)
     const candidates = Array.isArray(result) ? result : result.candidates
@@ -127,7 +132,12 @@ describe('ClaudeSkillProvider agent discovery', () => {
 
   it('loads the delegation spec for an agent candidate', async () => {
     const files = new Map<string, string>([['/proj/.claude/agents/reviewer.md', AGENT_FILE]])
-    const provider = new ClaudeSkillProvider(silent, new TreeFs(files), { userClaudeDir: '/home/u/.claude', watch: false, agents: true }, () => {})
+    const provider = new ClaudeSkillProvider(
+      silent,
+      new TreeFs(files),
+      { userClaudeDir: '/home/u/.claude', watch: false, agents: true },
+      () => {},
+    )
     const result = await provider.list(options)
     const candidates = Array.isArray(result) ? result : result.candidates
     const reviewer = candidates.find((candidate) => candidate.name === 'code-reviewer')
@@ -140,7 +150,13 @@ describe('ClaudeSkillProvider agent discovery', () => {
 describe('CodebuddySkillProvider agent discovery', () => {
   function makeCodebuddyProvider(files: Map<string, string>): CodebuddySkillProvider {
     const loader = new CodebuddySettingsLoader(silent, new TreeFs(files), { userCodebuddyDir: '/home/u/.codebuddy' })
-    return new CodebuddySkillProvider(silent, new TreeFs(files), { userCodebuddyDir: '/home/u/.codebuddy', watch: false, agents: true }, loader, () => {})
+    return new CodebuddySkillProvider(
+      silent,
+      new TreeFs(files),
+      { userCodebuddyDir: '/home/u/.codebuddy', watch: false, agents: true },
+      loader,
+      () => {},
+    )
   }
 
   it('lists agent files with project over user precedence', async () => {

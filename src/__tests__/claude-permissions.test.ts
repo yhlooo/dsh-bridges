@@ -17,7 +17,13 @@ describe('composePreToolDecision', () => {
   })
 
   it('keeps a hook deny over everything', async () => {
-    const decision = await composePreToolDecision(evaluator({ kind: 'allow' }), exec, { kind: 'deny', reason: 'hook said no' }, silent, next)
+    const decision = await composePreToolDecision(
+      evaluator({ kind: 'allow' }),
+      exec,
+      { kind: 'deny', reason: 'hook said no' },
+      silent,
+      next,
+    )
     expect(decision).toEqual({ kind: 'deny', reason: 'hook said no' })
   })
 
@@ -65,8 +71,14 @@ describe('composePreToolDecision', () => {
   })
 
   it('applies rules when hooks are undecided', async () => {
-    expect(await composePreToolDecision(evaluator({ kind: 'deny', reason: 'd' }), exec, { kind: 'undecided' }, silent, next)).toEqual({ kind: 'deny', reason: 'd' })
-    expect(await composePreToolDecision(evaluator({ kind: 'ask', reason: 'a' }), exec, { kind: 'undecided' }, silent, next)).toEqual({ kind: 'ask', reason: 'a' })
+    expect(await composePreToolDecision(evaluator({ kind: 'deny', reason: 'd' }), exec, { kind: 'undecided' }, silent, next)).toEqual({
+      kind: 'deny',
+      reason: 'd',
+    })
+    expect(await composePreToolDecision(evaluator({ kind: 'ask', reason: 'a' }), exec, { kind: 'undecided' }, silent, next)).toEqual({
+      kind: 'ask',
+      reason: 'a',
+    })
     expect(await composePreToolDecision(evaluator({ kind: 'allow' }), exec, { kind: 'undecided' }, silent, next)).toEqual({ kind: 'allow' })
   })
 

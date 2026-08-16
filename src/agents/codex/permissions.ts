@@ -72,7 +72,9 @@ export function applySettings(settings: LoadedCodexSettings, agent: Agent, logge
     // granular policies; DSH 'ask' delegates to the composed answerers.
     setApprovalPolicy(agent.session, policy.kind === 'never' ? 'never' : 'ask')
     if (policy.kind === 'granular') {
-      logger.warn('codex: granular approval_policy categories (sandbox_approval/rules/mcp_elicitations/request_permissions/skill_approval) have no DSH seam and are not enforced')
+      logger.warn(
+        'codex: granular approval_policy categories (sandbox_approval/rules/mcp_elicitations/request_permissions/skill_approval) have no DSH seam and are not enforced',
+      )
     }
   }
 }

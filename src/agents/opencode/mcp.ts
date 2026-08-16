@@ -84,7 +84,13 @@ export class OpencodeMcpManager {
 }
 
 /** Register the manager on the plugin fiber and reconcile at session start. */
-export function createMcpBridge(ctx: Context, logger: BridgeLogger, fs: FsAdapter, config: OpencodeMcpConfig, settingsLoader: OpencodeSettingsLoader): void {
+export function createMcpBridge(
+  ctx: Context,
+  logger: BridgeLogger,
+  fs: FsAdapter,
+  config: OpencodeMcpConfig,
+  settingsLoader: OpencodeSettingsLoader,
+): void {
   const manager = new OpencodeMcpManager(ctx, logger, fs, config, settingsLoader)
   createSharedMcpBridge(ctx, manager.manager)
 }

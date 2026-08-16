@@ -99,7 +99,13 @@ export function registerCodebuddyCodeBridge(ctx: Context, logger: BridgeLogger, 
 
   if (resolved.mcp) {
     const mcpLoader = new CodebuddySettingsLoader(logger, fs, { userCodebuddyDir: resolved.userCodebuddyDir })
-    createMcpBridge(ctx, logger, fs, { userCodebuddyDir: resolved.userCodebuddyDir, toolCallTimeoutMs: resolved.mcpToolCallTimeoutMs }, mcpLoader)
+    createMcpBridge(
+      ctx,
+      logger,
+      fs,
+      { userCodebuddyDir: resolved.userCodebuddyDir, toolCallTimeoutMs: resolved.mcpToolCallTimeoutMs },
+      mcpLoader,
+    )
   }
 
   if (resolved.hooks || resolved.permissions) {
