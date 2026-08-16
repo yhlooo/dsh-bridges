@@ -31,7 +31,7 @@ const MAX_READ_CHARS = 1024 * 1024
 const MAX_WALK_DEPTH = 32
 
 export interface MemorySection {
-  kind: 'user' | 'project' | 'hierarchy' | 'additional'
+  kind: 'user' | 'project' | 'hierarchy' | 'additional' | 'output-style'
   label: string
   content: string
 }
@@ -129,6 +129,18 @@ export async function collectMemorySections(
   // The cwd-level CLAUDE.local.md (DSH does not load it).
   const cwdLocal = await readOptional(fs, join(cwd, 'CLAUDE.local.md'))
   if (cwdLocal !== undefined) sections.push({ kind: 'hierarchy', label: 'CLAUDE.local.md', content: cwdLocal })
+
+  // `outputStyle`: the named style's prompt section (project file first, then
+  // user file — the upstream lookup order).
+  if (config.settingsLoader !== undefined) {
+    const styleName = (await config.settingsLoader.load(cwd)).outputStyle
+    if (styleName !== undefined) {
+      const styleText =
+        (await readOptional(fs, join(cwd, '.claude', 'output-styles', `${styleName}.md`))) ??
+        (await readOptional(fs, join(userClaudeDir, 'output-styles', `${styleName}.md`)))
+      if (styleText !== undefined) sections.push({ kind: 'output-style', label: `outputStyle: ${styleName}`, content: styleText })
+    }
+  }
   return sections
 }
 

@@ -203,8 +203,10 @@
 
 - [ ] **claude-code**：Auto memory（`autoMemoryEnabled`/`autoMemoryDirectory`、
   `~/.claude/projects/<project>/memory/`；降级映射 = 注入 MEMORY.md 索引）。
-- [ ] **claude-code**：`outputStyle` + `~/.claude/output-styles/`、
+- [x] **claude-code**：`outputStyle` + `~/.claude/output-styles/`、
   `.claude/output-styles/`（降级映射 = 会话注入 prompt 片段）。
+  **已实现**（2026-08-15）：settings 解析 `outputStyle`（最具体层），
+  memory 桥注入样式文件（项目文件优先、用户文件回退）。
 - [ ] **claude-code**：`.claude/workflows/*.js` + `~/.claude/workflows/*.js`
   （先进限制清单，再评估降级映射）。
 - [ ] **codebuddy-code**：`models.json`（`.codebuddy/models.json` +
@@ -221,19 +223,22 @@
 - [ ] **codex**：`[apps]` connectors（映射 dsh MCP/connector 行）。
 - [ ] **codex**：`[memories]`、`[history]`、`tool_output_token_limit`、
   `background_terminal_max_timeout`、`file_opener`。
-- [ ] **codex**：`projects.<path>.trust_level` 具体键（补齐现有"不信任项目门禁"
-  缺失——实现该键即可恢复上游的门禁语义）。
+- [x] **codex**：`projects.<path>.trust_level` 具体键（补齐现有"不信任项目门禁"
+  缺失——实现该键即可恢复上游的门禁语义）。**已实现**（2026-08-15）：
+  settings 加载器合并各层 `projects.<path>.trust_level`，cwd 显式
+  `untrusted` 时跳过项目 `.codex/` 层（hooks/MCP/skills 配置等）；
+  AGENTS.md 链不受影响（上游始终读取）；未列出路径维持无条件读取。
 - [ ] **opencode**：`formatter`、`lsp`、`experimental.*`（含已文档化的 `policies`）。
-- [ ] **hooks 事件扩展**（可行性评估 + 实现可行子集）：claude 17 个未桥事件
-  （`Setup`/`UserPromptExpansion`/`PostToolBatch`/`StopFailure`/`TeammateIdle`/
-  `TaskCreated`/`TaskCompleted`/`Elicitation`/`ElicitationResult`/
+- [x] **hooks 事件扩展**（可行性评估 + 实现可行子集）：`SubagentStart`/
+  `SubagentStop` **已实现**（2026-08-15，claude + codebuddy）：
+  `agent/session-start`/`agent/turn-stopping` 按 `delegationDepth` 分流到子代理
+  事件，matcher 固定 `generic`（DSH 子代理无上游 agent 类型，`*` matcher 可
+  运行）。其余事件（`Setup`/`UserPromptExpansion`/`PostToolBatch`/`StopFailure`/
+  `TeammateIdle`/`TaskCreated`/`TaskCompleted`/`Elicitation`/`ElicitationResult`/
   `WorktreeCreate`/`WorktreeRemove`/`ConfigChange`/`InstructionsLoaded`/
-  `CwdChanged`/`FileChanged`/`DirectoryAdded`/`MessageDisplay`）；codebuddy 对应
-  事件（`StopFailure`/`TeammateIdle`/`InstructionsLoaded`/`ConfigChange`/
-  `CwdChanged`/`WorktreeCreate`/`WorktreeRemove`/`TaskCreated`/`TaskCompleted`/
-  `ElicitationResult`）。`SubagentStart`/`SubagentStop`、`PreCompact`/`PostCompact`、
-  `PermissionRequest`/`PermissionDenied` 需先调研 dsh 对应事件（子代理、compaction、
-  审批）再定。
+  `CwdChanged`/`FileChanged`/`DirectoryAdded`/`MessageDisplay`、`PreCompact`/
+  `PostCompact`、`PermissionRequest`/`PermissionDenied` 等）无对应 dsh 接缝，
+  记限制。
 - [ ] **claude hooks**：SessionStart JSON 决策字段（`initialUserMessage`/
   `watchPaths`/`sessionTitle`/`reloadSkills`）、`suppressOutput`/`systemMessage`/
   `terminalSequence`。

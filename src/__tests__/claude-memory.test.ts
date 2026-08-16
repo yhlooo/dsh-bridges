@@ -33,6 +33,17 @@ function makeLoader(files: Map<string, string>): SettingsLoader {
 const config = { userClaudeDir: '/home/u/.claude', maxBytes: 32_768 }
 
 describe('collectMemorySections', () => {
+  it('injects the configured outputStyle file (project before user)', async () => {
+    const files = new Map<string, string>([
+      ['/repo/.claude/settings.json', JSON.stringify({ outputStyle: 'explanatory' })],
+      ['/repo/.claude/output-styles/explanatory.md', 'Be extra explanatory.'],
+      ['/home/u/.claude/output-styles/explanatory.md', 'User-level style.'],
+    ])
+    const sections = await collectMemorySections('/repo', silent, new TreeFs(files), { ...config, settingsLoader: makeLoader(files) })
+    const style = sections.find((section) => section.kind === 'output-style')
+    expect(style?.content).toBe('Be extra explanatory.')
+  })
+
   it('collects user, project, hierarchy, and local files in order', async () => {
     const files = new Map<string, string>([
       ['/home/u/.claude/CLAUDE.md', 'user memory'],
