@@ -73,14 +73,28 @@ describe('gemini skill/command/agent discovery', () => {
     expect(byName.get('u-skill')).toBe(210)
   })
 
-  it('discovers top-level command TOMLs and skips nested namespaced commands', async () => {
+  it('maps nested command TOMLs to kebab-case namespaced skills', async () => {
     const files = new Map<string, string>([
       [fx('proj', '.gemini', 'commands', 'review.toml'), 'description = "reviews"\nprompt = "Review."\n'],
       [fx('proj', '.gemini', 'commands', 'git', 'commit.toml'), 'prompt = "Commit."\n'],
+      [fx('proj', '.gemini', 'commands', 'git', 'branch', 'switch.toml'), 'prompt = "Switch."\n'],
+      [fx('home', 'u', '.gemini', 'commands', 'tools', 'search.toml'), 'prompt = "Search."\n'],
     ])
     const found = await list(makeProvider(files))
-    expect(found.map((entry) => entry.name)).toEqual(['review'])
-    expect(found[0]!.rank).toBe(207)
+    expect(found.map((entry) => entry.name).sort()).toEqual(['git-branch-switch', 'git-commit', 'review', 'tools-search'])
+    const projectCommand = found.find((entry) => entry.name === 'git-commit')!
+    expect(projectCommand.rank).toBe(207)
+    const userCommand = found.find((entry) => entry.name === 'tools-search')!
+    expect(userCommand.rank).toBe(212)
+  })
+
+  it('skips nested command directories whose qualified names are not kebab-case', async () => {
+    const files = new Map<string, string>([
+      [fx('proj', '.gemini', 'commands', 'myGroup', 'run.toml'), 'prompt = "Run."\n'],
+      [fx('proj', '.gemini', 'commands', 'fine', 'run.toml'), 'prompt = "Run."\n'],
+    ])
+    const found = await list(makeProvider(files))
+    expect(found.map((entry) => entry.name)).toEqual(['fine-run'])
   })
 
   it('registers a skill over a same-name command at the same level (rank order)', async () => {

@@ -230,9 +230,9 @@
 - [ ] **gemini-cli 工作区策略层**：上游 `.gemini/policies/` 因 issue #18186
   禁用，桥接同样不读；上游修复后补上（2026-08-16，gemini 桥接遗留，guides
   已记限制）。
-- [ ] **gemini-cli 命名空间命令**：`dir:name` 命令目前跳过（非 kebab-case）；
-  评估 `dir-name` 映射或核心命名放宽（claude-code / codebuddy-code 均已按
-  `:` → `-` 转写，2026-08-16，gemini 桥接遗留，guides 已记限制）。
+- [x] **gemini-cli 命名空间命令**：`dir:name` 命令（`commands/git/commit.toml`
+  → `/git:commit`）——已按 claude-code / codebuddy-code 同款 `:` → `-` 转写为
+  `group-name`（2026-08-16，commit 待补）。
 - [x] **codebuddy-code 嵌套资产**：嵌套 commands 与嵌套 skills
   （`skills/pathto/skill/SKILL.md` → 技能 `pathto:skill`）——已按 claude-code
   同款 `:` → `-` 转写为 `group-name`（2026-08-16，commit 待补）。

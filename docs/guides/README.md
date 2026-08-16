@@ -540,12 +540,12 @@ Reads the Gemini CLI asset locations and registers them on the DeepSeek Harness 
 | Gemini CLI location | Registered as |
 | :--- | :--- |
 | `~/.gemini/skills/<name>/SKILL.md` (user) and `.gemini/skills/<name>/SKILL.md` (workspace) | skill (directory skills, non-recursive) |
-| `~/.gemini/commands/<name>.toml` / `.gemini/commands/<name>.toml` | command (a skill; the TOML `prompt` is the body) |
+| `~/.gemini/commands/<name>.toml` / `.gemini/commands/<name>.toml` (also nested `<group>/<name>.toml`) | command (a skill; the TOML `prompt` is the body; nested: named `group-name`) |
 | `~/.gemini/agents/*.md` / `.gemini/agents/*.md` | subagent definition as a delegation-spec skill |
 
 Mapping rules:
 
-- The skill name is the frontmatter `name` (falling back to the directory name when absent); names must be kebab-case for DeepSeek Harness. Command names come from the file name — nested paths yield namespaced `dir:name` commands, which are not kebab-case and are skipped with a warning (no transliteration).
+- The skill name is the frontmatter `name` (falling back to the directory name when absent); names must be kebab-case for DeepSeek Harness. Command names come from the file path: nested files yield the upstream namespaced command with the path separator converted to `:` (`commands/git/commit.toml` → `/git:commit`), which maps onto the kebab-case skill name `git-commit` — DeepSeek Harness skill names cannot contain `:`. Directories whose own qualified name is not kebab-case are skipped wholesale.
 - `description` is required for skills (fail closed); command `description` is optional (falls back to the first paragraph of the prompt).
 - Precedence follows Gemini's discovery tiers (built-in < extension < user < workspace): **workspace assets override user assets**, and a skill overrides a same-name command at the same level. Native DeepSeek Harness skills (`.dsh/skills`, `.agents/skills`, runtime skills) still win on name conflicts — the bridge registers on the global skills layer, which nearer preset layers shadow. The `.agents/skills` alias locations are deliberately not re-read (DeepSeek Harness's filesystem provider covers `.agents` assets).
 - `skills.disabled` names and the `skills.enabled` master switch come from settings.json.

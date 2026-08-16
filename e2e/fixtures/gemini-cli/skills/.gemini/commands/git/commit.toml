@@ -1,0 +1,2 @@
+description = "Commits the staged changes"
+prompt = "Stage and commit the changes with a Conventional Commits message."
