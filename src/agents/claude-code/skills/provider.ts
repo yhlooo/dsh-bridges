@@ -4,9 +4,13 @@
  * Discovery reads the Claude Code skill locations:
  *
  * - `~/.claude/skills/<name>/SKILL.md` and flat `~/.claude/skills/<name>.md`
- * - `~/.claude/commands/<name>.md`
+ * - `~/.claude/commands/<name>.md` and nested `~/.claude/commands/<group>/<name>.md`
  * - `<cwd>/.claude/skills/<name>/SKILL.md` and flat `<cwd>/.claude/skills/<name>.md`
- * - `<cwd>/.claude/commands/<name>.md`
+ * - `<cwd>/.claude/commands/<name>.md` and nested `<cwd>/.claude/commands/<group>/<name>.md`
+ *
+ * Claude Code names a nested command file the slash command `/group:name`; DSH
+ * skills require kebab-case names, so the bridge maps the qualified name onto
+ * `group-name` (e.g. `commands/opsx/explore.md` → the `opsx-explore` skill).
  *
  * Precedence mirrors Claude Code: personal (user) assets override project
  * assets, and a skill overrides a same-name command at the same level. The
@@ -131,6 +135,18 @@ export class ClaudeSkillProvider implements SkillProvider {
             }
             continue
           }
+          if (root.kind === 'user-commands' || root.kind === 'project-commands') {
+            // Command directories nest: `commands/opsx/explore.md` is the slash
+            // command `/opsx:explore`; directories are groups, not skill bundles.
+            if (entry.isDir) {
+              complete = (await this.listCommandDir(root, join(root.path, entry.name), entry.name, options, candidates)) && complete
+            } else if (entry.isFile && entry.name.toLowerCase().endsWith('.md')) {
+              const file = join(root.path, entry.name)
+              const text = await this.fs.readText(file, options.signal)
+              candidates.push(this.summary(root, stripMarkdownExtension(entry.name), 'flat', file, text))
+            }
+            continue
+          }
           if (entry.isDir) {
             const file = join(root.path, entry.name, 'SKILL.md')
             if (!(await this.fs.fileExists(file, options.signal))) continue
@@ -155,6 +171,67 @@ export class ClaudeSkillProvider implements SkillProvider {
     }
     if (this.config.watch) this.ensureWatched(roots)
     return { candidates, complete }
+  }
+
+  /**
+   * Collect command files below a nested commands directory.
+   *
+   * The upstream name of `commands/opsx/explore.md` is the slash command
+   * `/opsx:explore`; because DSH skills require kebab-case names, the qualified
+   * `group:name` is mapped onto the kebab-case skill name `opsx-explore`. A
+   * directory whose own qualified name is not kebab-case is skipped wholesale,
+   * since every file below it would yield an invalid skill name.
+   *
+   * Abort errors rethrow so the caller stops the whole scan; a directory that
+   * vanishes mid-scan counts as complete; other read errors warn and make the
+   * observation incomplete.
+   */
+  private async listCommandDir(
+    root: SkillRoot,
+    dirPath: string,
+    prefix: string,
+    options: SkillLookupOptions,
+    candidates: SkillCandidate[],
+  ): Promise<boolean> {
+    if (!isSkillName(prefix)) {
+      this.logger.warn(
+        `claude-code: skipping command directory ${dirPath}: qualified name ${JSON.stringify(prefix)} is not kebab-case; DSH skills require kebab-case names`,
+      )
+      return true
+    }
+    let entries
+    try {
+      entries = await this.fs.listDir(dirPath, options.signal)
+    } catch (error) {
+      if (isAbort(error)) throw error
+      if (isMissing(error)) return true // vanished mid-scan
+      this.logger.warn(`claude-code: cannot read command directory ${dirPath}: ${errorMessage(error)}`)
+      return false
+    }
+    let complete = true
+    for (const entry of entries) {
+      if (options.signal?.aborted) throw Object.assign(new Error('aborted'), { name: 'AbortError' })
+      if (entry.isDir) {
+        complete = (await this.listCommandDir(root, join(dirPath, entry.name), `${prefix}-${entry.name}`, options, candidates)) && complete
+        continue
+      }
+      if (!entry.isFile || !entry.name.toLowerCase().endsWith('.md')) continue
+      const file = join(dirPath, entry.name)
+      try {
+        const text = await this.fs.readText(file, options.signal)
+        candidates.push(this.summary(root, `${prefix}-${stripMarkdownExtension(entry.name)}`, 'flat', file, text))
+      } catch (error) {
+        if (isAbort(error)) throw error
+        if (isMissing(error)) continue // vanished mid-scan
+        if (error instanceof FrontmatterError || error instanceof AgentDefinitionError) {
+          this.logger.warn(`claude-code: skipping malformed asset under ${root.path}: ${error.message}`)
+          continue
+        }
+        this.logger.warn(`claude-code: cannot read skill entry under ${root.path}: ${errorMessage(error)}`)
+        complete = false
+      }
+    }
+    return complete
   }
 
   private summary(root: SkillRoot, entry: string, kind: 'bundle' | 'flat', file: string, text: string): SkillCandidate {
@@ -298,7 +375,6 @@ export class ClaudeSkillProvider implements SkillProvider {
     const watcher = watch(rootPath, {
       persistent: true,
       ignoreInitial: true,
-      depth: 1,
       atomic: true,
       awaitWriteFinish: { stabilityThreshold: WATCH_STABILITY_MS, pollInterval: 100 },
     })
@@ -330,15 +406,21 @@ export class ClaudeSkillProvider implements SkillProvider {
   }
 }
 
-/** Whether a depth-1 watch event can change the catalog. */
+/**
+ * Whether a watch event can change the catalog.
+ *
+ * Watchers run with unlimited depth so nested command files are covered:
+ * any `.md` file at any depth (flat commands, `SKILL.md` bodies, nested command
+ * files) and any directory appearance/removal (skill bundles, command groups)
+ * can change the catalog; other files cannot.
+ */
 function isRelevantWatchEvent(rootPath: string, event: string, path: string): boolean {
   const relative = path.slice(rootPath.length).replace(/^[/\\]+/, '')
   if (relative === '') {
     // The root itself appeared or disappeared.
     return event === 'addDir' || event === 'unlinkDir'
   }
-  if (relative.includes('/') || relative.includes('\\')) return false
-  if (event === 'addDir' || event === 'unlinkDir') return true // bundle directory appeared/left
+  if (event === 'addDir' || event === 'unlinkDir') return true // bundle or command-group directory appeared/left
   return relative.toLowerCase().endsWith('.md')
 }
 

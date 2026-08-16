@@ -231,8 +231,11 @@
   禁用，桥接同样不读；上游修复后补上（2026-08-16，gemini 桥接遗留，guides
   已记限制）。
 - [ ] **gemini-cli 命名空间命令**：`dir:name` 命令目前跳过（非 kebab-case）；
-  评估 `dir-name` 映射或核心命名放宽（2026-08-16，gemini 桥接遗留，guides
-  已记限制）。
+  评估 `dir-name` 映射或核心命名放宽（claude-code 已按 `:` → `-` 转写，
+  2026-08-16，gemini 桥接遗留，guides 已记限制）。
+- [ ] **codebuddy-code 嵌套命令**：`group:name` 命令目前跳过（非 kebab-case）；
+  评估套用 claude-code 的 `:` → `-` 转写（2026-08-16，codebuddy 桥接遗留，
+  guides 已记限制）。
 - [ ] **gemini-cli JIT 上下文加载**：工具访问目录时发现的 GEMINI.md 无法
   静态注入——核心支持候选（fs 观察钩子）（2026-08-16，gemini 桥接遗留）。
 - [ ] **gemini-cli extensions**：`gemini-extension.json` 打包的

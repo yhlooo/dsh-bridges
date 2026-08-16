@@ -36,6 +36,18 @@ describe('e2e: claude-code skill discovery through the real registry', () => {
     expect(body?.content).toContain('Steps to deploy the project.')
   })
 
+  it('maps nested command files to kebab-case group-name skills', async () => {
+    harness = await setup()
+    const skills = await harness.ctx.skills.list({ cwd: project!.dir })
+    // `.claude/commands/opsx/explore.md` is `/opsx:explore` upstream; DSH skill
+    // names are kebab-case, so it registers as `opsx-explore`.
+    expect(skills.map((skill) => skill.name)).toContain('opsx-explore')
+    const opsx = skills.find((skill) => skill.name === 'opsx-explore')!
+    expect(opsx.provider).toBe('claude-code')
+    const body = await harness.ctx.skills.get('opsx-explore', { cwd: project!.dir })
+    expect(body?.content).toContain('Explore the codebase structure and report the key subsystems.')
+  })
+
   it('gives the user-level skill the winning rank on a name conflict (personal > project)', async () => {
     harness = await setup()
     const skills = await harness.ctx.skills.list({ cwd: project!.dir })
