@@ -36,7 +36,7 @@ const MAX_READ_CHARS = 1024 * 1024
 const MAX_WALK_DEPTH = 32
 
 interface MemorySection {
-  kind: 'user' | 'project'
+  kind: 'user' | 'project' | 'developer'
   label: string
   content: string
 }
@@ -94,6 +94,12 @@ export async function collectMemorySections(
 ): Promise<MemorySection[]> {
   const sections: MemorySection[] = []
   const userDir = expandHome(config.userCodexDir)
+  const settings = await loader.load(cwd)
+
+  // developer_instructions are injected before the AGENTS.md chain upstream.
+  if (settings.developerInstructions !== undefined && settings.developerInstructions.trim() !== '') {
+    sections.push({ kind: 'developer', label: 'config.toml developer_instructions', content: settings.developerInstructions })
+  }
 
   // Global scope: AGENTS.override.md wins over AGENTS.md; the first
   // non-empty file at this level is the only one used.
@@ -105,7 +111,6 @@ export async function collectMemorySections(
   }
 
   if (cwd) {
-    const settings = await loader.load(cwd)
     const chain = await collectProjectChain(cwd, settings.projectRootMarkers, settings.projectDocFallbackFilenames, fs)
     // DSH's own instruction loader reads the repository root's AGENTS.md.
     const rootAgents = await readOptional(fs, join(chain.rootDir, 'AGENTS.md'))
