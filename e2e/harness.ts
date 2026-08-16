@@ -15,7 +15,7 @@
  * for `tools/*` and `agent/pre-step` seams.
  * @module dsh-bridges/e2e/harness
  */
-import { cp, mkdtemp, rm } from 'node:fs/promises'
+import { cp, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
@@ -180,6 +180,16 @@ export async function tempUserDir(): Promise<{ dir: string; cleanup(): Promise<v
     dir,
     cleanup: () => rm(dir, { recursive: true, force: true }),
   }
+}
+
+/**
+ * Create a `.git` repository marker inside a copied fixture. Git never
+ * tracks paths containing `.git`, so fixtures cannot ship the marker — tests
+ * that depend on repository-root detection create it at runtime.
+ */
+export async function markRepoRoot(dir: string): Promise<void> {
+  await mkdir(join(dir, '.git'), { recursive: true })
+  await writeFile(join(dir, '.git', 'HEAD'), 'ref: refs/heads/main\n', 'utf8')
 }
 
 /** Minimal `ToolExecution` stand-in for a `bash` call, as the registry would hand it to the waterfall. */

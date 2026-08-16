@@ -5,7 +5,7 @@
  */
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { bootHarness, fixtureCopy, preToolUse, sessionStart, waitFor } from './harness.js'
+import { bootHarness, fixtureCopy, markRepoRoot, preToolUse, sessionStart, waitFor } from './harness.js'
 import type { Harness } from './harness.js'
 
 describe('e2e: cursor bridge through the real registry', () => {
@@ -55,6 +55,7 @@ describe('e2e: cursor bridge through the real registry', () => {
 
   it('injects always-apply rules and subdirectory AGENTS.md at session start', async () => {
     project = await fixtureCopy('cursor/rules')
+    await markRepoRoot(project.dir)
     user = await fixtureCopy('cursor/user')
     process.env['CURSOR_CONFIG_DIR'] = user.dir
     harness = await bootHarness({

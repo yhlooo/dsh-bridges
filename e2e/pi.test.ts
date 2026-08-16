@@ -11,7 +11,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { bootHarness, fixtureCopy, sessionStart, tempUserDir, waitFor } from './harness.js'
+import { bootHarness, fixtureCopy, markRepoRoot, sessionStart, tempUserDir, waitFor } from './harness.js'
 import type { Harness } from './harness.js'
 
 describe('e2e: pi bridge through the real registry', () => {
@@ -94,6 +94,7 @@ describe('e2e: pi bridge through the real registry', () => {
     // AGENTS.md is the file DSH's own loader already injects (skipped), and
     // the sub AGENTS.md arrives as a project section.
     project = await fixtureCopy('pi/memory')
+    await markRepoRoot(project.dir)
     user = await fixtureCopy('pi/user')
     process.env['PI_CODING_AGENT_DIR'] = user.dir
     harness = await bootHarness({

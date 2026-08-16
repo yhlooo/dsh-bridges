@@ -7,7 +7,7 @@
  */
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { bootHarness, fixtureCopy, preToolUse, sessionStart, waitFor } from './harness.js'
+import { bootHarness, fixtureCopy, markRepoRoot, preToolUse, sessionStart, waitFor } from './harness.js'
 import type { Harness } from './harness.js'
 
 describe('e2e: gemini-cli bridge through the real registry', () => {
@@ -67,6 +67,7 @@ describe('e2e: gemini-cli bridge through the real registry', () => {
 
   it('injects the GEMINI.md chain with @imports at session start', async () => {
     project = await fixtureCopy('gemini-cli/memory')
+    await markRepoRoot(project.dir)
     user = await fixtureCopy('gemini-cli/user')
     process.env['GEMINI_CLI_HOME'] = user.dir
     harness = await bootHarness({
