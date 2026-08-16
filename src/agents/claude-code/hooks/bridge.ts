@@ -24,6 +24,8 @@ import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import { createUserMessage, type ContentBlock, type UserMessage } from '@deepseek-ai/dsh-llm'
 import type { PostToolDecision, PreToolDecision, ToolExecution, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 import type { FsAdapter } from '../../../fs-adapter.js'
+import type { RuleVerdict } from '../../../permissions/types.js'
+import type { PermissionEvaluator } from '../permissions.js'
 import { claudeToolName } from './names.js'
 import type { BridgeLogger } from '../../../util.js'
 import { capString, escapeReminderClose, isPlainObject, killHookChild } from '../../../util.js'
@@ -54,6 +56,7 @@ export function createHookBridge(
   fs: FsAdapter,
   loader: SettingsLoader,
   config: HookBridgeConfig,
+  permissionEvaluator?: PermissionEvaluator,
 ): void {
   const activeChildren = new Set<ChildProcess>()
   const stopStates = new Map<string, StopState>()
@@ -70,7 +73,7 @@ export function createHookBridge(
     onUserPromptSubmit(payload.agent, payload.messages, payload.signal, stopStates, loader, logger, config, onSpawn, next),
   )
 
-  ctx.on('tools/pre-execute', (exec, next) => onPreToolUse(exec, loader, logger, config, onSpawn, next))
+  ctx.on('tools/pre-execute', (exec, next) => onPreToolUse(exec, loader, logger, config, onSpawn, permissionEvaluator, next))
 
   ctx.on('tools/post-execute', (exec, result, next) => onPostToolUse(exec, result, loader, logger, config, onSpawn, next))
 
@@ -209,15 +212,22 @@ async function onPreToolUse(
   logger: BridgeLogger,
   config: HookBridgeConfig,
   onSpawn: (child: ChildProcess) => void,
+  permissionEvaluator: PermissionEvaluator | undefined,
   next: () => Promise<PreToolDecision>,
 ): Promise<PreToolDecision> {
   const agent = exec.agent
   if (!agent) return next()
   const cwd = agent.session.header.cwd
   const settings = await loader.load(cwd)
-  if (settings.disabled) return next()
+  if (settings.disabled) {
+    // Hooks disabled: permission rules still apply on their own.
+    return composePreToolDecision(permissionEvaluator, exec, undefined, logger, next)
+  }
   const groups = settings.byEvent.get('PreToolUse')
-  if (!groups || groups.length === 0) return next()
+  if (!groups || groups.length === 0) {
+    // No PreToolUse hooks configured: permission rules apply on their own.
+    return composePreToolDecision(permissionEvaluator, exec, undefined, logger, next)
+  }
 
   try {
     const claudeName = claudeToolName(exec.name)
@@ -253,22 +263,61 @@ async function onPreToolUse(
     }
     const contexts = collectHookContext('PreToolUse', outcomes, config.maxHookOutputChars)
     if (contexts.length > 0) agent.inject(makeContextMessage('PreToolUse', contexts, config.maxHookOutputChars))
-    const decision = resolvePreToolUse(outcomes, config.maxHookOutputChars)
-    if (decision.kind === 'deny') return { kind: 'deny', reason: decision.reason }
-    if (decision.kind === 'ask') return { kind: 'ask', reason: decision.reason }
-    return next()
+    return composePreToolDecision(permissionEvaluator, exec, resolvePreToolUse(outcomes, config.maxHookOutputChars), logger, next)
   } catch (error) {
     logger.warn(`claude-code: PreToolUse hooks failed: ${error instanceof Error ? error.message : String(error)}`)
-    return next()
+    return composePreToolDecision(permissionEvaluator, exec, undefined, logger, next)
   }
 }
 
-export function resolvePreToolUse(
-  outcomes: readonly HookOutcome[],
-  maxChars: number,
-): { kind: 'allow' } | { kind: 'deny'; reason: string } | { kind: 'ask'; reason?: string } {
+/**
+ * Compose a hook decision with the permission-rule verdict, honoring the
+ * upstream contract: deny rules always win (a hook `allow` never overrides a
+ * matching deny rule), a hook `ask` prompts, a hook `allow` bypasses unless a
+ * deny/ask rule matches, and an undecided hook falls through to the rules.
+ * Exported for unit tests.
+ */
+export async function composePreToolDecision(
+  evaluator: PermissionEvaluator | undefined,
+  exec: ToolExecution,
+  hookDecision: PreToolUseResolution | undefined,
+  logger: BridgeLogger,
+  next: () => Promise<PreToolDecision>,
+): Promise<PreToolDecision> {
+  if (hookDecision?.kind === 'deny') return { kind: 'deny', reason: hookDecision.reason }
+  let rules: RuleVerdict
+  if (evaluator === undefined) {
+    rules = undefined
+  } else {
+    try {
+      rules = await evaluator(exec)
+    } catch (error) {
+      logger.warn(`claude-code: permission rules failed: ${error instanceof Error ? error.message : String(error)}`)
+      rules = undefined
+    }
+  }
+  if (rules?.kind === 'deny') return { kind: 'deny', reason: rules.reason }
+  if (hookDecision?.kind === 'ask') return { kind: 'ask', reason: hookDecision.reason }
+  if (hookDecision?.kind === 'allow') {
+    // Upstream: an ask rule still prompts after a hook grants the permission.
+    if (rules?.kind === 'ask') return { kind: 'ask', reason: rules.reason }
+    return { kind: 'allow' }
+  }
+  if (rules?.kind === 'ask') return { kind: 'ask', reason: rules.reason }
+  if (rules?.kind === 'allow') return { kind: 'allow' }
+  return next()
+}
+
+export type PreToolUseResolution =
+  | { kind: 'deny'; reason: string }
+  | { kind: 'ask'; reason?: string }
+  | { kind: 'allow' }
+  | { kind: 'undecided' }
+
+export function resolvePreToolUse(outcomes: readonly HookOutcome[], maxChars: number): PreToolUseResolution {
   // Precedence: deny > defer > ask > allow; timeouts and failures fail open.
   let ask: { kind: 'ask'; reason?: string } | undefined
+  let allow = false
   for (const outcome of outcomes) {
     if (!outcome.ran) continue
     const specific = outcome.output?.hookSpecificOutput
@@ -295,12 +344,14 @@ export function resolvePreToolUse(
       }
     }
     if (decision === 'ask') ask = { kind: 'ask', reason: specific?.permissionDecisionReason }
+    if (decision === 'allow') allow = true
     if (outcome.output?.continue === false) {
       return { kind: 'deny', reason: firstNonEmpty(outcome.output.stopReason, 'stopped by a Claude Code hook') }
     }
   }
   if (ask) return ask
-  return { kind: 'allow' }
+  if (allow) return { kind: 'allow' }
+  return { kind: 'undecided' }
 }
 
 // ── PostToolUse / PostToolUseFailure ────────────────────────────────────────

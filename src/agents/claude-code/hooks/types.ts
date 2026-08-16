@@ -3,6 +3,8 @@
  * @module dsh-bridges/agents/claude-code/hooks/types
  */
 
+import type { MergedPermissionConfig } from '../../../permissions/types.js'
+
 /** Handler fields shared by every hook type. */
 export interface HookCommonFields {
   /** `command` or `http`; `mcp_tool`, `prompt`, and `agent` are not bridged yet. */
@@ -51,6 +53,17 @@ export interface HookSettings {
   env?: Record<string, string>
   allowedHttpHookUrls?: string[]
   httpHookAllowedEnvVars?: string[]
+  permissions?: RawPermissionSettings
+}
+
+/** One settings file's `permissions` field, before cross-scope merging. */
+export interface RawPermissionSettings {
+  allow?: string[]
+  ask?: string[]
+  deny?: string[]
+  defaultMode?: string
+  additionalDirectories?: string[]
+  disableBypassPermissionsMode?: boolean
 }
 
 /** Merged, deduplicated hook configuration for one workspace. */
@@ -60,6 +73,7 @@ export interface LoadedHookSettings {
   env: Readonly<Record<string, string>>
   allowedHttpHookUrls?: readonly string[]
   httpHookAllowedEnvVars?: readonly string[]
+  permissions: MergedPermissionConfig
 }
 
 /** Parsed hook JSON output — the object Claude Code reads from stdout/HTTP body. */

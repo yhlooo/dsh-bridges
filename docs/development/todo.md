@@ -59,7 +59,9 @@
    opencode 三种语法 + codex 的 approval_policy 映射）、工具名翻译复用现有
    `hooks/names.ts` 映射表（提炼为共享），决策在 `tools/pre-execute` 与 hooks
    的 permissionDecision 协同（hooks 优先，与上游一致，实施时对照各工具
-   hooks 文档确认）。
+   hooks 文档确认）。**已落地**：`src/permissions/`（types/glob/fields/parse/
+   engine）+ claude-code 集成（含 `composePreToolDecision` 组合决策），
+   2026-08-15。
 
 ## P0 · 迁移阻断项
 
@@ -84,10 +86,15 @@
 
 ### P0.2 权限 / 审批规则（安全姿态静默改变）
 
-- [ ] **claude-code**：settings `permissions`——`allow`/`deny`/`ask` 规则
+- [x] **claude-code**：settings `permissions`——`allow`/`deny`/`ask` 规则
   （`Bash(...)`/`Edit(...)` 参数匹配）、`defaultMode`、`additionalDirectories`、
   `disableBypassPermissionsMode`。映射：规则引擎 → `tools/pre-execute`
   （与 hooks 的 permissionDecision 同接缝），工具名翻译复用现有表。
+  **已实现**（2026-08-15）：`src/permissions/`（types/glob/fields/parse/engine）
+  + `src/agents/claude-code/permissions.ts`；hooks 桥内 `composePreToolDecision`
+  组合（deny 规则恒胜、ask 规则压过 hook allow，与上游 hooks 契约一致）；
+  `defaultMode`/`disableBypassPermissionsMode` 读取不执行、项目 allow 规则无
+  信任门禁（均记限制）；示例与中英文档已同步。
 - [ ] **codebuddy-code**：settings `permissions.allow/ask/deny`（规则语法含
   `WebFetch(domain:)`、`mcp__…`、`Agent(…)`、`Skill(…)`）、`permissions.defaultMode`
   （default/acceptEdits/auto/dontAsk/plan/bypassPermissions）、

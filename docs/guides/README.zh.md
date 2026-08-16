@@ -41,6 +41,7 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
       skills: true                # 发现 .claude / ~/.claude 的 skills 与 commands
       memory: true                # 注入 ~/.claude/CLAUDE.md 与 .claude/CLAUDE.md
       hooks: true                 # 运行 settings.json 里的 Claude Code hooks
+      permissions: true           # 执行 settings.json 里的 permissions.allow/ask/deny 规则
       userClaudeDir: '~/.claude'  # 用户级 Claude Code 目录
       watch: true                 # 监听技能根目录，变更即重新发布
       hookTimeoutMs: 600000
@@ -115,7 +116,7 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 | :--- | :--- | :--- |
 | `SessionStart` | `agent/session-start` | `additionalContext`（及退出码 0 的纯文本 stdout）在首个提示词前注入 |
 | `UserPromptSubmit` | `agent/pre-step` | `decision: "block"` / 退出码 2 / `continue: false` 擦除提示词并展示原因；上下文追加到本步 |
-| `PreToolUse` | `tools/pre-execute` | `permissionDecision`：`deny` → 拒绝、`ask` → 走审批、`allow` → 放行、`defer` → 拒绝（不支持）；退出码 2 → 以 stderr 拒绝；`additionalContext` 注入 |
+| `PreToolUse` | `tools/pre-execute` | `permissionDecision`：`deny` → 拒绝、`ask` → 走审批、`allow` → 放行并跳过后续权限检查（但 deny/ask 权限规则仍会评估，见 Permissions 小节）、`defer` → 拒绝（不支持）；退出码 2 → 以 stderr 拒绝；`additionalContext` 注入 |
 | `PostToolUse` | `tools/post-execute` | `additionalContext` / `decision: "block"` 的 reason / 退出码 2 的 stderr → 结果旁注入上下文；`updatedToolOutput` 替换渲染内容 |
 | `PostToolUseFailure` | `tools/post-execute`（失败结果） | 同 PostToolUse |
 | `Stop` | `agent/turn-stopping` | `decision: "block"` / 退出码 2 / `additionalContext` 引导继续，最多连续 8 次（同 Claude Code 上限） |
@@ -130,6 +131,20 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 - `if` 过滤器支持常见的 `ToolName(glob)` 形态，对已映射的工具各对应一个主参数字段（`Bash(rm *)`、`Edit(*.ts)`……）；无法解析的规则以及没有映射字段的工具一律放行，与 Claude Code 的 best-effort 约定一致（不复制其更深的 Bash 子命令分析）。
 - 超时与 handler 失败一律放行（绝不因此阻断动作），同 Claude Code。
 - 子代理：`UserPromptSubmit`、`Stop`、`SessionStart`、`SessionEnd` 仅对主会话生效，与 Claude Code 一致；`PreToolUse`/`PostToolUse` 也会在子代理的工具调用上触发（`SubagentStart`/`SubagentStop` 尚未桥接）。
+
+### Permissions（权限规则）
+
+合并读取同一批 settings 文件的 `permissions.allow/ask/deny` 规则（跨层级叠加合并、去重），并在 `tools/pre-execute` 接缝执行，语义与 Claude Code 一致：
+
+- 规则语法为 `Tool` 或 `Tool(specifier)`；工具名支持 glob（`*`、`mcp__*`）。评估顺序 **deny → ask → allow**，首个命中决定结果，与规则特异性无关。
+- `Bash(...)` 按命令前缀匹配（如 `Bash(npm run *)` 匹配 `npm run build`；前缀匹配可被 `sudo`、管道等绕过，与上游文档明示的限制一致）。
+- `Read`/`Edit`/`Write` 按路径 glob 匹配：`//path` 为绝对路径、`/path` 相对项目根、`~` 相对主目录、`./` 相对项目根；`permissions.additionalDirectories` 中的目录也参与 `./` 相对解析。参数路径与规则路径都先归一化为绝对路径再比较。
+- `WebFetch(domain:example.com)` / `domain:*.example.com` 按 URL 主机名匹配（子域后缀）；不带 `domain:` 前缀时按完整 URL glob 匹配。
+- 与 hooks 的协同遵循上游契约：`PreToolUse` hook 先运行；hook `deny` 直接拒绝；**deny/ask 规则始终评估——hook 的 `allow` 不能覆盖命中的 deny 规则，命中的 ask 规则仍会触发审批**；hook 未表态时按规则决定（deny → 拒绝、ask → 审批、allow → 放行），无规则命中则交回 DeepSeek Harness 自身的审批策略。
+- 规则应用到主会话与子代理的工具调用（同 Claude Code，权限设置被子代理继承）。
+- 未命中任何规则的调用保持原行为（走 DeepSeek Harness 审批栈）；`hooks: false` 时权限规则独立生效（`permissions` 与 `hooks` 开关互相独立）。
+
+未桥接（记录为限制）：`permissions.defaultMode` 与 `permissions.disableBypassPermissionsMode` 会被读取但不生效——DeepSeek Harness 拥有自己的审批模式，插件没有切换它的接缝；项目 `.claude/settings.json` 的 allow 规则在 Claude Code 中需要工作区信任才生效，桥接没有信任状态、一律生效（deny/ask 规则上游本就不受信任门禁影响）。
 
 ### 限制
 

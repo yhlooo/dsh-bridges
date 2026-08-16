@@ -39,6 +39,7 @@ export const Config = z.object({
     skills: z.boolean().default(true),
     memory: z.boolean().default(true),
     hooks: z.boolean().default(true),
+    permissions: z.boolean().default(true),
     userClaudeDir: z.string().default('~/.claude'),
     watch: z.boolean().default(true),
     hookTimeoutMs: z.number().default(600_000),
