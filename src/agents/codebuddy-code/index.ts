@@ -14,6 +14,7 @@ import type { FsAdapter } from '../../fs-adapter.js'
 import type { BridgeLogger } from '../../util.js'
 import { createHookBridge } from './hooks/bridge.js'
 import { registerMemory } from './memory.js'
+import { createPermissionEvaluator, createPermissionsOnlyBridge } from './permissions.js'
 import { CodebuddySettingsLoader } from './settings.js'
 import { CodebuddySkillProvider } from './skills/provider.js'
 
@@ -26,6 +27,8 @@ export interface CodebuddyCodeConfig {
   memory?: boolean
   /** Run CodeBuddy Code hooks from settings.json at DSH lifecycle seams. */
   hooks?: boolean
+  /** Enforce `permissions.allow/ask/deny` rules from settings.json. */
+  permissions?: boolean
   /** User-level CodeBuddy Code directory (usually `~/.codebuddy`). */
   userCodebuddyDir?: string
   /** Watch existing skill roots and settings files, republishing on change. */
@@ -43,6 +46,7 @@ export const CODEBUDDY_CODE_DEFAULTS: Required<CodebuddyCodeConfig> = {
   skills: true,
   memory: true,
   hooks: true,
+  permissions: true,
   userCodebuddyDir: '~/.codebuddy',
   watch: true,
   hookTimeoutMs: 60_000,
@@ -83,10 +87,24 @@ export function registerCodebuddyCodeBridge(ctx: Context, logger: BridgeLogger, 
     registerMemory(ctx, logger, fs, { userCodebuddyDir: resolved.userCodebuddyDir, maxBytes: resolved.memoryMaxBytes })
   }
 
-  if (resolved.hooks) {
-    createHookBridge(ctx, logger, loader, {
-      hookTimeoutMs: resolved.hookTimeoutMs,
-      maxHookOutputChars: resolved.maxHookOutputChars,
-    })
+  if (resolved.hooks || resolved.permissions) {
+    if (resolved.hooks) {
+      // The hook bridge owns the PreToolUse composition: hook decisions run
+      // first and the permission evaluator is consulted with upstream
+      // precedence (deny rules always win; ask rules outrank a hook allow).
+      createHookBridge(
+        ctx,
+        logger,
+        loader,
+        {
+          hookTimeoutMs: resolved.hookTimeoutMs,
+          maxHookOutputChars: resolved.maxHookOutputChars,
+        },
+        resolved.permissions ? createPermissionEvaluator(logger, loader) : undefined,
+      )
+    } else {
+      // Permissions without hooks: a standalone pre-execute listener.
+      createPermissionsOnlyBridge(ctx, logger, loader)
+    }
   }
 }

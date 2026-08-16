@@ -10,7 +10,7 @@
  */
 
 /** Translate a glob pattern into an anchored regular expression. */
-export function globToRegExp(pattern: string): RegExp {
+export function globToRegExp(pattern: string, flags = ''): RegExp {
   let source = '^'
   for (const char of pattern) {
     if (char === '*') source += '.*'
@@ -18,7 +18,7 @@ export function globToRegExp(pattern: string): RegExp {
     else source += escapeRegExp(char)
   }
   source += '$'
-  return new RegExp(source)
+  return new RegExp(source, flags)
 }
 
 /** Anchored glob match (`*` and `?` wildcards). */

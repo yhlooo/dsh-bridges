@@ -26,6 +26,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import { createUserMessage, type ContentBlock, type UserMessage } from '@deepseek-ai/dsh-llm'
 import type { PostToolDecision, PreToolDecision, ToolExecution, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
+import { composePreToolDecision, type HookToolDecision, type PermissionEvaluator } from '../../../permissions/compose.js'
 import type { BridgeLogger } from '../../../util.js'
 import { capString, escapeReminderClose, isPlainObject, killHookChild } from '../../../util.js'
 import { CodebuddySettingsLoader } from '../settings.js'
@@ -53,7 +54,13 @@ interface StopState {
   count: number
 }
 
-export function createHookBridge(ctx: Context, logger: BridgeLogger, loader: CodebuddySettingsLoader, config: HookBridgeConfig): void {
+export function createHookBridge(
+  ctx: Context,
+  logger: BridgeLogger,
+  loader: CodebuddySettingsLoader,
+  config: HookBridgeConfig,
+  permissionEvaluator?: PermissionEvaluator,
+): void {
   const activeChildren = new Set<ChildProcess>()
   const stopStates = new Map<string, StopState>()
   const onceStates = new Map<string, Set<string>>()
@@ -70,7 +77,7 @@ export function createHookBridge(ctx: Context, logger: BridgeLogger, loader: Cod
     onUserPromptSubmit(payload.agent, payload.messages, payload.signal, stopStates, loader, logger, config, onSpawn, next),
   )
 
-  ctx.on('tools/pre-execute', (exec, next) => onPreToolUse(exec, onceStates, loader, logger, config, onSpawn, next))
+  ctx.on('tools/pre-execute', (exec, next) => onPreToolUse(exec, onceStates, loader, logger, config, onSpawn, permissionEvaluator, next))
 
   ctx.on('tools/post-execute', (exec, result, next) => onPostToolUse(exec, result, onceStates, loader, logger, config, onSpawn, next))
 
@@ -207,19 +214,26 @@ async function onPreToolUse(
   logger: BridgeLogger,
   config: HookBridgeConfig,
   onSpawn: (child: ChildProcess) => void,
+  permissionEvaluator: PermissionEvaluator | undefined,
   next: () => Promise<PreToolDecision>,
 ): Promise<PreToolDecision> {
   const agent = exec.agent
   if (!agent) return next()
   const cwd = agent.session.header.cwd
   const settings = await loader.load(cwd)
-  if (settings.disabled) return next()
+  if (settings.disabled) {
+    // Hooks disabled: permission rules still apply on their own.
+    return composePreToolDecision(permissionEvaluator, exec, undefined, logger, next)
+  }
   const groups = settings.byEvent.get('PreToolUse')
-  if (!groups || groups.length === 0) return next()
+  if (!groups || groups.length === 0) {
+    // No PreToolUse hooks configured: permission rules apply on their own.
+    return composePreToolDecision(permissionEvaluator, exec, undefined, logger, next)
+  }
 
   const sessionId = agent.session.id
   const eligible = pruneOnce(groups, sessionId, onceStates)
-  if (eligible.length === 0) return next()
+  if (eligible.length === 0) return composePreToolDecision(permissionEvaluator, exec, undefined, logger, next)
 
   try {
     const codebuddyName = codebuddyToolName(exec.name)
@@ -253,22 +267,21 @@ async function onPreToolUse(
     }
     const contexts = collectHookContext('PreToolUse', outcomes, config.maxHookOutputChars)
     if (contexts.length > 0) agent.inject(makeContextMessage('PreToolUse', contexts, config.maxHookOutputChars))
-    const decision = resolvePreToolUse(outcomes, config.maxHookOutputChars)
-    if (decision.kind === 'deny') return { kind: 'deny', reason: decision.reason }
-    if (decision.kind === 'ask') return { kind: 'ask', reason: decision.reason }
-    return next()
+    return composePreToolDecision(permissionEvaluator, exec, resolvePreToolUse(outcomes, config.maxHookOutputChars), logger, next)
   } catch (error) {
     logger.warn(`codebuddy-code: PreToolUse hooks failed: ${error instanceof Error ? error.message : String(error)}`)
-    return next()
+    return composePreToolDecision(permissionEvaluator, exec, undefined, logger, next)
   }
 }
 
-export function resolvePreToolUse(
-  outcomes: readonly HookOutcome[],
-  maxChars: number,
-): { kind: 'allow' } | { kind: 'deny'; reason: string } | { kind: 'ask'; reason?: string } {
+export type PreToolUseResolution = HookToolDecision
+
+export { composePreToolDecision }
+
+export function resolvePreToolUse(outcomes: readonly HookOutcome[], maxChars: number): PreToolUseResolution {
   // Precedence: deny > ask > allow; timeouts and failures fail open.
   let ask: { kind: 'ask'; reason?: string } | undefined
+  let allow = false
   for (const outcome of outcomes) {
     if (!outcome.ran) continue
     const specific = outcome.output?.hookSpecificOutput
@@ -286,12 +299,14 @@ export function resolvePreToolUse(
       }
     }
     if (decision === 'ask') ask = { kind: 'ask', reason: specific?.permissionDecisionReason }
+    if (decision === 'allow') allow = true
     if (outcome.output?.continue === false) {
       return { kind: 'deny', reason: firstNonEmpty(outcome.output.stopReason, outcome.output.reason, 'stopped by a CodeBuddy Code hook') }
     }
   }
   if (ask) return ask
-  return { kind: 'allow' }
+  if (allow) return { kind: 'allow' }
+  return { kind: 'undecided' }
 }
 
 // ── PostToolUse / PostToolUseFailure ────────────────────────────────────────

@@ -53,6 +53,7 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
       skills: true                      # 发现 .codebuddy / ~/.codebuddy 的 skills 与 commands
       memory: true                      # 注入 CODEBUDDY.md 记忆与始终应用规则
       hooks: true                       # 运行 settings.json 里的 CodeBuddy Code hooks
+      permissions: true                 # 执行 settings.json 里的 permissions.allow/ask/deny 规则
       userCodebuddyDir: '~/.codebuddy'  # 用户级 CodeBuddy Code 目录
       watch: true                       # 监听技能根目录与 settings 文件
       hookTimeoutMs: 60000              # 对齐 CodeBuddy Code 的 60 秒 hook 上限
@@ -197,7 +198,7 @@ DeepSeek Harness 核心自行加载 `AGENTS.md` 与根目录 `CLAUDE.md`，但�
 | :--- | :--- | :--- |
 | `SessionStart` | `agent/session-start` | `additionalContext`（及退出码 0 的纯文本 stdout）在首个提示词前注入；matcher 收到 `startup`/`resume`/`clear`/`compact` |
 | `UserPromptSubmit` | `agent/pre-step` | 退出码 2 / `continue: false` 擦除提示词并展示原因；上下文追加到本步 |
-| `PreToolUse` | `tools/pre-execute` | `permissionDecision`：`deny` → 拒绝、`ask` → 走审批、`allow` → 放行；退出码 2 → 拒绝（消息 stdout 优先）；`modifiedInput` 忽略 + 告警；`additionalContext` 注入 |
+| `PreToolUse` | `tools/pre-execute` | `permissionDecision`：`deny` → 拒绝、`ask` → 走审批、`allow` → 放行并跳过后续权限检查（但 deny/ask 权限规则仍会评估，见 Permissions 小节）；退出码 2 → 拒绝（消息 stdout 优先）；`modifiedInput` 忽略 + 告警；`additionalContext` 注入 |
 | `PostToolUse` | `tools/post-execute` | `additionalContext` / 退出码 2 消息 / 废弃的 `decision: "block"` reason → 结果旁注入上下文；`updatedToolOutput` 替换渲染内容 |
 | `PostToolUseFailure` | `tools/post-execute`（失败结果） | 同 PostToolUse |
 | `Stop` | `agent/turn-stopping` | 退出码 2 / `continue: false` / `additionalContext` 引导继续（重复时带 `stop_hook_active`；桥接侧安全上限连续 8 次） |
@@ -213,6 +214,19 @@ DeepSeek Harness 核心自行加载 `AGENTS.md` 与根目录 `CLAUDE.md`，但�
 - `if` 过滤器支持常见的 `ToolName(glob)` 形态，对已映射的工具各对应一个主参数字段（`Bash(git *)`、`Edit(*.ts)`……）；无法解析的规则以及没有映射字段的工具一律放行。
 - 超时与 handler 失败一律放行（绝不因此阻断动作），同 CodeBuddy Code。
 - 子代理：`UserPromptSubmit`、`Stop`、`SessionStart`、`SessionEnd` 仅对主会话生效，与 CodeBuddy Code 一致；`PreToolUse`/`PostToolUse` 也会在子代理的工具调用上触发（`SubagentStart`/`SubagentStop` 尚未桥接）。
+
+### Permissions（权限规则）
+
+合并读取同一批 settings 文件的 `permissions.allow/ask/deny` 规则（跨层级叠加合并、去重），并在 `tools/pre-execute` 接缝执行，语义与 CodeBuddy Code 一致（deny → ask → allow，首个命中决定结果）：
+
+- **Bash**：`Bash(cmd)` 精确匹配；`Bash(git:*)` 词前缀匹配；`Bash(npm run *)` 按 bash glob 匹配（`*` 可跨 `/`）。复合命令按顶层 `&&`/`||`/`;`/`|` 拆分（引号内不拆）：deny/ask 任一子命令命中即触发，allow 要求**所有**子命令命中，含重定向的命令在 allow 下要求精确匹配——即上游的"防夹带"规则。
+- **Read / Edit / Write**：不区分大小写的路径 glob，路径解析同上游（`//` 绝对、`/` 项目根、`~` 主目录、`path`/`./` 当前目录）；不带路径分隔符的 specifier 匹配任意深度的文件名。`permissions.additionalDirectories` 也参与 `./` 相对解析。
+- **WebFetch**：`domain:example.com` 匹配主机名及其子域；不带 `domain:` 前缀时按完整 URL glob 匹配。
+- **MCP**：`mcp__server` 匹配 `mcp__server__*`；`mcp__server__tool` 精确匹配单个工具；大小写与 `-`/`.` 归一为 `_`。裸 `*` 规则不覆盖 MCP 工具，`mcp__*` 仅在 deny/ask 生效——与上游文档一致。
+- **Skill**：`Skill(name)` 精确匹配 `skill` 工具的 `name` 参数（不支持通配符）。**Agent**：裸 `Agent` 匹配子代理工具；`Agent(name)` 无法匹配（DeepSeek Harness 子代理没有上游 agent 类型字段）。
+- 与 hooks 的协同遵循上游契约：`PreToolUse` hook 先运行；deny 规则恒胜（hook 的 `allow` 不能覆盖命中的 deny 规则，命中的 ask 规则仍会触发审批）；hook 未表态时按规则决定；无规则命中则交回 DeepSeek Harness 自身的审批策略。`hooks: false` 时权限规则独立生效（开关互相独立）。
+
+未桥接（记录为限制）：`permissions.defaultMode`、`disableBypassPermissionsMode`、`disableAutoMode`、`subagentPermissionMode` 读取但不生效——DeepSeek Harness 拥有自己的审批模式；`autoMode` 自然语言分类器无对应物；CodeBuddy Code 内置的受保护路径 / 灾难命令保护不复制（由 DeepSeek Harness 自己的沙箱与审批承担）；项目 allow 规则无 CodeBuddy Code 的信任分层门禁（桥接没有信任状态）。
 
 ### 限制
 

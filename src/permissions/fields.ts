@@ -7,12 +7,12 @@
  * (`Tool` bare rules still work; a specifier can never match).
  *
  * Field kinds drive specifier semantics:
- * - `command` — prefix glob against the command string (upstream documents
- *   Bash permission matching as prefix-based, with its known bypass caveats);
+ * - `command` — dialect-specific command matching (see `engine.ts`);
  * - `path` — glob against the resolved file path, with upstream rule-path
  *   resolution (`//` absolute, `/` project-relative, `~` home, `./` project);
  * - `url` — `domain:…` subdomain match or plain glob against the URL string;
- * - `text` — anchored glob against the field value.
+ * - `text` — anchored glob against the field value;
+ * - `skill` — exact, wildcard-free match (CodeBuddy Code `Skill(name)` rules).
  * @module dsh-bridges/permissions/fields
  */
 import { isPlainObject } from '../util.js'
@@ -20,7 +20,7 @@ import { isPlainObject } from '../util.js'
 export interface ToolFieldSpec {
   /** DSH tool argument field name. */
   field: string
-  kind: 'command' | 'path' | 'text' | 'url'
+  kind: 'command' | 'path' | 'text' | 'url' | 'skill'
 }
 
 /** Default field map (Claude Code / CodeBuddy Code tool names). */
@@ -34,6 +34,9 @@ export const DEFAULT_TOOL_FIELDS: Readonly<Record<string, ToolFieldSpec>> = {
   Grep: { field: 'pattern', kind: 'text' },
   WebFetch: { field: 'url', kind: 'url' },
   WebSearch: { field: 'query', kind: 'text' },
+  // The DSH skill tool takes a `name` argument; upstream requires an exact,
+  // wildcard-free match.
+  Skill: { field: 'name', kind: 'skill' },
 }
 
 /** Read the primary argument field of a tool call for rule matching. */

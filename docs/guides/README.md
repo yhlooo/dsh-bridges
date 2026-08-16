@@ -57,6 +57,7 @@ Every tool bridge owns a config section under the `bridges` row; a later patch l
       skills: true                    # discover .codebuddy / ~/.codebuddy skills and commands
       memory: true                    # inject CODEBUDDY.md memory and always-apply rules
       hooks: true                     # run CodeBuddy Code hooks from settings.json
+      permissions: true               # enforce permissions.allow/ask/deny rules from settings.json
       userCodebuddyDir: '~/.codebuddy'  # user-level CodeBuddy Code directory
       watch: true                     # watch skill roots and settings files
       hookTimeoutMs: 60000            # CodeBuddy Code's 60-second hook limit
@@ -201,7 +202,7 @@ Loads the merged `hooks` field from `~/.codebuddy/settings.json` → `.codebuddy
 | :--- | :--- | :--- |
 | `SessionStart` | `agent/session-start` | `additionalContext` (and exit-0 plain stdout) injected before the first prompt; matcher sees `startup`/`resume`/`clear`/`compact` |
 | `UserPromptSubmit` | `agent/pre-step` | exit 2 / `continue: false` erase the prompt and show the reason; context is appended to the step |
-| `PreToolUse` | `tools/pre-execute` | `permissionDecision` `deny` → deny, `ask` → approval, `allow` → allow; exit 2 → deny with the stdout-first message; `modifiedInput` is logged and ignored; `additionalContext` is injected |
+| `PreToolUse` | `tools/pre-execute` | `permissionDecision` `deny` → deny, `ask` → approval, `allow` → allow and skip further permission checks (deny/ask permission rules are still evaluated — see Permissions); exit 2 → deny with the stdout-first message; `modifiedInput` is logged and ignored; `additionalContext` is injected |
 | `PostToolUse` | `tools/post-execute` | `additionalContext`/exit-2 message/legacy `decision: "block"` reason → context next to the result; `updatedToolOutput` replaces the rendered content |
 | `PostToolUseFailure` | `tools/post-execute` (error results) | same as PostToolUse |
 | `Stop` | `agent/turn-stopping` | exit 2 / `continue: false` / `additionalContext` steer a continuation (`stop_hook_active` set on repeats; capped at 8 consecutive continuations as a bridge safety valve) |
@@ -217,6 +218,19 @@ Compatibility details:
 - The `if` filter supports the common `ToolName(glob)` form against one primary argument field for the mapped tools (`Bash(git *)`, `Edit(*.ts)`, …); uninterpretable rules and tools without a mapped field fail open.
 - Timeouts and handler failures fail open (never block the action), as in CodeBuddy Code.
 - Subagents: `UserPromptSubmit`, `Stop`, `SessionStart`, and `SessionEnd` run only for the main conversation, as in CodeBuddy Code; `PreToolUse`/`PostToolUse` also run for subagent tool calls (`SubagentStart`/`SubagentStop` are not bridged yet).
+
+### Permissions
+
+Reads the `permissions.allow/ask/deny` rules from the same settings files (merged additively across scopes, deduplicated) and enforces them at the `tools/pre-execute` seam with CodeBuddy Code's semantics (deny → ask → allow; first match decides):
+
+- **Bash**: `Bash(cmd)` matches the exact command, `Bash(git:*)` matches word-prefixes, `Bash(npm run *)` matches bash globs whose `*` crosses `/`. Compound commands split on top-level `&&`/`||`/`;`/`|` (quotes respected): deny/ask trigger when any subcommand matches, allow requires every subcommand to match, and allow rules demand an exact match when the command contains redirections — the upstream anti-sneak-in rules.
+- **Read / Edit / Write**: case-insensitive path globs with upstream resolution (`//` absolute, `/` project root, `~` home, `path`/`./` cwd); a specifier without a path separator matches the file's basename at any depth. `permissions.additionalDirectories` also resolve `./`-style rules.
+- **WebFetch**: `domain:example.com` matches the host and its subdomains; without `domain:` the whole URL is glob-matched.
+- **MCP**: `mcp__server` matches `mcp__server__*`, exact `mcp__server__tool` rules match one tool; case and `-`/`.` are normalized to `_`. A bare `*` rule never covers MCP tools, and `mcp__*` only takes effect in deny/ask — as upstream documents.
+- **Skill**: `Skill(name)` matches the skill tool's `name` argument exactly (no wildcards). **Agent**: bare `Agent` matches the subagent tool; `Agent(name)` specifiers cannot match (DeepSeek Harness subagents carry no upstream agent type).
+- Hooks and rules compose per the upstream contract: PreToolUse hooks run first; deny rules always win over a hook `allow`; a matching ask rule still prompts; undecided hooks fall through to the rules; no rule match defers to DeepSeek Harness's approval policy. With `hooks: false` the rules still apply (independent switches).
+
+Not bridged (recorded as limitations): `permissions.defaultMode`, `disableBypassPermissionsMode`, `disableAutoMode`, and `subagentPermissionMode` are read but not enforced — DeepSeek Harness owns its approval modes; the `autoMode` natural-language classifier has no equivalent; CodeBuddy Code's built-in protected-path / catastrophic-command protections are not replicated (DeepSeek Harness's sandbox and approval stack cover that layer); project allow rules apply without CodeBuddy Code's trust-tier gating (the bridge has no trust state).
 
 ### Limitations
 

@@ -21,15 +21,15 @@
  */
 import { homedir } from 'node:os'
 import type { Context } from '@deepseek-ai/cordis'
-import type { PreToolDecision, ToolExecution } from '@deepseek-ai/dsh-tools'
+import type { PreToolDecision } from '@deepseek-ai/dsh-tools'
 import { evaluateRules } from '../../permissions/engine.js'
+import type { PermissionEvaluator } from '../../permissions/compose.js'
 import type { RuleVerdict } from '../../permissions/types.js'
 import type { BridgeLogger } from '../../util.js'
 import { claudeToolName } from './hooks/names.js'
 import type { SettingsLoader } from './hooks/settings.js'
 
-/** Verdict provider consumed by the hooks bridge's PreToolUse handler. */
-export type PermissionEvaluator = (exec: ToolExecution) => Promise<RuleVerdict>
+export type { PermissionEvaluator }
 
 /** Build the rule evaluator for one tool call (rules only; hooks compose it). */
 export function createPermissionEvaluator(logger: BridgeLogger, loader: SettingsLoader): PermissionEvaluator {

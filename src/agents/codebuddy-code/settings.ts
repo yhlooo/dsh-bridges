@@ -22,6 +22,8 @@
  */
 import { join } from 'node:path'
 import type { FsAdapter } from '../../fs-adapter.js'
+import { parseToolSpecifierRules } from '../../permissions/parse.js'
+import type { MergedPermissionConfig } from '../../permissions/types.js'
 import type { BridgeLogger } from '../../util.js'
 import { expandHome, isPlainObject } from '../../util.js'
 import { SKILL_OVERRIDE_STATES, type HookDef, type MatcherGroup, type SkillOverrideState } from './hooks/types.js'
@@ -35,6 +37,7 @@ export interface LoadedCodebuddySettings {
   byEvent: ReadonlyMap<string, readonly MatcherGroup[]>
   env: Readonly<Record<string, string>>
   skillOverrides: ReadonlyMap<string, SkillOverrideState>
+  permissions: MergedPermissionConfig
 }
 
 interface SettingsSource {
@@ -47,6 +50,17 @@ interface RawSettings {
   disableAllHooks?: boolean
   env?: Record<string, string>
   skillOverrides?: Record<string, SkillOverrideState>
+  permissions?: RawPermissionSettings
+}
+
+interface RawPermissionSettings {
+  allow?: string[]
+  ask?: string[]
+  deny?: string[]
+  defaultMode?: string
+  additionalDirectories?: string[]
+  disableBypassPermissionsMode?: string
+  disableAutoMode?: string
 }
 
 export class CodebuddySettingsLoader {
@@ -127,6 +141,11 @@ export class CodebuddySettingsLoader {
     const env: Record<string, string> = {}
     let disableAllHooks: boolean | undefined
     let skillOverrides: Map<string, SkillOverrideState> | undefined
+    const permissionBuckets = { allow: new Set<string>(), ask: new Set<string>(), deny: new Set<string>() }
+    const additionalDirectories = new Set<string>()
+    let defaultMode: string | undefined
+    let disableBypassPermissionsMode: string | undefined
+    let disableAutoMode: string | undefined
 
     for (const { settings } of parsed) {
       for (const [event, groups] of Object.entries(settings.hooks ?? {})) {
@@ -150,6 +169,16 @@ export class CodebuddySettingsLoader {
         // filtered to valid states, so a later file simply overwrites.
         skillOverrides = new Map([...(skillOverrides ?? []), ...Object.entries(settings.skillOverrides)])
       }
+      const permissions = settings.permissions
+      if (permissions !== undefined) {
+        for (const rule of permissions.allow ?? []) permissionBuckets.allow.add(rule)
+        for (const rule of permissions.ask ?? []) permissionBuckets.ask.add(rule)
+        for (const rule of permissions.deny ?? []) permissionBuckets.deny.add(rule)
+        for (const dir of permissions.additionalDirectories ?? []) additionalDirectories.add(dir)
+        if (permissions.defaultMode !== undefined) defaultMode = permissions.defaultMode
+        if (permissions.disableBypassPermissionsMode !== undefined) disableBypassPermissionsMode = permissions.disableBypassPermissionsMode
+        if (permissions.disableAutoMode !== undefined) disableAutoMode = permissions.disableAutoMode
+      }
     }
 
     return {
@@ -157,6 +186,14 @@ export class CodebuddySettingsLoader {
       byEvent,
       env,
       skillOverrides: skillOverrides ?? new Map(),
+      permissions: {
+        allow: parseToolSpecifierRules('allow', [...permissionBuckets.allow]),
+        ask: parseToolSpecifierRules('ask', [...permissionBuckets.ask]),
+        deny: parseToolSpecifierRules('deny', [...permissionBuckets.deny]),
+        defaultMode,
+        disableBypassPermissionsMode: disableBypassPermissionsMode !== undefined,
+        additionalDirectories: [...additionalDirectories],
+      },
     }
   }
 }
@@ -165,6 +202,7 @@ function normalizeSettings(value: Record<string, unknown>, logger: BridgeLogger,
   const result: RawSettings = {
     env: readEnv(value['env'], logger, path),
     disableAllHooks: typeof value['disableAllHooks'] === 'boolean' ? value['disableAllHooks'] : undefined,
+    permissions: readPermissions(value['permissions'], logger, path),
   }
   const hooks = value['hooks']
   if (hooks !== undefined && isPlainObject(hooks)) {
@@ -229,4 +267,26 @@ function readEnv(value: unknown, logger: BridgeLogger, path: string): Record<str
     if (typeof entry === 'string') env[key] = entry
   }
   return env
+}
+
+function readPermissions(value: unknown, logger: BridgeLogger, path: string): RawPermissionSettings | undefined {
+  if (value === undefined) return undefined
+  if (!isPlainObject(value)) {
+    logger.warn(`codebuddy-code: ignoring malformed permissions field in ${path}: must be an object`)
+    return undefined
+  }
+  return {
+    allow: readStringArray(value['allow']),
+    ask: readStringArray(value['ask']),
+    deny: readStringArray(value['deny']),
+    defaultMode: typeof value['defaultMode'] === 'string' ? value['defaultMode'] : undefined,
+    additionalDirectories: readStringArray(value['additionalDirectories']),
+    disableBypassPermissionsMode: typeof value['disableBypassPermissionsMode'] === 'string' ? value['disableBypassPermissionsMode'] : undefined,
+    disableAutoMode: typeof value['disableAutoMode'] === 'string' ? value['disableAutoMode'] : undefined,
+  }
+}
+
+function readStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  return value.filter((entry): entry is string => typeof entry === 'string')
 }
