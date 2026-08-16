@@ -17,6 +17,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Debug OIDC identity (temporary)
+        run: |
+          echo "repo=$GITHUB_REPOSITORY ref=$GITHUB_REF event=$GITHUB_EVENT_NAME workflow=$GITHUB_WORKFLOW"
+          ID_TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://registry.npmjs.org" | jq -r .value)
+          if [ "$ID_TOKEN" = "null" ] || [ -z "$ID_TOKEN" ]; then
+            echo "no id token available"
+          else
+            echo "$ID_TOKEN" | jq -R 'split(".")[1] | gsub("-";"+") | gsub("_";"/") | . + ("=" * ((4 - (. | length % 4)) % 4)) | @base64d | fromjson | {sub, repository, repository_owner, job_workflow_ref, ref, event_name, aud}'
+          fi
+          echo "--- npm identity ---"
+          npm whoami 2>&1 || true
+          npm config get registry
+
       - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v4
@@ -40,19 +53,6 @@ jobs:
       - run: pnpm build
       - run: pnpm test
       - run: npm pack --dry-run
-
-      - name: Debug OIDC identity (temporary)
-        run: |
-          echo "repo=$GITHUB_REPOSITORY ref=$GITHUB_REF event=$GITHUB_EVENT_NAME workflow=$GITHUB_WORKFLOW"
-          ID_TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://registry.npmjs.org" | jq -r .value)
-          if [ "$ID_TOKEN" = "null" ] || [ -z "$ID_TOKEN" ]; then
-            echo "no id token available"
-          else
-            echo "$ID_TOKEN" | jq -R 'split(".")[1] | gsub("-";"+") | gsub("_";"/") | . + ("=" * ((4 - (. | length % 4)) % 4)) | @base64d | fromjson | {sub, repository, repository_owner, job_workflow_ref, ref, event_name, aud}'
-          fi
-          echo "--- npm identity ---"
-          npm whoami 2>&1 || true
-          npm config get registry
 
       - name: Publish to npm
         run: npm publish --provenance
