@@ -5,7 +5,9 @@ const silent = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {
 
 describe('gemini hook execution (real subprocesses)', () => {
   it('runs a command hook with the JSON payload on stdin and parses the deny decision', async () => {
-    const command = `node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const p=JSON.parse(d);if(p.tool_name==='run_shell_command'){}else{process.exit(7)}console.log(JSON.stringify({decision:'deny',reason:'no bash'}))})"`
+    // Shell-form command; must stay cmd-safe (no %/!/&, function() instead of
+    // arrows — cmd would treat the arrow's `>` as redirection).
+    const command = `node -e "var d='';process.stdin.on('data',function(c){d+=c});process.stdin.on('end',function(){var p=JSON.parse(d);if(p.tool_name==='run_shell_command'){}else{process.exit(7)}console.log(JSON.stringify({decision:'deny',reason:'no bash'}))})"`
     const outcomes = await runEventHooks(
       {
         event: 'BeforeTool',
@@ -27,7 +29,7 @@ describe('gemini hook execution (real subprocesses)', () => {
     const outcomes = await runEventHooks(
       {
         event: 'BeforeTool',
-        groups: [{ matcher: '*', hooks: [{ type: 'command', command: 'echo blocked >&2; exit 2' }] }],
+        groups: [{ matcher: '*', hooks: [{ type: 'command', command: `node -e "console.error('blocked');process.exit(2)"` }] }],
         matchedValue: 'write_file',
         input: { tool_name: 'write_file' },
         cwd: process.cwd(),
@@ -57,14 +59,16 @@ describe('gemini hook execution (real subprocesses)', () => {
   })
 
   it('fails open on timeout', async () => {
+    // Short sleep: on Windows the kill hits the direct child only and the
+    // surviving grandchild holds the pipes until it exits (pitfalls #25).
     const outcomes = await runEventHooks(
       {
         event: 'BeforeTool',
-        groups: [{ hooks: [{ type: 'command', command: 'sleep 30' }] }],
+        groups: [{ hooks: [{ type: 'command', command: `node -e "setTimeout(function(){process.exit(0)},400)"` }] }],
         matchedValue: 'x',
         input: {},
         cwd: process.cwd(),
-        defaultTimeoutMs: 200,
+        defaultTimeoutMs: 100,
       },
       silent,
     )

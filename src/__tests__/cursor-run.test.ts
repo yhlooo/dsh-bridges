@@ -37,7 +37,9 @@ describe('cursor matcher and names', () => {
 
 describe('cursor hook execution (real subprocesses)', () => {
   it('runs a command hook with JSON stdin and parses a deny decision', async () => {
-    const command = `node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const p=JSON.parse(d);if(p.tool_name==='Shell'){}else{process.exit(7)}console.log(JSON.stringify({permission:'deny',agent_message:'no shell for you'}))})"`
+    // Shell-form command; must stay cmd-safe (no %/!/&, function() instead of
+    // arrows — cmd would treat the arrow's `>` as redirection).
+    const command = `node -e "var d='';process.stdin.on('data',function(c){d+=c});process.stdin.on('end',function(){var p=JSON.parse(d);if(p.tool_name==='Shell'){}else{process.exit(7)}console.log(JSON.stringify({permission:'deny',agent_message:'no shell for you'}))})"`
     const outcomes = await runEventHooks(
       {
         event: 'preToolUse',
@@ -59,8 +61,12 @@ describe('cursor hook execution (real subprocesses)', () => {
       {
         event: 'preToolUse',
         groups: [
-          { hooks: [{ type: 'command', command: 'echo blocked >&2; exit 2' }] },
-          { hooks: [{ type: 'command', command: 'node -e "setTimeout(()=>process.exit(0),30000)"', timeout: 0.1, failClosed: true }] },
+          { hooks: [{ type: 'command', command: `node -e "console.error('blocked');process.exit(2)"` }] },
+          // Short sleep: on Windows the kill hits the direct child only and
+          // the surviving grandchild holds the pipes until it exits.
+          {
+            hooks: [{ type: 'command', command: `node -e "setTimeout(function(){process.exit(0)},400)"`, timeout: 0.1, failClosed: true }],
+          },
         ],
         matchedValue: 'Read',
         input: { tool_name: 'Read' },
