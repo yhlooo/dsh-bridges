@@ -30,7 +30,7 @@ import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import { createUserMessage, type ContentBlock, type UserMessage } from '@deepseek-ai/dsh-llm'
 import type { PostToolDecision, PreToolDecision, ToolExecution, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 import type { BridgeLogger } from '../../../util.js'
-import { capString, escapeReminderClose, isPlainObject } from '../../../util.js'
+import { capString, escapeReminderClose, isPlainObject, killHookChild } from '../../../util.js'
 import { CodexSettingsLoader } from '../settings.js'
 import { codexToolName } from './names.js'
 import { hookBlockMessage, runEventHooks } from './run.js'
@@ -89,11 +89,7 @@ export function createHookBridge(ctx: Context, logger: BridgeLogger, loader: Cod
   ctx.effect(
     () => () => {
       for (const child of activeChildren) {
-        try {
-          child.kill('SIGTERM')
-        } catch {
-          // already gone
-        }
+        killHookChild(child, 'SIGTERM')
       }
       activeChildren.clear()
     },

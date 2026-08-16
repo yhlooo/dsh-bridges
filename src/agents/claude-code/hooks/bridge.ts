@@ -26,7 +26,7 @@ import type { PostToolDecision, PreToolDecision, ToolExecution, ToolExecutionRes
 import type { FsAdapter } from '../../../fs-adapter.js'
 import { claudeToolName } from './names.js'
 import type { BridgeLogger } from '../../../util.js'
-import { capString, escapeReminderClose, isPlainObject } from '../../../util.js'
+import { capString, escapeReminderClose, isPlainObject, killHookChild } from '../../../util.js'
 import { runEventHooks } from './run.js'
 import { SettingsLoader } from './settings.js'
 import type { BridgedHookEvent, HookOutcome } from './types.js'
@@ -83,11 +83,7 @@ export function createHookBridge(
   ctx.effect(
     () => () => {
       for (const child of activeChildren) {
-        try {
-          child.kill('SIGTERM')
-        } catch {
-          // already gone
-        }
+        killHookChild(child, 'SIGTERM')
       }
       activeChildren.clear()
     },
