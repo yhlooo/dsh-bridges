@@ -174,5 +174,6 @@ chore: bump dev dependencies
 - tag 版本必须与 `package.json` 的 version 一致（`publish.yml` 会校验），且
   不能与 npm 上已发布的版本重复。
 - tag 推送后 `.github/workflows/publish.yml` 自动执行测试、
-  `npm publish --provenance` 与 GitHub Release；**不要再手动 `pnpm publish`**
-  （OIDC trust 尚未配置时的临时手段除外）。
+  `npx npm@latest publish --provenance`（必须用最新 npm：Node 自带 npm 10
+  会被 setup-node 的空 token 占位符劫持导致 E404，见 pitfalls #35）与
+  GitHub Release；**不要再手动 `pnpm publish`**。

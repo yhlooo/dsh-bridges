@@ -320,3 +320,23 @@ User=4、Admin=5），工作区层因此也不读（上游 issue #18186）。
 **正确写法**：fixture 目录不提交任何 `.git` 内容；需要仓库根标记的测试在
 `fixtureCopy` 之后调用 `e2e/harness.ts` 的 `markRepoRoot(dir)`（运行时
 `mkdir .git` + 写 HEAD）。gemini 的边界标记同样处理，保证本地与 CI 一致。
+
+## 35. npm 10 的 OIDC 可信发布被 setup-node 的空 token 占位符劫持（E404）
+
+**现象**：publish.yml 正确配置了 `id-token: write` + `npm publish --provenance`，
+npmjs.com 上也配好了 trusted publisher，但发布永远在
+`PUT https://registry.npmjs.org/<pkg>` 上报
+`E404 Not Found - '<pkg>@<ver>' is not in this registry`；provenance 签名
+却显示成功（"Signed provenance statement ... transparency log"）。排查时在
+job 里 `npm whoami` 报 ENEEDAUTH、OIDC token 的 claims（owner/repo/workflow）
+全部正确，容易误判为 trust 配置填错。
+
+**原因**：`actions/setup-node` 配了 `registry-url` 后会把
+`//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}` 写进 `.npmrc`——即使
+`NODE_AUTH_TOKEN` 未设置，也会留下**空值占位符**。Node 22 自带的 npm 10
+读到这个空 token 就把它当 bearer 发出，不再回退到 OIDC 可信发布交换；注册表
+对未授权发布统一回 404（掩盖包存在性）。npm 11 修复了空 token 回退。
+
+**正确写法**：发布步骤用最新 npm 而非 Node 自带的：
+`npx npm@latest publish --provenance`（mem0ai/mem0 PR #4724 同款修法）。
+publish.yml 里已在注释写明原因，换 npm 版本时不要随手退回 `npm publish`。
