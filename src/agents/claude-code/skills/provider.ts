@@ -95,7 +95,9 @@ export class ClaudeSkillProvider implements SkillProvider {
       roots.push(
         { kind: 'project-skills', path: join(projectClaudeDir, 'skills'), rank: RANK_PROJECT_SKILLS },
         { kind: 'project-commands', path: join(projectClaudeDir, 'commands'), rank: RANK_PROJECT_COMMANDS },
-        ...(this.config.agents ? [{ kind: 'project-agents' as const, path: join(projectClaudeDir, 'agents'), rank: RANK_PROJECT_AGENTS }] : []),
+        ...(this.config.agents
+          ? [{ kind: 'project-agents' as const, path: join(projectClaudeDir, 'agents'), rank: RANK_PROJECT_AGENTS }]
+          : []),
       )
     }
     return roots

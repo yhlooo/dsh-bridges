@@ -102,7 +102,15 @@ describe('applySettings', () => {
   it('writes sandbox_mode through the sandbox/mode event', () => {
     const { agent, events } = makeAgent()
     applySettings(
-      { hooksDisabled: false, byEvent: new Map(), skillDisabledPaths: new Set(), projectDocMaxBytes: 0, projectDocFallbackFilenames: [], projectRootMarkers: ['.git'], sandboxMode: 'workspace-write' },
+      {
+        hooksDisabled: false,
+        byEvent: new Map(),
+        skillDisabledPaths: new Set(),
+        projectDocMaxBytes: 0,
+        projectDocFallbackFilenames: [],
+        projectRootMarkers: ['.git'],
+        sandboxMode: 'workspace-write',
+      },
       agent,
       silent,
     )
@@ -112,7 +120,16 @@ describe('applySettings', () => {
   it('lets a built-in default_permissions profile win over sandbox_mode', () => {
     const { agent, events } = makeAgent()
     applySettings(
-      { hooksDisabled: false, byEvent: new Map(), skillDisabledPaths: new Set(), projectDocMaxBytes: 0, projectDocFallbackFilenames: [], projectRootMarkers: ['.git'], sandboxMode: 'workspace-write', defaultPermissionsProfile: ':read-only' },
+      {
+        hooksDisabled: false,
+        byEvent: new Map(),
+        skillDisabledPaths: new Set(),
+        projectDocMaxBytes: 0,
+        projectDocFallbackFilenames: [],
+        projectRootMarkers: ['.git'],
+        sandboxMode: 'workspace-write',
+        defaultPermissionsProfile: ':read-only',
+      },
       agent,
       silent,
     )
@@ -122,7 +139,16 @@ describe('applySettings', () => {
   it('falls back to sandbox_mode for a custom profile name', () => {
     const { agent, events } = makeAgent()
     applySettings(
-      { hooksDisabled: false, byEvent: new Map(), skillDisabledPaths: new Set(), projectDocMaxBytes: 0, projectDocFallbackFilenames: [], projectRootMarkers: ['.git'], sandboxMode: 'danger-full-access', defaultPermissionsProfile: 'my-profile' },
+      {
+        hooksDisabled: false,
+        byEvent: new Map(),
+        skillDisabledPaths: new Set(),
+        projectDocMaxBytes: 0,
+        projectDocFallbackFilenames: [],
+        projectRootMarkers: ['.git'],
+        sandboxMode: 'danger-full-access',
+        defaultPermissionsProfile: 'my-profile',
+      },
       agent,
       silent,
     )
@@ -132,7 +158,15 @@ describe('applySettings', () => {
   it('maps approval_policy never → never and the rest → ask', () => {
     const never = makeAgent()
     applySettings(
-      { hooksDisabled: false, byEvent: new Map(), skillDisabledPaths: new Set(), projectDocMaxBytes: 0, projectDocFallbackFilenames: [], projectRootMarkers: ['.git'], approvalPolicy: { kind: 'never' } },
+      {
+        hooksDisabled: false,
+        byEvent: new Map(),
+        skillDisabledPaths: new Set(),
+        projectDocMaxBytes: 0,
+        projectDocFallbackFilenames: [],
+        projectRootMarkers: ['.git'],
+        approvalPolicy: { kind: 'never' },
+      },
       never.agent,
       silent,
     )
@@ -141,7 +175,15 @@ describe('applySettings', () => {
     for (const kind of ['untrusted', 'on-request', 'granular'] as const) {
       const ask = makeAgent()
       applySettings(
-        { hooksDisabled: false, byEvent: new Map(), skillDisabledPaths: new Set(), projectDocMaxBytes: 0, projectDocFallbackFilenames: [], projectRootMarkers: ['.git'], approvalPolicy: { kind } },
+        {
+          hooksDisabled: false,
+          byEvent: new Map(),
+          skillDisabledPaths: new Set(),
+          projectDocMaxBytes: 0,
+          projectDocFallbackFilenames: [],
+          projectRootMarkers: ['.git'],
+          approvalPolicy: { kind },
+        },
         ask.agent,
         silent,
       )
@@ -152,7 +194,14 @@ describe('applySettings', () => {
   it('writes nothing when neither key is configured', () => {
     const { agent, events } = makeAgent()
     applySettings(
-      { hooksDisabled: false, byEvent: new Map(), skillDisabledPaths: new Set(), projectDocMaxBytes: 0, projectDocFallbackFilenames: [], projectRootMarkers: ['.git'] },
+      {
+        hooksDisabled: false,
+        byEvent: new Map(),
+        skillDisabledPaths: new Set(),
+        projectDocMaxBytes: 0,
+        projectDocFallbackFilenames: [],
+        projectRootMarkers: ['.git'],
+      },
       agent,
       silent,
     )

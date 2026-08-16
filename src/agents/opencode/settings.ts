@@ -220,7 +220,8 @@ export class OpencodeSettingsLoader {
       const layerMcp = readMcp(value['mcp'], this.logger, source.path)
       for (const [name, entry] of layerMcp) mcp.set(name, entry)
       for (const [alias, entry] of readReferences(value['references'], source.dir, this.logger, source.path)) references.set(alias, entry)
-      for (const [id, entry] of readAgents(value['agent'], source.dir, source.kind === 'project', this.logger, source.path)) agents.set(id, entry)
+      for (const [id, entry] of readAgents(value['agent'], source.dir, source.kind === 'project', this.logger, source.path))
+        agents.set(id, entry)
       for (const path of readSkillPaths(value['skills'], source.dir)) skillPaths.push(path)
     }
     for (const [name, command] of projectCommands) commands.set(name, command)
@@ -246,7 +247,11 @@ export class OpencodeSettingsLoader {
 const OPENCODE_ACTIONS: readonly OpencodeAction[] = ['allow', 'ask', 'deny']
 
 /** Parse the `permission` field: a bare action or a family → rules object. */
-function readPermission(value: unknown, logger: BridgeLogger, path: string): { defaultAction?: OpencodeAction; families: Map<string, OpencodePermissionFamily> } | undefined {
+function readPermission(
+  value: unknown,
+  logger: BridgeLogger,
+  path: string,
+): { defaultAction?: OpencodeAction; families: Map<string, OpencodePermissionFamily> } | undefined {
   if (value === undefined) return undefined
   if (typeof value === 'string') {
     if ((OPENCODE_ACTIONS as readonly string[]).includes(value)) return { families: new Map(), defaultAction: value as OpencodeAction }
@@ -285,7 +290,12 @@ function readPermissionFamily(value: unknown, logger: BridgeLogger, path: string
   return { rules }
 }
 
-function readJsonCommands(value: unknown, commands: Map<string, OpencodeJsonCommand>, logger: BridgeLogger, path: string): Map<string, OpencodeJsonCommand> {
+function readJsonCommands(
+  value: unknown,
+  commands: Map<string, OpencodeJsonCommand>,
+  logger: BridgeLogger,
+  path: string,
+): Map<string, OpencodeJsonCommand> {
   if (value === undefined) return commands
   if (!isPlainObject(value)) {
     logger.warn(`opencode: ignoring malformed command field in ${path}: must be an object`)
@@ -359,7 +369,13 @@ function readSkillPaths(value: unknown, baseDir: string): { path: string }[] {
 }
 
 /** Parse `agent.<id>`: custom agents; only subagent/all modes are bridged. */
-function readAgents(value: unknown, baseDir: string, project: boolean, logger: BridgeLogger, path: string): Map<string, OpencodeAgentEntry> {
+function readAgents(
+  value: unknown,
+  baseDir: string,
+  project: boolean,
+  logger: BridgeLogger,
+  path: string,
+): Map<string, OpencodeAgentEntry> {
   const result = new Map<string, OpencodeAgentEntry>()
   if (value === undefined) return result
   if (!isPlainObject(value)) {
@@ -404,7 +420,11 @@ function readMcp(value: unknown, logger: BridgeLogger, path: string): Map<string
     if (!isPlainObject(entry)) continue
     const type = entry['type']
     if (type !== 'local' && type !== 'remote') continue
-    const command = Array.isArray(entry['command']) ? entry['command'].filter((part): part is string => typeof part === 'string') : typeof entry['command'] === 'string' ? [entry['command']] : undefined
+    const command = Array.isArray(entry['command'])
+      ? entry['command'].filter((part): part is string => typeof part === 'string')
+      : typeof entry['command'] === 'string'
+        ? [entry['command']]
+        : undefined
     const environment: Record<string, string> = {}
     if (isPlainObject(entry['environment'])) {
       for (const [key, envValue] of Object.entries(entry['environment'])) {

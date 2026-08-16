@@ -44,13 +44,7 @@ export function normalizeServer(name: string, entry: Record<string, unknown>, to
 export class ClaudeMcpManager {
   readonly manager: McpManager
 
-  constructor(
-    ctx: Context,
-    logger: BridgeLogger,
-    fs: FsAdapter,
-    config: ClaudeMcpConfig,
-    settingsLoader: SettingsLoader,
-  ) {
+  constructor(ctx: Context, logger: BridgeLogger, fs: FsAdapter, config: ClaudeMcpConfig, settingsLoader: SettingsLoader) {
     const userFile = join(dirname(expandHome(config.userClaudeDir)), '.claude.json')
     const normalize = (name: string, entry: Record<string, unknown>, baseEnv?: Readonly<Record<string, string>>) =>
       normalizeClaudeStyleEntry(name, entry, 'claude', config.toolCallTimeoutMs, baseEnv)
@@ -82,7 +76,13 @@ export class ClaudeMcpManager {
 }
 
 /** Register the manager on the plugin fiber and reconcile at session start. */
-export function createMcpBridge(ctx: Context, logger: BridgeLogger, fs: FsAdapter, config: ClaudeMcpConfig, settingsLoader: SettingsLoader): void {
+export function createMcpBridge(
+  ctx: Context,
+  logger: BridgeLogger,
+  fs: FsAdapter,
+  config: ClaudeMcpConfig,
+  settingsLoader: SettingsLoader,
+): void {
   const manager = new ClaudeMcpManager(ctx, logger, fs, config, settingsLoader)
   createSharedMcpBridge(ctx, manager.manager)
 }

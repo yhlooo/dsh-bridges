@@ -79,7 +79,13 @@ describe('ClaudeMcpManager.reconcile', () => {
       on: () => {},
     } as never
     const settingsLoader = new SettingsLoader(silent, new TreeFs(files), { userClaudeDir: '/home/u/.claude' })
-    return new ClaudeMcpManager(ctx, silent, new TreeFs(files), { userClaudeDir: '/home/u/.claude', toolCallTimeoutMs: 120_000 }, settingsLoader)
+    return new ClaudeMcpManager(
+      ctx,
+      silent,
+      new TreeFs(files),
+      { userClaudeDir: '/home/u/.claude', toolCallTimeoutMs: 120_000 },
+      settingsLoader,
+    )
   }
 
   it('registers user servers and lets approved project servers override same-name user ones', async () => {
@@ -131,14 +137,28 @@ describe('ClaudeMcpManager.reconcile', () => {
     const ctx = {
       plugin: (_plugin: unknown, _config: unknown) => {
         pluginCalls.push(_config)
-        const fiber: any = Promise.resolve({ dispose: () => { disposals.push(1); return Promise.resolve() } })
-        fiber.dispose = () => { disposals.push(1); return Promise.resolve() }
+        const fiber: any = Promise.resolve({
+          dispose: () => {
+            disposals.push(1)
+            return Promise.resolve()
+          },
+        })
+        fiber.dispose = () => {
+          disposals.push(1)
+          return Promise.resolve()
+        }
         return fiber
       },
       on: () => {},
     } as never
     const settingsLoader = new SettingsLoader(silent, new TreeFs(files), { userClaudeDir: '/home/u/.claude' })
-    const manager = new ClaudeMcpManager(ctx, silent, new TreeFs(files), { userClaudeDir: '/home/u/.claude', toolCallTimeoutMs: 120_000 }, settingsLoader)
+    const manager = new ClaudeMcpManager(
+      ctx,
+      silent,
+      new TreeFs(files),
+      { userClaudeDir: '/home/u/.claude', toolCallTimeoutMs: 120_000 },
+      settingsLoader,
+    )
     await manager.reconcile('/proj')
     files.delete('/proj/.mcp.json')
     await manager.reconcile('/proj')

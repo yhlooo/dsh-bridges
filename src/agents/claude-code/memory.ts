@@ -93,7 +93,8 @@ export async function collectMemorySections(
   }
   if (!cwd) return sections
   const rootText = await readOptional(fs, join(cwd, 'CLAUDE.md'))
-  const isRootDuplicate = (text: string | undefined): boolean => text !== undefined && rootText !== undefined && text.trim() === rootText.trim()
+  const isRootDuplicate = (text: string | undefined): boolean =>
+    text !== undefined && rootText !== undefined && text.trim() === rootText.trim()
 
   // Ancestors above the working directory, filesystem-root first.
   for (const dir of ancestorDirs(cwd)) {
@@ -148,7 +149,8 @@ export async function collectMemorySections(
     if (loadedSettings.autoMemoryDirectory !== undefined) {
       const memoryFile = join(expandHome(loadedSettings.autoMemoryDirectory), 'MEMORY.md')
       const memoryText = await readOptional(fs, memoryFile)
-      if (memoryText !== undefined) sections.push({ kind: 'auto-memory', label: `${loadedSettings.autoMemoryDirectory}/MEMORY.md`, content: memoryText })
+      if (memoryText !== undefined)
+        sections.push({ kind: 'auto-memory', label: `${loadedSettings.autoMemoryDirectory}/MEMORY.md`, content: memoryText })
     }
   }
   return sections

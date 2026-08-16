@@ -120,7 +120,9 @@ export class CodebuddySkillProvider implements SkillProvider {
       roots.push(
         { kind: 'project-skills', path: join(projectCodebuddyDir, 'skills'), rank: RANK_PROJECT_SKILLS },
         { kind: 'project-commands', path: join(projectCodebuddyDir, 'commands'), rank: RANK_PROJECT_COMMANDS },
-        ...(this.config.agents ? [{ kind: 'project-agents' as const, path: join(projectCodebuddyDir, 'agents'), rank: RANK_PROJECT_AGENTS }] : []),
+        ...(this.config.agents
+          ? [{ kind: 'project-agents' as const, path: join(projectCodebuddyDir, 'agents'), rank: RANK_PROJECT_AGENTS }]
+          : []),
       )
     }
     return roots

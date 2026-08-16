@@ -161,7 +161,6 @@ export class CodebuddySettingsLoader {
     const additionalDirectories = new Set<string>()
     let defaultMode: string | undefined
     let disableBypassPermissionsMode: string | undefined
-    let disableAutoMode: string | undefined
     let enableAllProjectMcpServers = false
     let enabledMcpjsonServers: Set<string> | undefined
     let disabledMcpjsonServers = new Set<string>()
@@ -196,7 +195,9 @@ export class CodebuddySettingsLoader {
         for (const dir of permissions.additionalDirectories ?? []) additionalDirectories.add(dir)
         if (permissions.defaultMode !== undefined) defaultMode = permissions.defaultMode
         if (permissions.disableBypassPermissionsMode !== undefined) disableBypassPermissionsMode = permissions.disableBypassPermissionsMode
-        if (permissions.disableAutoMode !== undefined) disableAutoMode = permissions.disableAutoMode
+        // disableAutoMode is read but not enforced (DeepSeek Harness owns
+        // its approval modes); the value is validated and dropped.
+        void permissions.disableAutoMode
       }
       const mcp = settings.mcp
       if (mcp !== undefined) {
@@ -312,7 +313,8 @@ function readPermissions(value: unknown, logger: BridgeLogger, path: string): Ra
     deny: readStringArray(value['deny']),
     defaultMode: typeof value['defaultMode'] === 'string' ? value['defaultMode'] : undefined,
     additionalDirectories: readStringArray(value['additionalDirectories']),
-    disableBypassPermissionsMode: typeof value['disableBypassPermissionsMode'] === 'string' ? value['disableBypassPermissionsMode'] : undefined,
+    disableBypassPermissionsMode:
+      typeof value['disableBypassPermissionsMode'] === 'string' ? value['disableBypassPermissionsMode'] : undefined,
     disableAutoMode: typeof value['disableAutoMode'] === 'string' ? value['disableAutoMode'] : undefined,
   }
 }
@@ -328,6 +330,11 @@ function readMcpSettings(value: Record<string, unknown>): RawMcpSettings | undef
     enabledMcpjsonServers: readStringArray(value['enabledMcpjsonServers']),
     disabledMcpjsonServers: readStringArray(value['disabledMcpjsonServers']),
   }
-  if (result.enableAllProjectMcpServers === undefined && result.enabledMcpjsonServers === undefined && result.disabledMcpjsonServers === undefined) return undefined
+  if (
+    result.enableAllProjectMcpServers === undefined &&
+    result.enabledMcpjsonServers === undefined &&
+    result.disabledMcpjsonServers === undefined
+  )
+    return undefined
   return result
 }

@@ -242,7 +242,13 @@ describe('decision resolvers', () => {
   })
 
   it('fails open on timeouts and startup failures', () => {
-    const decision = resolvePreToolUse([{ ...base, timedOut: true }, { ...base, failedToStart: 'ENOENT' }], 1000)
+    const decision = resolvePreToolUse(
+      [
+        { ...base, timedOut: true },
+        { ...base, failedToStart: 'ENOENT' },
+      ],
+      1000,
+    )
     expect(decision).toEqual({ kind: 'undecided' })
   })
 })

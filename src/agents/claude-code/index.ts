@@ -78,7 +78,12 @@ export function registerClaudeCodeBridge(ctx: Context, logger: BridgeLogger, fs:
   if (resolved.skills) {
     let provider: ClaudeSkillProvider | undefined
     ctx.skills.registerProvider((control) => {
-      provider = new ClaudeSkillProvider(logger, fs, { userClaudeDir: resolved.userClaudeDir, watch: resolved.watch, agents: resolved.agents }, control.invalidate)
+      provider = new ClaudeSkillProvider(
+        logger,
+        fs,
+        { userClaudeDir: resolved.userClaudeDir, watch: resolved.watch, agents: resolved.agents },
+        control.invalidate,
+      )
       return provider
     })
     ctx.effect(

@@ -28,7 +28,7 @@ import type { FsAdapter } from '../../../fs-adapter.js'
 import type { BridgeLogger } from '../../../util.js'
 import { capString, expandHome, isPlainObject } from '../../../util.js'
 import type { CodexSettingsLoader, RawCodexAgent } from '../settings.js'
-import { AgentDefinitionError, buildAgentSkillBody, type AgentDefinition } from '../../../agent-definitions.js'
+import { buildAgentSkillBody, type AgentDefinition } from '../../../agent-definitions.js'
 import { FrontmatterError, parseSkillFile } from './parse.js'
 
 export const PROVIDER_NAME = 'codex'
@@ -248,7 +248,7 @@ export class CodexSkillProvider implements SkillProvider {
     const definition: AgentDefinition = {
       name: locator.entry,
       description: agent.description ?? '',
-      body: body.trim() === '' ? agent.description ?? '' : body,
+      body: body.trim() === '' ? (agent.description ?? '') : body,
       tools: [],
       disallowedTools: [],
       model,

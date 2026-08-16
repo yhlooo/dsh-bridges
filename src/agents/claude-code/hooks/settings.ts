@@ -12,7 +12,7 @@
  */
 import { join } from 'node:path'
 import { parseToolSpecifierRules } from '../../../permissions/parse.js'
-import type { MergedPermissionConfig } from '../../../permissions/types.js'
+import type { MergedPermissionConfig as _MergedPermissionConfig } from '../../../permissions/types.js'
 import type { FsAdapter } from '../../../fs-adapter.js'
 import type { BridgeLogger } from '../../../util.js'
 import { expandHome, isPlainObject } from '../../../util.js'
@@ -182,7 +182,10 @@ function normalizeSettings(value: Record<string, unknown>, logger: BridgeLogger,
     enabledMcpjsonServers: readStringArray(value['enabledMcpjsonServers']),
     disabledMcpjsonServers: readStringArray(value['disabledMcpjsonServers']),
     outputStyle: typeof value['outputStyle'] === 'string' && value['outputStyle'].trim() !== '' ? value['outputStyle'].trim() : undefined,
-    autoMemoryDirectory: typeof value['autoMemoryDirectory'] === 'string' && value['autoMemoryDirectory'].trim() !== '' ? value['autoMemoryDirectory'].trim() : undefined,
+    autoMemoryDirectory:
+      typeof value['autoMemoryDirectory'] === 'string' && value['autoMemoryDirectory'].trim() !== ''
+        ? value['autoMemoryDirectory'].trim()
+        : undefined,
   }
   const hooks = value['hooks']
   if (hooks === undefined) return result
@@ -255,6 +258,7 @@ function readPermissions(value: unknown, logger: BridgeLogger, path: string): Ra
     deny: readStringArray(value['deny']),
     defaultMode: typeof value['defaultMode'] === 'string' ? value['defaultMode'] : undefined,
     additionalDirectories: readStringArray(value['additionalDirectories']),
-    disableBypassPermissionsMode: typeof value['disableBypassPermissionsMode'] === 'boolean' ? value['disableBypassPermissionsMode'] : undefined,
+    disableBypassPermissionsMode:
+      typeof value['disableBypassPermissionsMode'] === 'boolean' ? value['disableBypassPermissionsMode'] : undefined,
   }
 }

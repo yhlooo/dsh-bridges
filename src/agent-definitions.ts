@@ -70,7 +70,7 @@ const UPSTREAM_TO_DSH_TOOL: Readonly<Record<string, string>> = {
  * tool-filter names at startup, so dropping them (with a warning) beats
  * failing every delegation.
  */
-export function translateAgentToolList(entries: readonly string[], logger: BridgeLogger, name: string): string[] {
+export function translateAgentToolList(entries: readonly string[], _logger: BridgeLogger, _name: string): string[] {
   const translated: string[] = []
   for (const entry of entries) {
     const trimmed = entry.trim()
@@ -87,7 +87,8 @@ export function translateAgentToolList(entries: readonly string[], logger: Bridg
  * are missing, so discovery can fail closed (drop with a warning).
  */
 export function parseAgentDefinition(text: string): AgentDefinition {
-  const match = FRONTMATTER_RE.exec(text)
+  // Windows editors add a UTF-8 BOM; tolerate it before the fence.
+  const match = FRONTMATTER_RE.exec(text.replace(/^\uFEFF/, ''))
   if (!match) throw new AgentDefinitionError('missing YAML frontmatter (--- … ---)')
   let frontmatter: unknown
   try {
@@ -98,13 +99,18 @@ export function parseAgentDefinition(text: string): AgentDefinition {
   if (!isPlainObject(frontmatter)) throw new AgentDefinitionError('frontmatter must be a YAML mapping')
   const name = frontmatter['name']
   if (typeof name !== 'string' || name.trim() === '') throw new AgentDefinitionError('frontmatter name must be a non-empty string')
-  if (name.includes(':')) throw new AgentDefinitionError(`frontmatter name ${JSON.stringify(name)} contains ":" (plugin-scoped names are not supported)`)
+  if (name.includes(':'))
+    throw new AgentDefinitionError(`frontmatter name ${JSON.stringify(name)} contains ":" (plugin-scoped names are not supported)`)
   const description = frontmatter['description']
-  if (typeof description !== 'string' || description.trim() === '') throw new AgentDefinitionError('frontmatter description must be a non-empty string')
+  if (typeof description !== 'string' || description.trim() === '')
+    throw new AgentDefinitionError('frontmatter description must be a non-empty string')
   const tools = readStringList(frontmatter['tools'])
   const disallowedTools = readStringList(frontmatter['disallowedTools'])
   const model = typeof frontmatter['model'] === 'string' && frontmatter['model'].trim() !== '' ? frontmatter['model'] : undefined
-  const maxTurns = typeof frontmatter['maxTurns'] === 'number' && Number.isInteger(frontmatter['maxTurns']) && frontmatter['maxTurns'] > 0 ? frontmatter['maxTurns'] : undefined
+  const maxTurns =
+    typeof frontmatter['maxTurns'] === 'number' && Number.isInteger(frontmatter['maxTurns']) && frontmatter['maxTurns'] > 0
+      ? frontmatter['maxTurns']
+      : undefined
   return {
     name: name.trim(),
     description: description.trim(),
@@ -132,10 +138,7 @@ function readStringList(value: unknown): string[] {
  * verbatim, followed by the delegation spec the model should pass to the DSH
  * `subagent` tool.
  */
-export function buildAgentSkillBody(
-  definition: AgentDefinition,
-  logger: BridgeLogger,
-): string {
+export function buildAgentSkillBody(definition: AgentDefinition, logger: BridgeLogger): string {
   const allow = translateAgentToolList(definition.tools, logger, definition.name)
   const deny = translateAgentToolList(definition.disallowedTools, logger, definition.name)
   const lines: string[] = [
@@ -146,7 +149,7 @@ export function buildAgentSkillBody(
     'This skill is a bridged custom subagent definition. To use it, delegate with the `subagent` tool:',
     `- label: "${escapeSpecValue(definition.name)}"`,
     '- persona: the entire text above this separator, verbatim',
-    '- prompt: the user\'s task',
+    "- prompt: the user's task",
   ]
   if (allow.length > 0) lines.push(`- toolFilter.allow: ${JSON.stringify(allow)}`)
   if (deny.length > 0) lines.push(`- toolFilter.deny: ${JSON.stringify(deny)}`)

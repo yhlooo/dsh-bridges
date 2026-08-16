@@ -87,7 +87,13 @@ describe('OpencodeSkillProvider upward discovery', () => {
 
   function makeProvider(files: Map<string, string>): OpencodeSkillProvider {
     const loader = new OpencodeSettingsLoader(silent, new TreeFs(files), { userOpencodeDir: '/home/u/.config/opencode' })
-    return new OpencodeSkillProvider(silent, new TreeFs(files), { userOpencodeDir: '/home/u/.config/opencode', watch: false }, loader, () => {})
+    return new OpencodeSkillProvider(
+      silent,
+      new TreeFs(files),
+      { userOpencodeDir: '/home/u/.config/opencode', watch: false },
+      loader,
+      () => {},
+    )
   }
 
   it('discovers .opencode/skills from the cwd up to the git root, closest first', async () => {

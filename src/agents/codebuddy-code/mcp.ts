@@ -13,7 +13,13 @@
 import { dirname, join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { FsAdapter } from '../../fs-adapter.js'
-import { createMcpBridge as createSharedMcpBridge, McpManager, normalizeClaudeStyleEntry, readJsonServerFiles, type McpBridgeOptions } from '../../mcp-bridge.js'
+import {
+  createMcpBridge as createSharedMcpBridge,
+  McpManager,
+  normalizeClaudeStyleEntry,
+  readJsonServerFiles,
+  type McpBridgeOptions,
+} from '../../mcp-bridge.js'
 import type { BridgeLogger } from '../../util.js'
 import { expandHome } from '../../util.js'
 import type { CodebuddySettingsLoader } from './settings.js'
@@ -27,13 +33,7 @@ export interface CodebuddyMcpConfig {
 export class CodebuddyMcpManager {
   readonly manager: McpManager
 
-  constructor(
-    ctx: Context,
-    logger: BridgeLogger,
-    fs: FsAdapter,
-    config: CodebuddyMcpConfig,
-    settingsLoader: CodebuddySettingsLoader,
-  ) {
+  constructor(ctx: Context, logger: BridgeLogger, fs: FsAdapter, config: CodebuddyMcpConfig, settingsLoader: CodebuddySettingsLoader) {
     const userDir = expandHome(config.userCodebuddyDir)
     const userFiles = [join(userDir, '.mcp.json'), join(userDir, 'mcp.json'), join(dirname(userDir), '.codebuddy.json')]
     const normalize = (name: string, entry: Record<string, unknown>, baseEnv?: Readonly<Record<string, string>>) =>
@@ -47,7 +47,9 @@ export class CodebuddyMcpManager {
         const env = (await settingsLoader.load(cwd)).env
         return {
           user: await readJsonServerFiles(fs, logger, userFiles, (name, entry) => normalize(name, entry, env)),
-          project: await readJsonServerFiles(fs, logger, [join(cwd, '.mcp.json'), join(cwd, 'mcp.json')], (name, entry) => normalize(name, entry, env)),
+          project: await readJsonServerFiles(fs, logger, [join(cwd, '.mcp.json'), join(cwd, 'mcp.json')], (name, entry) =>
+            normalize(name, entry, env),
+          ),
         }
       },
       readPolicy: async (cwd) => (await settingsLoader.load(cwd)).mcpjsonServers,
@@ -66,7 +68,13 @@ export class CodebuddyMcpManager {
 }
 
 /** Register the manager on the plugin fiber and reconcile at session start. */
-export function createMcpBridge(ctx: Context, logger: BridgeLogger, fs: FsAdapter, config: CodebuddyMcpConfig, settingsLoader: CodebuddySettingsLoader): void {
+export function createMcpBridge(
+  ctx: Context,
+  logger: BridgeLogger,
+  fs: FsAdapter,
+  config: CodebuddyMcpConfig,
+  settingsLoader: CodebuddySettingsLoader,
+): void {
   const manager = new CodebuddyMcpManager(ctx, logger, fs, config, settingsLoader)
   createSharedMcpBridge(ctx, manager.manager)
 }

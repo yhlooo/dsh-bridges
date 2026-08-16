@@ -26,7 +26,7 @@ import { globMatch } from '../../permissions/glob.js'
 import type { RuleVerdict } from '../../permissions/types.js'
 import type { BridgeLogger } from '../../util.js'
 import { isPlainObject } from '../../util.js'
-import type { OpencodeAction, OpencodePermissionConfig, OpencodePermissionFamily, OpencodeSettingsLoader } from './settings.js'
+import type { OpencodeAction, OpencodePermissionConfig, OpencodeSettingsLoader } from './settings.js'
 
 /** DSH tool names → opencode permission families (evaluated in order). */
 const DSH_TO_OPENCODE_FAMILIES: Readonly<Record<string, readonly string[]>> = {
@@ -82,10 +82,22 @@ function stringField(args: Record<string, unknown>, key: string): string | undef
 }
 
 /** Resolve one opencode family for a tool call into an action or undefined. */
-export function evaluateFamily(permissions: OpencodePermissionConfig, family: string, value: string | undefined, kind: 'path' | 'text', context: { cwd: string; home: string }): OpencodeAction | undefined {
+export function evaluateFamily(
+  permissions: OpencodePermissionConfig,
+  family: string,
+  value: string | undefined,
+  kind: 'path' | 'text',
+  context: { cwd: string; home: string },
+): OpencodeAction | undefined {
   const entry = permissions.families.get(family)
   const wildcard = permissions.families.get('*')
-  const rules = entry?.rules.length ? entry.rules : wildcard?.rules.length ? wildcard.rules : family === 'read' ? [...BUILTIN_READ_RULES] : []
+  const rules = entry?.rules.length
+    ? entry.rules
+    : wildcard?.rules.length
+      ? wildcard.rules
+      : family === 'read'
+        ? [...BUILTIN_READ_RULES]
+        : []
   let action: OpencodeAction | undefined
   if (value !== undefined) {
     for (const [pattern, ruleAction] of rules) {
@@ -97,10 +109,16 @@ export function evaluateFamily(permissions: OpencodePermissionConfig, family: st
 }
 
 /** opencode wildcard matching: `*` any chars, `?` one char; `~`/`$HOME` for paths. */
-export function matchOpencodePattern(pattern: string, value: string, kind: 'path' | 'text', context: { cwd: string; home: string }): boolean {
+export function matchOpencodePattern(
+  pattern: string,
+  value: string,
+  kind: 'path' | 'text',
+  context: { cwd: string; home: string },
+): boolean {
   let expanded = pattern
   if (expanded === '~' || expanded.startsWith('~/')) expanded = join(context.home, expanded === '~' ? '' : expanded.slice(2))
-  else if (expanded === '$HOME' || expanded.startsWith('$HOME/')) expanded = join(context.home, expanded === '$HOME' ? '' : expanded.slice(6))
+  else if (expanded === '$HOME' || expanded.startsWith('$HOME/'))
+    expanded = join(context.home, expanded === '$HOME' ? '' : expanded.slice(6))
   if (kind === 'path') {
     if (isAbsolute(expanded)) {
       const absolute = isAbsolute(value) ? value : resolve(context.cwd, value)
@@ -115,7 +133,12 @@ export function matchOpencodePattern(pattern: string, value: string, kind: 'path
 }
 
 /** The merged verdict for one tool call; undefined defers to DSH policy. */
-export function evaluateOpencodePermissions(permissions: OpencodePermissionConfig, toolName: string, args: unknown, context: { cwd: string; home: string }): RuleVerdict {
+export function evaluateOpencodePermissions(
+  permissions: OpencodePermissionConfig,
+  toolName: string,
+  args: unknown,
+  context: { cwd: string; home: string },
+): RuleVerdict {
   const families = DSH_TO_OPENCODE_FAMILIES[toolName] ?? [undefined]
   const verdicts: OpencodeAction[] = []
   let externalPath: string | undefined

@@ -17,7 +17,12 @@
  */
 import { watch } from 'chokidar'
 import type { Context } from '@deepseek-ai/cordis'
-import { apply as applyMcpClient, Config as McpClientConfig, inject as mcpClientInject, name as mcpClientName } from '@deepseek-ai/dsh-mcp-client'
+import {
+  apply as applyMcpClient,
+  Config as McpClientConfig,
+  inject as mcpClientInject,
+  name as mcpClientName,
+} from '@deepseek-ai/dsh-mcp-client'
 import type { FsAdapter } from './fs-adapter.js'
 import type { BridgeLogger } from './util.js'
 import { isPlainObject } from './util.js'
@@ -95,7 +100,10 @@ export class McpManager {
 
   private startServer(server: DesiredServer): Fiber | undefined {
     try {
-      const fiber = this.ctx.plugin({ apply: applyMcpClient, Config: McpClientConfig, inject: mcpClientInject, name: mcpClientName }, server.config)
+      const fiber = this.ctx.plugin(
+        { apply: applyMcpClient, Config: McpClientConfig, inject: mcpClientInject, name: mcpClientName },
+        server.config,
+      )
       void fiber.then(undefined, (error: unknown) => {
         this.logger.warn(`MCP server ${server.name} failed to start: ${errorMessage(error)}`)
       })
@@ -128,7 +136,9 @@ export class McpManager {
       }
       if (!policy.enableAll && !policy.enabled.has(name)) {
         servers.delete(name)
-        this.logger.warn(`skipping project MCP server ${JSON.stringify(name)}: not approved (enableAllProjectMcpServers / enabledMcpjsonServers)`)
+        this.logger.warn(
+          `skipping project MCP server ${JSON.stringify(name)}: not approved (enableAllProjectMcpServers / enabledMcpjsonServers)`,
+        )
       }
     }
     return servers
@@ -194,9 +204,12 @@ export function createMcpBridge(ctx: Context, manager: McpManager): void {
     const cwd = payload.agent.session.header.cwd
     if (cwd !== undefined) void manager.reconcile(cwd)
   })
-  ctx.effect(() => () => {
-    void manager.dispose()
-  }, 'bridge mcp instances')
+  ctx.effect(
+    () => () => {
+      void manager.dispose()
+    },
+    'bridge mcp instances',
+  )
 }
 
 /** dsh MCP server names must be `[A-Za-z0-9_-]{1,32}` and globally unique. */

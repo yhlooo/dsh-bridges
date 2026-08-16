@@ -61,7 +61,10 @@ export function normalizeCodexServer(name: string, entry: RawCodexMcpServer, too
       const value = process.env[key]
       if (value !== undefined) env[key] = value
     }
-    return { name, config: { transport: 'stdio', ...base, command: entry.command, args: entry.args ?? [], env, cwd: entry.cwd ?? process.cwd() } }
+    return {
+      name,
+      config: { transport: 'stdio', ...base, command: entry.command, args: entry.args ?? [], env, cwd: entry.cwd ?? process.cwd() },
+    }
   }
   return undefined
 }
@@ -103,7 +106,13 @@ export class CodexMcpManager {
 }
 
 /** Register the manager on the plugin fiber and reconcile at session start. */
-export function createMcpBridge(ctx: Context, logger: BridgeLogger, fs: FsAdapter, config: CodexMcpConfig, settingsLoader: CodexSettingsLoader): void {
+export function createMcpBridge(
+  ctx: Context,
+  logger: BridgeLogger,
+  fs: FsAdapter,
+  config: CodexMcpConfig,
+  settingsLoader: CodexSettingsLoader,
+): void {
   const manager = new CodexMcpManager(ctx, logger, fs, config, settingsLoader)
   createSharedMcpBridge(ctx, manager.manager)
 }

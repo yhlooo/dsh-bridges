@@ -80,7 +80,9 @@ describe('opencode permission parsing', () => {
 
 describe('opencode permission evaluation', () => {
   it('applies the last matching rule', async () => {
-    const result = await evaluate({ bash: { '*': 'ask', 'git *': 'allow', 'git push *': 'deny' } }, 'bash', { command: 'git push origin' })()
+    const result = await evaluate({ bash: { '*': 'ask', 'git *': 'allow', 'git push *': 'deny' } }, 'bash', {
+      command: 'git push origin',
+    })()
     expect(result).toEqual({ kind: 'deny', reason: 'denied by an opencode permission rule' })
     const allowed = await evaluate({ bash: { '*': 'ask', 'git *': 'allow', 'git push *': 'deny' } }, 'bash', { command: 'git status' })()
     expect(allowed).toEqual({ kind: 'allow' })
@@ -112,7 +114,9 @@ describe('opencode permission evaluation', () => {
   it('guards paths outside the working directory with external_directory', async () => {
     const asked = await evaluate({ read: 'allow' }, 'read', { file_path: '/outside/file.txt' })()
     expect(asked?.kind).toBe('ask')
-    const allowed = await evaluate({ read: 'allow', external_directory: { '~/projects/**': 'allow' } }, 'read', { file_path: '/home/u/projects/x/f.txt' })()
+    const allowed = await evaluate({ read: 'allow', external_directory: { '~/projects/**': 'allow' } }, 'read', {
+      file_path: '/home/u/projects/x/f.txt',
+    })()
     expect(allowed?.kind).toBe('allow')
     const inside = await evaluate({ read: 'allow' }, 'read', { file_path: '/proj/file.txt' })()
     expect(inside?.kind).toBe('allow')
@@ -124,7 +128,9 @@ describe('opencode permission evaluation', () => {
   })
 
   it('matches worktree-relative patterns for files under the working directory', async () => {
-    const allowed = await evaluate({ edit: { '*': 'ask', 'packages/web/**': 'allow' } }, 'edit', { file_path: '/proj/packages/web/a.mdx' })()
+    const allowed = await evaluate({ edit: { '*': 'ask', 'packages/web/**': 'allow' } }, 'edit', {
+      file_path: '/proj/packages/web/a.mdx',
+    })()
     expect(allowed?.kind).toBe('allow')
     const asked = await evaluate({ edit: { '*': 'ask', 'packages/web/**': 'allow' } }, 'edit', { file_path: '/proj/other/a.ts' })()
     expect(asked?.kind).toBe('ask')

@@ -55,7 +55,14 @@ const RANK_USER_COMMANDS = 160
 /** opencode caps the skill `description` at 1,024 characters. */
 const MAX_DESCRIPTION_CHARS = 1024
 
-type RootKind = 'user-skills' | 'user-json-commands' | 'user-commands' | 'project-skills' | 'project-extra-skills' | 'project-json-commands' | 'project-commands'
+type RootKind =
+  | 'user-skills'
+  | 'user-json-commands'
+  | 'user-commands'
+  | 'project-skills'
+  | 'project-extra-skills'
+  | 'project-json-commands'
+  | 'project-commands'
 
 interface SkillRoot {
   kind: RootKind
@@ -239,7 +246,10 @@ export class OpencodeSkillProvider implements SkillProvider {
     }
   }
 
-  private async readJsonCommands(cwd: string | undefined, signal?: AbortSignal): Promise<{ all: readonly { name: string; template: string; description?: string }[]; project: ReadonlySet<string> }> {
+  private async readJsonCommands(
+    cwd: string | undefined,
+    signal?: AbortSignal,
+  ): Promise<{ all: readonly { name: string; template: string; description?: string }[]; project: ReadonlySet<string> }> {
     if (signal?.aborted) return { all: [], project: new Set() }
     try {
       const settings = await this.settings.load(cwd)

@@ -53,7 +53,12 @@ export function evaluateRules(rules: RuleSet, toolName: string, args: unknown, c
   return undefined
 }
 
-function firstMatchingRule(bucket: readonly ParsedRule[], toolName: string, args: unknown, context: RuleMatchContext): ParsedRule | undefined {
+function firstMatchingRule(
+  bucket: readonly ParsedRule[],
+  toolName: string,
+  args: unknown,
+  context: RuleMatchContext,
+): ParsedRule | undefined {
   for (const rule of bucket) {
     if (ruleMatches(rule, toolName, args, context)) return rule
   }

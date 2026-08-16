@@ -44,8 +44,4 @@ export interface MergedPermissionConfig extends RuleSet {
 }
 
 /** Verdict vocabulary mapped onto the `tools/pre-execute` decision shapes. */
-export type RuleVerdict =
-  | { kind: 'deny'; reason: string }
-  | { kind: 'ask'; reason?: string }
-  | { kind: 'allow' }
-  | undefined
+export type RuleVerdict = { kind: 'deny'; reason: string } | { kind: 'ask'; reason?: string } | { kind: 'allow' } | undefined
