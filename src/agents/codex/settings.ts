@@ -63,6 +63,16 @@ export interface LoadedCodexSettings {
   mcpServers: ReadonlyMap<string, RawCodexMcpServer>
   /** `developer_instructions` from the most specific layer that defines it. */
   developerInstructions?: string
+  /** `[agents.<name>]` custom roles, most-specific layer per name. */
+  agents: ReadonlyMap<string, RawCodexAgent>
+}
+
+/** One `[agents.<name>]` role declaration. */
+export interface RawCodexAgent {
+  description?: string
+  configFile?: string
+  /** Directory of the config layer that declared the role. */
+  baseDir: string
 }
 
 /** One `[mcp_servers.<id>]` table (raw, unvalidated fields). */
@@ -112,6 +122,7 @@ interface RawLayer {
   defaultPermissionsProfile?: string
   mcpServers?: Map<string, RawCodexMcpServer>
   developerInstructions?: string
+  agents?: Map<string, RawCodexAgent>
 }
 
 /**
@@ -308,6 +319,7 @@ export class CodexSettingsLoader {
     let sandboxMode: CodexSandboxMode | undefined
     let defaultPermissionsProfile: string | undefined
     let developerInstructions: string | undefined
+    const agents = new Map<string, RawCodexAgent>()
     const mcpServers = new Map<string, RawCodexMcpServer>()
 
     for (const layer of layers) {
@@ -339,6 +351,9 @@ export class CodexSettingsLoader {
         for (const [id, entry] of layer.mcpServers) mcpServers.set(id, entry)
       }
       if (layer.developerInstructions !== undefined) developerInstructions = layer.developerInstructions
+      if (layer.agents !== undefined) {
+        for (const [name, entry] of layer.agents) agents.set(name, entry)
+      }
     }
 
     return {
@@ -353,6 +368,7 @@ export class CodexSettingsLoader {
       defaultPermissionsProfile,
       mcpServers,
       developerInstructions,
+      agents,
     }
   }
 }
@@ -403,6 +419,20 @@ function normalizeLayer(value: Record<string, unknown>, source: SettingsSource, 
   const developerInstructions = value['developer_instructions']
   if (typeof developerInstructions === 'string' && developerInstructions.trim() !== '') {
     layer.developerInstructions = developerInstructions.trim()
+  }
+  const agentsValue = value['agents']
+  if (isPlainObject(agentsValue)) {
+    const parsed = new Map<string, RawCodexAgent>()
+    for (const [name, entry] of Object.entries(agentsValue)) {
+      if (!isPlainObject(entry)) continue
+      // Scalar setting names are reserved; skip them.
+      if (['enabled', 'max_concurrent_threads', 'max_concurrent_threads_per_session', 'default_subagent_model', 'default_subagent_reasoning_effort', 'interrupt_message', 'allow_task_tool'].includes(name)) continue
+      const agent: RawCodexAgent = { baseDir: source.dir }
+      if (typeof entry['description'] === 'string' && entry['description'].trim() !== '') agent.description = entry['description'].trim()
+      if (typeof entry['config_file'] === 'string' && entry['config_file'].trim() !== '') agent.configFile = entry['config_file'].trim()
+      parsed.set(name, agent)
+    }
+    if (parsed.size > 0) layer.agents = parsed
   }
   const mcpServers = value['mcp_servers']
   if (isPlainObject(mcpServers)) {
