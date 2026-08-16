@@ -71,6 +71,10 @@ export function registerClaudeCodeBridge(ctx: Context, logger: BridgeLogger, fs:
   const resolved = { ...CLAUDE_CODE_DEFAULTS, ...config }
   if (!resolved.enabled) return
 
+  // The settings loader is shared by memory (additionalDirectories), MCP
+  // (approval keys), hooks, and permissions — one cached instance per plugin.
+  let loader: SettingsLoader | undefined
+
   if (resolved.skills) {
     let provider: ClaudeSkillProvider | undefined
     ctx.skills.registerProvider((control) => {
@@ -86,16 +90,17 @@ export function registerClaudeCodeBridge(ctx: Context, logger: BridgeLogger, fs:
   }
 
   if (resolved.memory) {
-    registerMemory(ctx, logger, fs, { userClaudeDir: resolved.userClaudeDir, maxBytes: resolved.memoryMaxBytes })
+    loader ??= new SettingsLoader(logger, fs, { userClaudeDir: resolved.userClaudeDir })
+    registerMemory(ctx, logger, fs, { userClaudeDir: resolved.userClaudeDir, maxBytes: resolved.memoryMaxBytes, settingsLoader: loader })
   }
 
   if (resolved.mcp) {
-    const mcpLoader = new SettingsLoader(logger, fs, { userClaudeDir: resolved.userClaudeDir })
-    createMcpBridge(ctx, logger, fs, { userClaudeDir: resolved.userClaudeDir, toolCallTimeoutMs: resolved.mcpToolCallTimeoutMs }, mcpLoader)
+    loader ??= new SettingsLoader(logger, fs, { userClaudeDir: resolved.userClaudeDir })
+    createMcpBridge(ctx, logger, fs, { userClaudeDir: resolved.userClaudeDir, toolCallTimeoutMs: resolved.mcpToolCallTimeoutMs }, loader)
   }
 
   if (resolved.hooks || resolved.permissions) {
-    const loader = new SettingsLoader(logger, fs, { userClaudeDir: resolved.userClaudeDir })
+    loader ??= new SettingsLoader(logger, fs, { userClaudeDir: resolved.userClaudeDir })
     if (resolved.hooks) {
       // The hook bridge owns the PreToolUse composition: hook decisions run
       // first and the permission evaluator is consulted with upstream
