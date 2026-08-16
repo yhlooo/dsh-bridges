@@ -153,3 +153,28 @@ ctx.on('event', handler)                              // 随 fiber 自动解绑
 - NodeNext：所有相对导入写 `.js` 扩展名；`verbatimModuleSyntax` 下类型必须 `import type`。
 - tsconfig 排除 `src/__tests__`，测试由 vitest 跑源码（`include: ['src/**/*.test.ts']`）。
 - pnpm 的构建脚本批准（esbuild）会被写进 `pnpm-workspace.yaml` 的 `allowBuilds`，该文件要保留提交。
+
+## 9. 会话级沙箱 / 审批策略覆盖（codex 权限桥接用）
+
+- `@deepseek-ai/dsh-sandbox-policy` 导出 `setSandboxMode(session, mode)`：向会话日志追加一个
+  `sandbox/mode` 事件（`session.append("sandbox/mode", { mode })`），`SandboxMode =
+  'read-only' | 'workspace-write' | 'danger-full-access'`——与 Codex 的 `sandbox_mode` 词汇完全一致。
+  每次执行时按日志折叠取最后一次覆盖；无覆盖用部署默认。会话级**没有**可写根/网络开关
+  （`[sandbox_workspace_write]` 无法映射，记录为限制）。
+- `@deepseek-ai/dsh-user-approval` 导出 `setApprovalPolicy(session, policy)`：`ApprovalPolicy =
+  'ask' | 'never'`，同样走会话日志事件 `approval/policy`。Codex `approval_policy: "never"` →
+  `'never'`；`untrusted`/`on-request`/`granular` → `'ask'`。
+- 两个包均为 `0.1.0-rc.6`，插件以 dependencies 引入（纯函数 + session.append，无副作用）。
+- 权限规则引擎（claude/codebuddy 的 settings `permissions`）走 `tools/pre-execute`，与 hooks
+  的 `permissionDecision` 在 `src/permissions/compose.ts` 的 `composePreToolDecision` 中组合
+  （deny 规则恒胜、ask 规则压过 hook allow，对照上游 hooks 文档）。
+
+## 10. MCP 动态实例化（P0.1 实施备忘）
+
+- `@deepseek-ai/dsh-mcp-client` 是可动态加载的 cordis 插件（`inject: ['tools']`），
+  `apply(ctx, config)` 连接一个服务器并把工具注册为 `mcp__<serverName>__<tool>`
+  （`ctx.tools.register`），disposal 自动断开并注销。用 `ctx.plugin(mcpClient, config)` 逐服务器
+  实例化；`serverName` 必须 `[A-Za-z0-9_-]{1,32}` 且全局唯一（建议工具前缀，如 `claude__github`）。
+- stdio 传输：`{ transport: 'stdio', serverName, command, args, env, cwd, toolCallTimeoutMs,
+  failOnStartupError, reconnect? }`；HTTP：`{ transport: 'streamable-http', serverName, url,
+  headers, … }`。

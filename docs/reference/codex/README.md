@@ -47,6 +47,6 @@
 
 ### 其他
 
-- Rules：`~/.codex/rules/*.rules`（Python DSL，实验性）。
+- Rules：`~/.codex/rules/*.rules`（Starlark DSL，实验性）。
 - 自定义 agents：`config.toml` 的 `[agents]` 段。
 - 沙箱/审批策略：见 [approvals-security.md](approvals-security.md)。

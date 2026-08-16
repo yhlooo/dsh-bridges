@@ -73,6 +73,7 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
       skills: true                      # 发现 .agents/skills（cwd → 仓库根）、~/.agents/skills、/etc/codex/skills
       memory: true                      # 注入 AGENTS.md 指令链
       hooks: true                       # 运行 hooks.json / config.toml 里的 Codex hooks
+      permissions: true                 # 会话开始时应用 approval_policy / sandbox_mode / default_permissions
       userCodexDir: '~/.codex'          # 用户级 Codex 目录（设置 CODEX_HOME 时以它为准）
       userSkillsDir: '~/.agents/skills' # 用户级 skills 目录
       watch: true                       # 监听技能根目录与 settings 文件
@@ -332,6 +333,17 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md`。本桥接在会话
 - 超时与 handler 失败一律放行，同 Codex。
 - 子代理：`SessionStart`/`SessionEnd`/`UserPromptSubmit`/`Stop` 仅主会话，`SubagentStart`/`SubagentStop` 仅子代理，`PreToolUse`/`PostToolUse` 两者皆触发——与 Codex 的事件作用域一致。
 
+### Permissions（审批 / 沙箱策略）
+
+合并读取各配置层的 `approval_policy`、`sandbox_mode`、`default_permissions`，并在 `agent/session-start` 应用到每个会话（主会话与子代理会话一致）：
+
+- **`sandbox_mode`**：`read-only` / `workspace-write` / `danger-full-access` 与 DeepSeek Harness 沙箱模式 1:1 映射，经会话的 `sandbox/mode` 覆盖生效。
+- **`approval_policy`**：`never` → DeepSeek Harness 审批策略 `never`（自动放行）；`untrusted` / `on-request` / 废弃的 `on-failure` / `granular` → `ask`（这些模式下 Codex 都会弹审批；DeepSeek Harness 的 `ask` 交由已组合的审批应答者）。`granular` 表的逐项开关（`sandbox_approval`/`rules`/`mcp_elicitations`/`request_permissions`/`skill_approval`）仅记录告警、不生效。
+- **`default_permissions`**：仅当命名内置档案时生效——`:read-only`、`:workspace`、`:danger-full-access`——且优先于 `sandbox_mode`（档案是 Codex 当前推荐机制）。自定义 `[permissions.<name>]` 档案读取但不应用。
+- **只有显式配置的值才生效**：Codex 自身的默认值（read-only 沙箱、`untrusted` 审批）不会覆盖 DeepSeek Harness 部署的策略。
+
+未桥接（记录为限制）：`[sandbox_workspace_write]` 的 `writable_roots` / `network_access` / `exclude_tmpdir_env_var` / `exclude_slash_tmp`（DeepSeek Harness 会话没有逐会话可写根覆盖）、自定义权限档案的文件系统/网络规则表、`approvals_reviewer` / `[auto_review]` guardian 策略、granular 逐项审批开关。
+
 ### 限制
 
 尚未桥接（按子系统记录）：
@@ -339,4 +351,4 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md`。本桥接在会话
 - **Skills**：`agents/openai.yaml` 元数据（`allow_implicit_invocation`、工具依赖）、插件分发的技能、符号链接的技能目录（桥接经文件系统读取，但不解析符号链接身份）、curated 插件目录。
 - **Memory**：`model_instructions_file`、Codex 的 8,000 字符初始列表预算（DeepSeek Harness 有自己的目录预算）。
 - **Hooks**：`PermissionRequest`（DeepSeek Harness 没有"即将请求审批"的接缝）、`PreCompact`/`PostCompact`（无压缩前接缝；`compact` 会话来源会触发 SessionStart hooks 代替）、Codex 的 hook trust 审核流程（`/hooks`——桥接与其他桥接一致、无 trust 闸门运行）、后台 hook 输出在下个安全点投递、`systemMessage`/`suppressOutput` 仅用户通道、`additionalContextLimit` 溢出落盘（桥接按字符截断替代）、插件捆绑与托管 `requirements.toml` hooks、`transcript_path`（桥接没有真实转录文件）、`updatedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）。
-- **Rules / 配置**：`rules/*.rules`（实验性 Python DSL）、`notify`、`[agents]` 子代理角色、`requirements.toml`、profile 文件（`--profile`）、未信任项目门禁（项目 `.codex/` 层无条件读取——桥接没有 trust 状态）。
+- **Rules / 配置**：`rules/*.rules`（实验性 Starlark DSL）、`notify`、`[agents]` 子代理角色、`requirements.toml`、profile 文件（`--profile`）、未信任项目门禁（项目 `.codex/` 层无条件读取——桥接没有 trust 状态）。

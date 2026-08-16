@@ -18,6 +18,7 @@ import type { FsAdapter } from '../../fs-adapter.js'
 import type { BridgeLogger } from '../../util.js'
 import { createHookBridge } from './hooks/bridge.js'
 import { registerMemory } from './memory.js'
+import { createPermissionsBridge } from './permissions.js'
 import { CodexSettingsLoader } from './settings.js'
 import { CodexSkillProvider } from './skills/provider.js'
 
@@ -30,6 +31,8 @@ export interface CodexConfig {
   memory?: boolean
   /** Run Codex hooks from hooks.json / config.toml at DSH lifecycle seams. */
   hooks?: boolean
+  /** Apply config.toml `approval_policy` / `sandbox_mode` / `default_permissions` at session start. */
+  permissions?: boolean
   /** User-level Codex directory (usually `~/.codex`; `CODEX_HOME` wins when set). */
   userCodexDir?: string
   /** User-level skills directory (Codex uses `~/.agents/skills`). */
@@ -49,6 +52,7 @@ export const CODEX_DEFAULTS: Required<CodexConfig> = {
   skills: true,
   memory: true,
   hooks: true,
+  permissions: true,
   userCodexDir: '~/.codex',
   userSkillsDir: '~/.agents/skills',
   watch: true,
@@ -101,5 +105,9 @@ export function registerCodexBridge(ctx: Context, logger: BridgeLogger, fs: FsAd
       hookTimeoutMs: resolved.hookTimeoutMs,
       maxHookOutputChars: resolved.maxHookOutputChars,
     })
+  }
+
+  if (resolved.permissions) {
+    createPermissionsBridge(ctx, logger, loader)
   }
 }
