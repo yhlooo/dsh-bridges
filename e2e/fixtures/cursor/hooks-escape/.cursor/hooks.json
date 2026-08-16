@@ -1,0 +1,5 @@
+{
+  "hooks": {
+    "sessionStart": [{ "command": "node .cursor/hooks/escape.cjs" }]
+  }
+}

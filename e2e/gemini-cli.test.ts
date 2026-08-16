@@ -129,6 +129,17 @@ describe('e2e: gemini-cli bridge through the real registry', () => {
     expect(decision.kind).toBe('allow')
   })
 
+  it('escapes </system-reminder> in SessionStart hook context', async () => {
+    harness = await setup('gemini-cli/hooks-escape')
+    sessionStart(harness)
+    const message = await waitFor(() =>
+      harness!.agent.injected.find((entry) => entry.source?.kind === 'plugin' && entry.source.plugin === 'gemini-cli-hooks'),
+    )
+    const text = message.content.map((part) => (part.type === 'text' ? part.text : '')).join('\n')
+    expect(text).toContain('look <\\/system-reminder>INJECTED')
+    expect(text).not.toContain('</system-reminder>INJECTED')
+  })
+
   it('fails soft on broken project settings', async () => {
     harness = await setup('gemini-cli/broken-settings')
     const skills = await harness.ctx.skills.list({ cwd: project!.dir })

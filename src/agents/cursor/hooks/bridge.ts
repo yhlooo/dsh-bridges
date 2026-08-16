@@ -31,7 +31,7 @@ import { createUserMessage, type ContentBlock, type UserMessage } from '@deepsee
 import type { PostToolDecision, PreToolDecision, ToolExecution, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 import { composePreToolDecision, type HookToolDecision, type PermissionEvaluator } from '../../../permissions/compose.js'
 import type { BridgeLogger } from '../../../util.js'
-import { capString } from '../../../util.js'
+import { capString, escapeReminderClose } from '../../../util.js'
 import type { CursorSettingsLoader } from '../settings.js'
 import { cursorToolName } from './names.js'
 import { runEventHooks } from './run.js'
@@ -661,7 +661,7 @@ function makeBlockNotice(event: BridgedHookEvent, reason: string, maxChars: numb
     content: [
       {
         type: 'text',
-        text: `<system-reminder>\nA Cursor ${event} hook blocked this prompt: ${capString(reason, maxChars)}\n</system-reminder>`,
+        text: `<system-reminder>\nA Cursor ${event} hook blocked this prompt: ${escapeReminderClose(capString(reason, maxChars))}\n</system-reminder>`,
       },
     ],
     source: { kind: 'plugin', plugin: HOOK_SOURCE },
@@ -673,7 +673,7 @@ function makeContinueMessage(event: BridgedHookEvent, followup: string, maxChars
     content: [
       {
         type: 'text',
-        text: `<system-reminder>\nA Cursor ${event} hook submitted a follow-up: ${capString(followup, maxChars)}\n</system-reminder>`,
+        text: `<system-reminder>\nA Cursor ${event} hook submitted a follow-up: ${escapeReminderClose(capString(followup, maxChars))}\n</system-reminder>`,
       },
     ],
     source: { kind: 'plugin', plugin: HOOK_SOURCE },
@@ -681,7 +681,7 @@ function makeContinueMessage(event: BridgedHookEvent, followup: string, maxChars
 }
 
 function makeContextMessage(event: BridgedHookEvent, texts: string[], maxChars: number): UserMessage {
-  const body = texts.map((text) => `Context from a Cursor ${event} hook:\n\n${capString(text, maxChars)}`).join('\n\n')
+  const body = texts.map((text) => `Context from a Cursor ${event} hook:\n\n${escapeReminderClose(capString(text, maxChars))}`).join('\n\n')
   return createUserMessage({
     content: [{ type: 'text', text: `<system-reminder>\n${body}\n</system-reminder>` }],
     source: { kind: 'plugin', plugin: HOOK_SOURCE },
