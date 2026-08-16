@@ -53,6 +53,7 @@
     "test:e2e": "vitest run --project e2e",
     "test:all": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "smoke": "node scripts/pack-smoke.mjs",
     "lint": "eslint src e2e",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

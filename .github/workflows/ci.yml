@@ -10,7 +10,11 @@ permissions:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -29,4 +33,10 @@ jobs:
       - run: pnpm test
       - run: pnpm test:e2e
       - run: pnpm test:coverage
+      - run: pnpm lint
+      - run: pnpm format:check
       - run: npm pack --dry-run
+
+      - name: Install the dsh CLI for the pack smoke
+        run: npm i -g @deepseek-ai/dsh@0.1.0-rc.6
+      - run: pnpm smoke
