@@ -5,7 +5,7 @@ describe('cursor skill frontmatter parsing', () => {
   it('parses the mapped fields with cursor defaults', () => {
     const parsed = parseSkillFile(
       '---\nname: deploy-skill\ndescription: Deploys.\ndisable-model-invocation: true\nuser-invocable: false\nmetadata:\n  owner: team\n---\nBody.\n',
-      'fallback',
+      'deploy-skill',
     )
     expect(parsed.frontmatter.name).toBe('deploy-skill')
     expect(parsed.frontmatter.disableModelInvocation).toBe(true)
@@ -14,13 +14,14 @@ describe('cursor skill frontmatter parsing', () => {
   })
 
   it('defaults user-invocable to true and tolerates a BOM', () => {
-    const parsed = parseSkillFile('\uFEFF---\nname: bom\ndescription: d\n---\nBody.\n', 'fallback')
+    const parsed = parseSkillFile('\uFEFF---\nname: bom\ndescription: d\n---\nBody.\n', 'bom')
     expect(parsed.frontmatter.userInvocable).toBe(true)
     expect(parsed.frontmatter.name).toBe('bom')
   })
 
-  it('fails closed on missing name/description and malformed frontmatter', () => {
-    expect(() => parseSkillFile('---\ndescription: d\n---\nBody.\n', 'f')).not.toThrow() // name falls back
+  it('fails closed on missing name/description, name-folder mismatch, and malformed frontmatter', () => {
+    expect(() => parseSkillFile('---\ndescription: d\n---\nBody.\n', 'f')).toThrow(FrontmatterError)
+    expect(() => parseSkillFile('---\nname: other\ndescription: d\n---\nBody.\n', 'folder')).toThrow(FrontmatterError)
     expect(() => parseSkillFile('---\nname: x\n---\nBody.\n', 'x')).toThrow(FrontmatterError)
     expect(() => parseSkillFile('body only\n', 'x')).toThrow(FrontmatterError)
     expect(() => parseSkillFile('---\nname: x\ndescription: d\ndisable-model-invocation: nope\n---\nB\n', 'x')).toThrow(FrontmatterError)

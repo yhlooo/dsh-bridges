@@ -674,7 +674,7 @@ Enforces the CLI permission tokens from `~/.cursor/cli-config.json` → `.cursor
 
 ### MCP servers
 
-Bridges `.cursor/mcp.json` and `~/.cursor/mcp.json` `mcpServers` into DeepSeek Harness tools as `mcp__cursor__<server>__<tool>` (project overrides user per name). stdio entries (`command` / `args` / `env` / `envFile`) spawn with `${env:VAR}` and `${workspaceFolder}` interpolation; remote `url` entries connect over streamable-http with header interpolation. `auth` OAuth flows are recorded as a limitation.
+Bridges `.cursor/mcp.json` and `~/.cursor/mcp.json` `mcpServers` into DeepSeek Harness tools as `mcp__cursor__<server>__<tool>` (project overrides user per name). stdio entries (`command` / `args` / `env` / `envFile`) spawn with Cursor's configuration-variable interpolation (`${env:VAR}`, `${userHome}`, `${workspaceFolder}`, `${workspaceFolderBasename}`, `${pathSeparator}`, `${/}`); remote `url` entries connect over streamable-http with header interpolation. `auth` OAuth flows are recorded as a limitation.
 
 ### Limitations
 
@@ -685,4 +685,4 @@ Not bridged yet (documented per subsystem):
 - **Hooks**: prompt-type hooks, `preCompact`, `afterAgentThought`, `workspaceOpen`, Tab hooks, enterprise/team hook tiers, `updated_input` / `updated_mcp_tool_output` rewriting, `env` from `sessionStart` (per-session environment has no seam).
 - **Permissions**: `approvalMode`, `permissions.json` semantics, sandbox.json (network policy / extra paths have no per-session seam).
 - **MCP**: `auth` credential flows.
-- **Other**: `~/.cursor/settings.json` (IDE settings; only `enabled_plugins` reaches the CLI), themes — DeepSeek Harness owns these layers; model routing is host-plane and out of scope.
+- **Other**: `~/.cursor/settings.json` (IDE settings; only `enabled_plugins` reaches the CLI), themes — DeepSeek Harness owns these layers; model routing is host-plane and out of scope. Cursor's third-party Claude Code hooks compatibility (Cursor reads `.claude/settings*.json` hooks and translates event/tool names itself) is not re-read — the claude-code bridge covers the original files with Claude semantics. `.cursorignore` / `.cursorindexingignore` (DeepSeek Harness owns its ignore layer), `worktrees.json` (worktree setup scripts), and the ACP server mode (`agent acp`) are also out of scope.

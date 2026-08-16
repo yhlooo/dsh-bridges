@@ -286,9 +286,13 @@ describe('gemini-cli: BOM / CRLF skills and broken config fail soft', () => {
 describe('cursor: BOM / CRLF skills and broken JSONC config fail soft', () => {
   it('parses a BOM-prefixed SKILL.md and ignores malformed siblings', async () => {
     const files = new Map<string, string>([
-      [fx('proj', '.cursor', 'skills', 'bom', 'SKILL.md'), '\uFEFF---\r\nname: bom-skill\r\ndescription: BOM skill\r\n---\r\nBody.\r\n'],
+      [
+        fx('proj', '.cursor', 'skills', 'bom-skill', 'SKILL.md'),
+        '\uFEFF---\r\nname: bom-skill\r\ndescription: BOM skill\r\n---\r\nBody.\r\n',
+      ],
       [fx('proj', '.cursor', 'skills', 'broken', 'SKILL.md'), '---\nname: [not yaml\n---\nBody.\n'],
       [fx('proj', '.cursor', 'skills', 'no-desc', 'SKILL.md'), '---\nname: no-desc\n---\nBody.\n'],
+      [fx('proj', '.cursor', 'skills', 'mismatch', 'SKILL.md'), '---\nname: other\ndescription: d\n---\nBody.\n'],
     ])
     const loader = new CursorSettingsLoader(silent, new TreeFs(files), { userCursorDir: fx('home', 'u', '.cursor') })
     const provider = new CursorSkillProvider(

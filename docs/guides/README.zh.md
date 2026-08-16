@@ -670,7 +670,7 @@ Cursor 的资产分布在 IDE 与 CLI（`agent` 二进制）之间。本桥接�
 
 ### MCP 服务器
 
-把 `.cursor/mcp.json` 与 `~/.cursor/mcp.json` 的 `mcpServers` 桥接为 DeepSeek Harness 工具（`mcp__cursor__<server>__<tool>`；项目按名覆盖用户）。stdio 条目（`command` / `args` / `env` / `envFile`）以 `${env:VAR}` 与 `${workspaceFolder}` 插值启动；远程 `url` 条目经 streamable-http 连接并插值 headers。`auth` OAuth 流程记限制。
+把 `.cursor/mcp.json` 与 `~/.cursor/mcp.json` 的 `mcpServers` 桥接为 DeepSeek Harness 工具（`mcp__cursor__<server>__<tool>`；项目按名覆盖用户）。stdio 条目（`command` / `args` / `env` / `envFile`）以 Cursor 的配置变量插值启动（`${env:VAR}`、`${userHome}`、`${workspaceFolder}`、`${workspaceFolderBasename}`、`${pathSeparator}`、`${/}`）；远程 `url` 条目经 streamable-http 连接并插值 headers。`auth` OAuth 流程记限制。
 
 ### 限制
 
@@ -681,4 +681,4 @@ Cursor 的资产分布在 IDE 与 CLI（`agent` 二进制）之间。本桥接�
 - **Hooks**：prompt 型 hooks、`preCompact`、`afterAgentThought`、`workspaceOpen`、Tab hooks、企业/团队 hook 层、`updated_input` / `updated_mcp_tool_output` 改写、`sessionStart` 的 `env`（逐会话环境无接缝）。
 - **Permissions**：`approvalMode`、`permissions.json` 语义、sandbox.json（网络策略/额外路径无逐会话接缝）。
 - **MCP**：`auth` 凭据流程。
-- **其他**：`~/.cursor/settings.json`（IDE 设置；仅 `enabled_plugins` 到达 CLI）、themes——DeepSeek Harness 拥有这些层；模型路由为 host-plane，不在范围内。
+- **其他**：`~/.cursor/settings.json`（IDE 设置；仅 `enabled_plugins` 到达 CLI）、themes——DeepSeek Harness 拥有这些层；模型路由为 host-plane，不在范围内。Cursor 的第三方 Claude Code hooks 兼容层（Cursor 自行读取 `.claude/settings*.json` hooks 并翻译事件/工具名）不重读——claude-code 桥接以 Claude 语义覆盖原始文件。`.cursorignore` / `.cursorindexingignore`（DeepSeek Harness 拥有自己的忽略层）、`worktrees.json`（工作树 setup 脚本）、ACP 服务端模式（`agent acp`）同样不在范围内。

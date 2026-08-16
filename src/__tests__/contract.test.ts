@@ -273,9 +273,9 @@ describe('rank bands (golden table)', () => {
 
   it('cursor ranks stay in 225–240 with project before user', async () => {
     const files = new Map<string, string>([
-      [fx('home', 'u', '.cursor', 'skills', 'u-skill', 'SKILL.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('home', 'u', '.cursor', 'skills', 'u-skill', 'SKILL.md'), '---\nname: u-skill\ndescription: a\n---\nBody.\n'],
       [fx('home', 'u', '.cursor', 'agents', 'u-agent.md'), '---\nname: u-agent\ndescription: a\n---\nBody.\n'],
-      [fx('proj', '.cursor', 'skills', 'p-skill', 'SKILL.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('proj', '.cursor', 'skills', 'p-skill', 'SKILL.md'), '---\nname: p-skill\ndescription: a\n---\nBody.\n'],
       [fx('proj', '.cursor', 'agents', 'p-agent.md'), '---\nname: p-agent\ndescription: a\n---\nBody.\n'],
     ])
     const loader = new CursorSettingsLoader(silent, new TreeFs(files), { userCursorDir: fx('home', 'u', '.cursor') })

@@ -4,15 +4,18 @@
  *
  * Entries: `type: "stdio"` (command/args/env/envFile) or remote (`url` +
  * headers; `type` "http"/"sse" degrade to streamable-http like the other
- * bridges). `${env:VAR}` and `${workspaceFolder}` references interpolate
- * (workspaceFolder = the session working directory). Project entries
- * override user entries per name. `auth` OAuth flows are recorded as a
- * limitation.
+ * bridges). Cursor's configuration variables interpolate — `${env:VAR}`,
+ * `${userHome}`, `${workspaceFolder}`, `${workspaceFolderBasename}`,
+ * `${pathSeparator}`, `${/}` (workspaceFolder = the session working
+ * directory). Project entries override user entries per name. `auth` OAuth
+ * flows are recorded as a limitation.
  * @module dsh-bridges/agents/cursor/mcp
  */
-import { isAbsolute, join } from 'node:path'
+import { basename, isAbsolute, join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { FsAdapter } from '../../fs-adapter.js'
+import type { BridgeLogger } from '../../util.js'
+import { expandHome } from '../../util.js'
 import {
   createMcpBridge as createSharedMcpBridge,
   McpManager,
@@ -20,18 +23,27 @@ import {
   type DesiredServer,
   type McpBridgeOptions,
 } from '../../mcp-bridge.js'
-import type { BridgeLogger } from '../../util.js'
 import type { CursorSettingsLoader, RawCursorMcpServer } from './settings.js'
 
 export interface CursorMcpConfig {
   toolCallTimeoutMs: number
 }
 
-/** Interpolate `${env:VAR}` and `${workspaceFolder}` references. */
+/**
+ * Interpolate Cursor's documented configuration variables: `${env:VAR}`,
+ * `${userHome}`, `${workspaceFolder}`, `${workspaceFolderBasename}`,
+ * `${pathSeparator}`, and `${/}` (an alias of the path separator).
+ */
 export function interpolateCursor(value: string, workspaceFolder: string): string {
+  const folderBasename = basename(workspaceFolder)
+  const pathSeparator = process.platform === 'win32' ? '\\' : '/'
   return value
     .replace(/\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g, (_, name: string) => process.env[name] ?? '')
+    .replace(/\$\{userHome\}/g, expandHome('~'))
+    .replace(/\$\{workspaceFolderBasename\}/g, folderBasename)
     .replace(/\$\{workspaceFolder\}/g, workspaceFolder)
+    .replace(/\$\{pathSeparator\}/g, pathSeparator)
+    .replace(/\$\{\/\}/g, pathSeparator)
 }
 
 async function readEnvFile(fs: FsAdapter, path: string): Promise<Record<string, string>> {

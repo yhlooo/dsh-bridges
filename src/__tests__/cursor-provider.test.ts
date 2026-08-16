@@ -68,13 +68,13 @@ async function list(
   }))
 }
 
-const SKILL = (description = 'd') => `---\ndescription: ${description}\n---\nBody.\n`
+const SKILL = (name: string, description = 'd') => `---\nname: ${name}\ndescription: ${description}\n---\nBody.\n`
 
 describe('cursor skill/agent discovery', () => {
   it('discovers project and user skills with project-before-user ranks', async () => {
     const files = new Map<string, string>([
-      [fx('home', 'u', '.cursor', 'skills', 'u-skill', 'SKILL.md'), SKILL()],
-      [fx('proj', '.cursor', 'skills', 'p-skill', 'SKILL.md'), SKILL()],
+      [fx('home', 'u', '.cursor', 'skills', 'u-skill', 'SKILL.md'), SKILL('u-skill')],
+      [fx('proj', '.cursor', 'skills', 'p-skill', 'SKILL.md'), SKILL('p-skill')],
     ])
     const found = await list(makeProvider(files))
     const byName = new Map(found.map((entry) => [entry.name, entry.rank]))
@@ -94,7 +94,7 @@ describe('cursor skill/agent discovery', () => {
     const files = new Map<string, string>([
       [
         fx('proj', '.cursor', 'skills', 'hidden', 'SKILL.md'),
-        '---\ndescription: d\ndisable-model-invocation: true\nuser-invocable: false\n---\nB.\n',
+        '---\nname: hidden\ndescription: d\ndisable-model-invocation: true\nuser-invocable: false\n---\nB.\n',
       ],
     ])
     const found = await list(makeProvider(files))
