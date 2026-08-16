@@ -68,7 +68,7 @@ describe('opencode references parsing', () => {
     const loader = new OpencodeSettingsLoader(silent, new TreeFs(files), { userOpencodeDir: fx('home', 'u', '.config', 'opencode') })
     const settings = await loader.load(fx('proj'))
     expect(settings.references.get('docs')).toEqual({ alias: 'docs', path: fx('docs'), description: 'Product docs', hidden: false })
-    expect(settings.references.get('home')?.path).toMatch(/\/notes$/)
+    expect(settings.references.get('home')?.path).toMatch(/[\\/]notes$/)
     expect(settings.references.has('bad alias')).toBe(false)
     expect(settings.references.get('sdk')?.repository).toBe('anomalyco/opencode-sdk-js')
     expect(settings.references.get('hidden')?.hidden).toBe(true)
