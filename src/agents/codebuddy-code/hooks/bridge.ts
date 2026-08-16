@@ -70,7 +70,13 @@ export function createHookBridge(
   }
 
   ctx.on('agent/session-start', (payload) => {
-    void onSessionStart(payload.agent, payload.source, loader, logger, config, onSpawn)
+    // Subagent sessions get CodeBuddy Code's SubagentStart event instead of
+    // SessionStart (upstream scoping).
+    if (payload.agent.session.header.delegationDepth !== undefined) {
+      void onSubagentStart(payload.agent, payload.source, loader, logger, config, onSpawn)
+    } else {
+      void onSessionStart(payload.agent, payload.source, loader, logger, config, onSpawn)
+    }
   })
 
   ctx.on('agent/pre-step', (payload, next) =>
@@ -81,7 +87,10 @@ export function createHookBridge(
 
   ctx.on('tools/post-execute', (exec, result, next) => onPostToolUse(exec, result, onceStates, loader, logger, config, onSpawn, next))
 
-  ctx.on('agent/turn-stopping', (payload) => onStop(payload.agent, payload.signal, stopStates, onceStates, loader, logger, config, onSpawn))
+  ctx.on('agent/turn-stopping', (payload) =>
+    payload.agent.session.header.delegationDepth !== undefined
+      ? onSubagentStop(payload.agent, payload.signal, stopStates, onceStates, loader, logger, config, onSpawn)
+      : onStop(payload.agent, payload.signal, stopStates, onceStates, loader, logger, config, onSpawn))
 
   ctx.on('agent/disposed', (payload) => {
     void onSessionEnd(payload.agent, onceStates, loader, logger, config, onSpawn)
@@ -108,10 +117,6 @@ async function onSessionStart(
   config: HookBridgeConfig,
   onSpawn: (child: ChildProcess) => void,
 ): Promise<void> {
-  // Subagents have their own lifecycle events in CodeBuddy Code
-  // (SubagentStart/SubagentStop, not bridged); SessionStart is the main
-  // conversation's.
-  if (agent.session.header.delegationDepth !== undefined) return
   const cwd = agent.session.header.cwd
   const settings = await loader.load(cwd)
   if (settings.disabled) return
@@ -136,6 +141,45 @@ async function onSessionStart(
     if (contexts.length > 0) agent.inject(makeContextMessage('SessionStart', contexts, config.maxHookOutputChars))
   } catch (error) {
     logger.warn(`codebuddy-code: SessionStart hooks failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
+// ── SubagentStart ───────────────────────────────────────────────────────────
+
+async function onSubagentStart(
+  agent: Agent,
+  source: string,
+  loader: CodebuddySettingsLoader,
+  logger: BridgeLogger,
+  config: HookBridgeConfig,
+  onSpawn: (child: ChildProcess) => void,
+): Promise<void> {
+  const cwd = agent.session.header.cwd
+  const settings = await loader.load(cwd)
+  if (settings.disabled) return
+  const groups = settings.byEvent.get('SubagentStart')
+  if (!groups || groups.length === 0) return
+  try {
+    // DSH subagents carry no upstream agent type, so specific matchers
+    // cannot match; `*` matchers run (documented limitation).
+    const outcomes = await runEventHooks(
+      {
+        event: 'SubagentStart',
+        groups,
+        matchedValue: 'generic',
+        input: { ...commonInput(agent, 'SubagentStart'), agent_type: 'generic' },
+        cwd: cwd ?? process.cwd(),
+        projectDir: cwd ?? process.cwd(),
+        env: settings.env,
+        defaultTimeoutMs: config.hookTimeoutMs,
+        onSpawn,
+      },
+      logger,
+    )
+    const contexts = collectHookContext('SubagentStart', outcomes, config.maxHookOutputChars)
+    if (contexts.length > 0) agent.inject(makeContextMessage('SubagentStart', contexts, config.maxHookOutputChars))
+  } catch (error) {
+    logger.warn(`codebuddy-code: SubagentStart hooks failed: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
@@ -437,7 +481,6 @@ async function onStop(
   config: HookBridgeConfig,
   onSpawn: (child: ChildProcess) => void,
 ): Promise<void> {
-  if (agent.session.header.delegationDepth !== undefined) return // SubagentStop not bridged
   const cwd = agent.session.header.cwd
   const settings = await loader.load(cwd)
   if (settings.disabled) return
@@ -474,6 +517,58 @@ async function onStop(
     agent.steer(makeContinueMessage('Stop', feedback, config.maxHookOutputChars))
   } catch (error) {
     logger.warn(`codebuddy-code: Stop hooks failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
+// ── SubagentStop ────────────────────────────────────────────────────────────
+
+async function onSubagentStop(
+  agent: Agent,
+  signal: AbortSignal,
+  stopStates: Map<string, StopState>,
+  onceStates: Map<string, Set<string>>,
+  loader: CodebuddySettingsLoader,
+  logger: BridgeLogger,
+  config: HookBridgeConfig,
+  onSpawn: (child: ChildProcess) => void,
+): Promise<void> {
+  const cwd = agent.session.header.cwd
+  const settings = await loader.load(cwd)
+  if (settings.disabled) return
+  const groups = settings.byEvent.get('SubagentStop')
+  if (!groups || groups.length === 0) return
+  const state = stopStates.get(agent.session.id) ?? { count: 0 }
+  if (state.count >= MAX_STOP_CONTINUATIONS) return // bridge safety cap
+
+  const sessionId = agent.session.id
+  const eligible = pruneOnce(groups, sessionId, onceStates)
+  if (eligible.length === 0) return
+
+  try {
+    const outcomes = await runEventHooks(
+      {
+        event: 'SubagentStop',
+        groups: eligible,
+        matchedValue: 'generic',
+        input: { ...commonInput(agent, 'SubagentStop'), agent_type: 'generic', stop_hook_active: state.count > 0 },
+        cwd: cwd ?? process.cwd(),
+        projectDir: cwd ?? process.cwd(),
+        env: settings.env,
+        signal,
+        defaultTimeoutMs: config.hookTimeoutMs,
+        onSpawn,
+      },
+      logger,
+    )
+    recordOnce(outcomes, sessionId, onceStates)
+    const block = resolveBlockDecision(outcomes, config.maxHookOutputChars)
+    const contexts = collectHookContext('SubagentStop', outcomes, config.maxHookOutputChars)
+    const feedback = [...(block !== undefined ? [block] : []), ...contexts]
+    if (feedback.length === 0) return
+    stopStates.set(agent.session.id, { count: state.count + 1 })
+    agent.steer(makeContinueMessage('SubagentStop', feedback, config.maxHookOutputChars))
+  } catch (error) {
+    logger.warn(`codebuddy-code: SubagentStop hooks failed: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 

@@ -55,6 +55,24 @@ const sessionHook = { type: 'command', command: 'session.py' }
 const toolHook = { type: 'command', command: 'policy.py', timeout: 30 }
 
 describe('CodexSettingsLoader', () => {
+  it('skips project layers when the working directory is explicitly untrusted', async () => {
+    const files = new Map<string, string>([
+      ['/home/u/.codex/config.toml', '[features]\nhooks = false'],
+      ['/proj/.codex/config.toml', '[hooks]\nSessionStart = [{ matcher = "startup", hooks = [{ type = "command", command = "x" }] }]\n[mcp_servers.local]\ncommand = "m"'],
+    ])
+    const trusted = await makeLoader(files).load('/proj')
+    expect(trusted.byEvent.has('SessionStart')).toBe(true)
+    expect(trusted.mcpServers.has('local')).toBe(true)
+
+    const untrustedFiles = new Map<string, string>([
+      ['/home/u/.codex/config.toml', ''],
+      ['/proj/.codex/config.toml', '[hooks]\nSessionStart = [{ matcher = "startup", hooks = [{ type = "command", command = "x" }] }]\n[mcp_servers.local]\ncommand = "m"\n\n[projects."/proj"]\ntrust_level = "untrusted"'],
+    ])
+    const gated = await makeLoader(untrustedFiles).load('/proj')
+    expect(gated.byEvent.has('SessionStart')).toBe(false)
+    expect(gated.mcpServers.has('local')).toBe(false)
+  })
+
   it('merges hooks from hooks.json and inline TOML across layers, deduplicating identical handlers', async () => {
     const files = new Map<string, string>([
       [

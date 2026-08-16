@@ -123,7 +123,16 @@ Mapping rules:
 
 ### CLAUDE.md memory
 
-DeepSeek Harness already loads root-level `CLAUDE.md`. The bridge additionally injects `~/.claude/CLAUDE.md` (user) and `.claude/CLAUDE.md` (project) at session start, in the same system-reminder framing DeepSeek Harness uses for workspace instructions, with a 32 KiB budget (the broader user-level file is dropped first; the project file is then truncated if still over budget). A `.claude/CLAUDE.md` identical to the root `CLAUDE.md` is skipped, since DeepSeek Harness already loaded that content.
+DeepSeek Harness already loads root-level `CLAUDE.md`. The bridge additionally injects at session start, in the same system-reminder framing DeepSeek Harness uses for workspace instructions, broadest first:
+
+- `~/.claude/CLAUDE.md` (user)
+- every ancestor directory's `CLAUDE.md` and `CLAUDE.local.md` above the working directory (filesystem-root first, `CLAUDE.local.md` after `CLAUDE.md` per directory — Claude Code's hierarchy order)
+- the `CLAUDE.md` / `CLAUDE.local.md` files under `permissions.additionalDirectories`
+- `.claude/CLAUDE.md` (project)
+- the `outputStyle` file (`.claude/output-styles/<name>.md`, falling back to `~/.claude/output-styles/<name>.md` — a degraded mapping that injects the style's prompt section as context)
+- the cwd-level `CLAUDE.local.md` (personal, gitignored)
+
+Budget 32 KiB: the broader user-level file is dropped first, then the most specific sections are truncated. Files identical to the root `CLAUDE.md` DeepSeek Harness already loaded are skipped to avoid duplicate blocks.
 
 ### Hooks
 
@@ -137,6 +146,8 @@ Loads the merged `hooks` field from `~/.claude/settings.json` → `.claude/setti
 | `PostToolUse` | `tools/post-execute` | `additionalContext`/`decision: "block"` reason/exit-2 stderr → context next to the result; `updatedToolOutput` replaces the rendered content |
 | `PostToolUseFailure` | `tools/post-execute` (error results) | same as PostToolUse |
 | `Stop` | `agent/turn-stopping` | `decision: "block"` / exit 2 / `additionalContext` steer a continuation, capped at Claude Code's 8 consecutive continuations |
+| `SubagentStart` | `agent/session-start` (subagent sessions) | `additionalContext` (and exit-0 plain stdout) injected into the subagent; the matcher sees `generic` (DeepSeek Harness subagents carry no upstream agent type, so `*` matchers run and specific ones cannot match) |
+| `SubagentStop` | `agent/turn-stopping` (subagent sessions) | `decision: "block"` / exit 2 / `additionalContext` steer a continuation, capped at Claude Code's 8 consecutive continuations |
 | `SessionEnd` | `agent/disposed` | side effects only (1.5 s budget) |
 
 Supported handler types: `command` (shell form and `args` exec form, `${CLAUDE_PROJECT_DIR}` substitution, per-handler `timeout`, `async: true`, exit codes and JSON output per the Claude Code contract) and `http` (POST of the same JSON, header env-var interpolation under `allowedEnvVars`/`httpHookAllowedEnvVars`, `allowedHttpHookUrls` allowlist).
@@ -147,7 +158,7 @@ Compatibility details:
 - Matcher semantics follow the Claude Code spec: exact-name sets (`Bash|Edit`), unanchored regex for anything else, `*`/empty matches all.
 - The `if` filter supports the common `ToolName(glob)` form against one primary argument field for the mapped tools (`Bash(rm *)`, `Edit(*.ts)`, …); uninterpretable rules and tools without a mapped field fail open, matching Claude Code's best-effort contract (its deeper Bash subcommand analysis is not replicated).
 - Timeouts and handler failures fail open (never block the action), as in Claude Code.
-- Subagents: `UserPromptSubmit`, `Stop`, `SessionStart`, and `SessionEnd` run only for the main conversation, as in Claude Code; `PreToolUse`/`PostToolUse` also run for subagent tool calls (`SubagentStart`/`SubagentStop` are not bridged yet).
+- Subagents: `UserPromptSubmit`, `Stop`, `SessionStart`, and `SessionEnd` run only for the main conversation, and `SubagentStart`/`SubagentStop` run only for subagent sessions — matching Claude Code's scoping. `PreToolUse`/`PostToolUse` also run for subagent tool calls.
 
 ### Permissions
 
@@ -189,7 +200,7 @@ Not bridged yet (documented per subsystem):
 
 - **Skills**: nested `.claude/skills/` below the workspace (their qualified names are not kebab-case), enterprise/managed skills, plugin skills, synced claude.ai skills; `allowed-tools`/`disallowed-tools`, `model`, `effort`, `context: fork`/`agent`/`background`, `paths`, `shell`, and `$ARGUMENTS` substitution in bodies; skill/agent frontmatter `hooks`.
 - **Memory**: `.claude/rules/*.md`, CLAUDE.md `@import`s, and nested CLAUDE.md files.
-- **Hooks**: handler types `mcp_tool`, `prompt`, `agent`; `PreCompact`/`PostCompact`, `Notification`, `SubagentStart`/`SubagentStop`, `PermissionRequest`/`PermissionDenied`, and the remaining async events; `CLAUDE_ENV_FILE`; `asyncRewake`; `updatedInput` rewriting (DeepSeek Harness freezes tool arguments before policy); `permissionDecision: "defer"` (mapped to deny).
+- **Hooks**: handler types `mcp_tool`, `prompt`, `agent`; `PreCompact`/`PostCompact`, `Notification`, `PermissionRequest`/`PermissionDenied`, and the remaining async events; `CLAUDE_ENV_FILE`; `asyncRewake`; `updatedInput` rewriting (DeepSeek Harness freezes tool arguments before policy); `permissionDecision: "defer"` (mapped to deny).
 - **MCP**: `managed-mcp.json` and server-managed enterprise servers, per-project `local`-scope servers inside `~/.claude.json`, plugin-bundled MCP servers, and in-process `type: "sdk"` entries; SSE servers connect over the streamable-http transport instead.
 - **Plugins**: only plugin *skills* are bridged; plugin-bundled agents, MCP servers, hooks (`hooks/hooks.json`), output styles, commands, and workflows are not (installed plugins live under `~/.claude/plugins/` and need the marketplace runtime).
 
@@ -240,6 +251,8 @@ Loads the merged `hooks` field from `~/.codebuddy/settings.json` → `.codebuddy
 | `PostToolUse` | `tools/post-execute` | `additionalContext`/exit-2 message/legacy `decision: "block"` reason → context next to the result; `updatedToolOutput` replaces the rendered content |
 | `PostToolUseFailure` | `tools/post-execute` (error results) | same as PostToolUse |
 | `Stop` | `agent/turn-stopping` | exit 2 / `continue: false` / `additionalContext` steer a continuation (`stop_hook_active` set on repeats; capped at 8 consecutive continuations as a bridge safety valve) |
+| `SubagentStart` | `agent/session-start` (subagent sessions) | `additionalContext` (and exit-0 plain stdout) injected into the subagent; the matcher sees `generic` (DeepSeek Harness subagents carry no upstream agent type, so `*` matchers run and specific ones cannot match) |
+| `SubagentStop` | `agent/turn-stopping` (subagent sessions) | exit 2 / `continue: false` / `additionalContext` steer a continuation (`stop_hook_active` set on repeats; capped at 8 consecutive continuations) |
 | `SessionEnd` | `agent/disposed` | side effects only (1.5 s budget, `reason: "other"`) |
 
 Supported handler types: `command` (shell form and `args` exec form, `${CODEBUDDY_PROJECT_DIR}` substitution, per-handler `timeout` defaulting to CodeBuddy Code's 60 s, `async: true`, `once: true`, exit codes and JSON output per the CodeBuddy Code contract) and `http` (`method` POST/PUT/PATCH, `headers`; CodeBuddy Code documents no URL allowlist, so none is applied).
@@ -251,7 +264,7 @@ Compatibility details:
 - Blocking messages follow CodeBuddy Code's exit-2 priority: stdout JSON `reason`/`stopReason`, then plain stdout, then stderr as fallback (the inverse of Claude Code's stderr-first behavior).
 - The `if` filter supports the common `ToolName(glob)` form against one primary argument field for the mapped tools (`Bash(git *)`, `Edit(*.ts)`, …); uninterpretable rules and tools without a mapped field fail open.
 - Timeouts and handler failures fail open (never block the action), as in CodeBuddy Code.
-- Subagents: `UserPromptSubmit`, `Stop`, `SessionStart`, and `SessionEnd` run only for the main conversation, as in CodeBuddy Code; `PreToolUse`/`PostToolUse` also run for subagent tool calls (`SubagentStart`/`SubagentStop` are not bridged yet).
+- Subagents: `UserPromptSubmit`, `Stop`, `SessionStart`, and `SessionEnd` run only for the main conversation, and `SubagentStart`/`SubagentStop` run only for subagent sessions — matching CodeBuddy Code's scoping. `PreToolUse`/`PostToolUse` also run for subagent tool calls.
 
 ### Permissions
 
@@ -282,7 +295,7 @@ Not bridged yet (documented per subsystem):
 
 - **Skills**: flat `.md` skills, nested commands (`group:name` names are not kebab-case), plugin skills; `allowed-tools`, `model`, `context: fork`, `agent`, and skill frontmatter `hooks`; inline shell-command execution, `$ARGUMENTS` substitution, and `@file` references in bodies.
 - **Memory**: conditional rules (`alwaysApply: false` plus `paths`), `@import` expansion, upward-directory discovery, nested-subtree dynamic loading, Auto Memory.
-- **Hooks**: handler types `prompt` and `agent` (both need an LLM evaluation); `Notification`, `SubagentStart`/`SubagentStop`, `PreCompact`/`PostCompact`, `PermissionRequest`/`PermissionDenied`, `Elicitation`, `FileChanged`, `Setup`, and the remaining events; frontmatter hooks (and the `allowUntrustedFrontmatterHooks` gate); plugin `hooks/hooks.json`; the `transcript_path` input field (the bridge has no transcript file to point at); `suppressOutput`/`systemMessage` user-only channels (DeepSeek Harness has no non-model notice channel); `modifiedInput` rewriting (DeepSeek Harness freezes tool arguments before policy). Windows runs hooks through the system shell rather than CodeBuddy Code's forced Git Bash.
+- **Hooks**: handler types `prompt` and `agent` (both need an LLM evaluation); `Notification`, `PreCompact`/`PostCompact`, `PermissionRequest`/`PermissionDenied`, `Elicitation`, `FileChanged`, `Setup`, and the remaining events; frontmatter hooks (and the `allowUntrustedFrontmatterHooks` gate); plugin `hooks/hooks.json`; the `transcript_path` input field (the bridge has no transcript file to point at); `suppressOutput`/`systemMessage` user-only channels (DeepSeek Harness has no non-model notice channel); `modifiedInput` rewriting (DeepSeek Harness freezes tool arguments before policy). Windows runs hooks through the system shell rather than CodeBuddy Code's forced Git Bash.
 - **Plugins**: only plugin *skills* and plugin *hooks* are acknowledged as limitations; plugin-bundled commands, agents, `.mcp.json` MCP servers, `.lsp.json` LSP servers, settings overrides, and `bin/` helpers are not bridged either (plugins need the marketplace runtime).
 
 ## The opencode bridge
@@ -423,4 +436,4 @@ Not bridged yet (documented per subsystem):
 - **Skills**: `agents/openai.yaml` metadata (`allow_implicit_invocation`, tool dependencies), plugin-bundled skills, symlinked skill folders (the bridge reads them through the filesystem, but does not resolve symlink identity), the curated plugin catalog.
 - **Memory**: `model_instructions_file` (replaces the built-in instructions — out of scope), Codex's 8,000-character initial-list budget (DeepSeek Harness applies its own catalog budgets).
 - **Hooks**: `PermissionRequest` (no DeepSeek Harness seam for "about to ask for approval"), `PreCompact`/`PostCompact` (no pre-compaction seam; the `compact` session-start source runs SessionStart hooks instead), Codex's hook trust-review flow (`/hooks` — the bridge runs hooks the way the other bridges do, without a trust gate), background-hook output delivery at the next safe point, `systemMessage`/`suppressOutput` user-only channels, `additionalContextLimit` spilling (the bridge caps context by characters instead), plugin-bundled and managed `requirements.toml` hooks, `transcript_path` (the bridge has no transcript file to point at), `updatedInput` rewriting (DeepSeek Harness freezes tool arguments before policy).
-- **Rules / config**: `rules/*.rules` (experimental Starlark DSL), `notify`, `[agents]` subagent roles, `requirements.toml`, profile files (`--profile`), plugin-bundled MCP servers (`plugins.<plugin>.mcp_servers`), and untrusted-project gating (project `.codex/` layers are read unconditionally — the bridge has no trust state).
+- **Rules / config**: `rules/*.rules` (experimental Starlark DSL), `notify`, `[agents]` subagent roles, `requirements.toml`, profile files (`--profile`), plugin-bundled MCP servers (`plugins.<plugin>.mcp_servers`), and untrusted-project gating beyond an explicit `projects["<path>"].trust_level = "untrusted"` entry (which now skips the project `.codex/` layers — the bridge has no interactive trust flow, so unlisted paths are read unconditionally).

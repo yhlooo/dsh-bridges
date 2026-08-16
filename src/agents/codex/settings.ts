@@ -239,13 +239,19 @@ export class CodexSettingsLoader {
     const cached = this.cache.get(cacheKey)
     if (cached && cached.stamp === stamp) return cached.loaded
 
-    const loaded = await this.loadFresh(sources)
+    const loaded = await this.loadFresh(sources, cwd)
     this.cache.set(cacheKey, { stamp, loaded })
     return loaded
   }
 
-  private async loadFresh(sources: SettingsSource[]): Promise<LoadedCodexSettings> {
-    const layers: RawLayer[] = []
+  private async loadFresh(sources: SettingsSource[], cwd: string | undefined): Promise<LoadedCodexSettings> {
+    // Parse every layer first so `projects.<path>.trust_level` can gate the
+    // project layers: an explicit "untrusted" entry for the working directory
+    // skips the project `.codex/` config (Codex does not load it before the
+    // user trusts the project). Absent entries keep the bridge's documented
+    // read-unconditionally behavior; the AGENTS.md chain itself is unaffected
+    // (it is the repository's own instruction file, always read upstream).
+    const parsed: { source: SettingsSource; value: Record<string, unknown> }[] = []
     for (const source of sources) {
       let text: string
       try {
@@ -268,6 +274,25 @@ export class CodexSettingsLoader {
         this.logger.warn(`codex: ignoring settings file ${source.path}: top level must be an object`)
         continue
       }
+      parsed.push({ source, value })
+    }
+
+    const trustLevels = new Map<string, string>()
+    for (const { value } of parsed) {
+      const projects = value['projects']
+      if (!isPlainObject(projects)) continue
+      for (const [path, entry] of Object.entries(projects)) {
+        if (isPlainObject(entry) && typeof entry['trust_level'] === 'string') trustLevels.set(path, entry['trust_level'])
+      }
+    }
+    const untrusted = cwd !== undefined && trustLevels.get(cwd) === 'untrusted'
+    if (untrusted) {
+      this.logger.warn(`codex: the working directory is marked untrusted (projects["${cwd}"].trust_level = "untrusted"); skipping project .codex/ layers`)
+    }
+
+    const layers: RawLayer[] = []
+    for (const { source, value } of parsed) {
+      if (untrusted && source.kind === 'project') continue
       layers.push(normalizeLayer(value, source, this.logger))
     }
 

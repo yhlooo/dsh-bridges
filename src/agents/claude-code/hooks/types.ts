@@ -60,6 +60,8 @@ export interface HookSettings {
   enabledMcpjsonServers?: string[]
   /** Rejected `.mcp.json` server names. */
   disabledMcpjsonServers?: string[]
+  /** `outputStyle` style name (system-prompt modifier). */
+  outputStyle?: string
 }
 
 /** One settings file's `permissions` field, before cross-scope merging. */
@@ -82,6 +84,8 @@ export interface LoadedHookSettings {
   permissions: MergedPermissionConfig
   /** `.mcp.json` server approval policy (merged across scopes). */
   mcpjsonServers: McpJsonServerPolicy
+  /** `outputStyle` from the most specific source that defines it. */
+  outputStyle?: string
 }
 
 /** Approval policy for project `.mcp.json` servers. */
@@ -132,4 +136,12 @@ export interface HookOutcome {
 
 /** The hook events this bridge maps onto DSH lifecycles. */
 export type BridgedHookEvent =
-  'SessionStart' | 'UserPromptSubmit' | 'PreToolUse' | 'PostToolUse' | 'PostToolUseFailure' | 'Stop' | 'SessionEnd'
+  | 'SessionStart'
+  | 'SubagentStart'
+  | 'SubagentStop'
+  | 'UserPromptSubmit'
+  | 'PreToolUse'
+  | 'PostToolUse'
+  | 'PostToolUseFailure'
+  | 'Stop'
+  | 'SessionEnd'
