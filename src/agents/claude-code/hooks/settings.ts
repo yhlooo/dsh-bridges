@@ -109,6 +109,7 @@ export class SettingsLoader {
     let enabledMcpjsonServers: Set<string> | undefined
     let disabledMcpjsonServers = new Set<string>()
     let outputStyle: string | undefined
+    let autoMemoryDirectory: string | undefined
 
     for (const { settings } of parsed) {
       for (const [event, groups] of Object.entries(settings.hooks ?? {})) {
@@ -133,6 +134,7 @@ export class SettingsLoader {
       if (settings.enabledMcpjsonServers !== undefined) enabledMcpjsonServers = new Set(settings.enabledMcpjsonServers)
       if (settings.disabledMcpjsonServers !== undefined) disabledMcpjsonServers = new Set(settings.disabledMcpjsonServers)
       if (settings.outputStyle !== undefined) outputStyle = settings.outputStyle
+      if (settings.autoMemoryDirectory !== undefined) autoMemoryDirectory = settings.autoMemoryDirectory
       const permissions = settings.permissions
       if (permissions !== undefined) {
         for (const rule of permissions.allow ?? []) permissionBuckets.allow.add(rule)
@@ -164,6 +166,7 @@ export class SettingsLoader {
         disabled: disabledMcpjsonServers,
       },
       outputStyle,
+      autoMemoryDirectory,
     }
   }
 }
@@ -179,6 +182,7 @@ function normalizeSettings(value: Record<string, unknown>, logger: BridgeLogger,
     enabledMcpjsonServers: readStringArray(value['enabledMcpjsonServers']),
     disabledMcpjsonServers: readStringArray(value['disabledMcpjsonServers']),
     outputStyle: typeof value['outputStyle'] === 'string' && value['outputStyle'].trim() !== '' ? value['outputStyle'].trim() : undefined,
+    autoMemoryDirectory: typeof value['autoMemoryDirectory'] === 'string' && value['autoMemoryDirectory'].trim() !== '' ? value['autoMemoryDirectory'].trim() : undefined,
   }
   const hooks = value['hooks']
   if (hooks === undefined) return result

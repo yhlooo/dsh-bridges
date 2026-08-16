@@ -19,6 +19,9 @@
 | [permissions.md](permissions.md) | 权限规则语法 |
 | [permission-modes.md](permission-modes.md) | 权限模式（Shift+Tab 切换、defaultMode） |
 | [plugins.md](plugins.md) / [plugins-reference.md](plugins-reference.md) | 插件系统与参考 |
+| [mcp.md](mcp.md) | MCP 服务器配置（补齐于 2026-08-15） |
+| [iam.md](iam.md) | 身份与访问管理（信任目录、权限）（补齐于 2026-08-15） |
+| [models.md](models.md) | 模型配置与 models.json（补齐于 2026-08-15） |
 | [env-vars.md](env-vars.md) | 环境变量参考 |
 | [cli-reference.md](cli-reference.md) | CLI 命令与参数（含沙箱参数） |
 | [best-practices.md](best-practices.md) / [common-workflows.md](common-workflows.md) | 最佳实践与常见工作流 |

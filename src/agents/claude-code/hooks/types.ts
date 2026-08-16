@@ -62,6 +62,8 @@ export interface HookSettings {
   disabledMcpjsonServers?: string[]
   /** `outputStyle` style name (system-prompt modifier). */
   outputStyle?: string
+  /** Custom auto-memory storage directory. */
+  autoMemoryDirectory?: string
 }
 
 /** One settings file's `permissions` field, before cross-scope merging. */
@@ -86,6 +88,8 @@ export interface LoadedHookSettings {
   mcpjsonServers: McpJsonServerPolicy
   /** `outputStyle` from the most specific source that defines it. */
   outputStyle?: string
+  /** `autoMemoryDirectory` from the most specific source that defines it. */
+  autoMemoryDirectory?: string
 }
 
 /** Approval policy for project `.mcp.json` servers. */
