@@ -191,6 +191,7 @@ Not bridged yet (documented per subsystem):
 - **Memory**: `.claude/rules/*.md`, CLAUDE.md `@import`s, and nested CLAUDE.md files.
 - **Hooks**: handler types `mcp_tool`, `prompt`, `agent`; `PreCompact`/`PostCompact`, `Notification`, `SubagentStart`/`SubagentStop`, `PermissionRequest`/`PermissionDenied`, and the remaining async events; `CLAUDE_ENV_FILE`; `asyncRewake`; `updatedInput` rewriting (DeepSeek Harness freezes tool arguments before policy); `permissionDecision: "defer"` (mapped to deny).
 - **MCP**: `managed-mcp.json` and server-managed enterprise servers, per-project `local`-scope servers inside `~/.claude.json`, plugin-bundled MCP servers, and in-process `type: "sdk"` entries; SSE servers connect over the streamable-http transport instead.
+- **Plugins**: only plugin *skills* are bridged; plugin-bundled agents, MCP servers, hooks (`hooks/hooks.json`), output styles, commands, and workflows are not (installed plugins live under `~/.claude/plugins/` and need the marketplace runtime).
 
 ## The CodeBuddy Code bridge
 
@@ -282,6 +283,7 @@ Not bridged yet (documented per subsystem):
 - **Skills**: flat `.md` skills, nested commands (`group:name` names are not kebab-case), plugin skills; `allowed-tools`, `model`, `context: fork`, `agent`, and skill frontmatter `hooks`; inline shell-command execution, `$ARGUMENTS` substitution, and `@file` references in bodies.
 - **Memory**: conditional rules (`alwaysApply: false` plus `paths`), `@import` expansion, upward-directory discovery, nested-subtree dynamic loading, Auto Memory.
 - **Hooks**: handler types `prompt` and `agent` (both need an LLM evaluation); `Notification`, `SubagentStart`/`SubagentStop`, `PreCompact`/`PostCompact`, `PermissionRequest`/`PermissionDenied`, `Elicitation`, `FileChanged`, `Setup`, and the remaining events; frontmatter hooks (and the `allowUntrustedFrontmatterHooks` gate); plugin `hooks/hooks.json`; the `transcript_path` input field (the bridge has no transcript file to point at); `suppressOutput`/`systemMessage` user-only channels (DeepSeek Harness has no non-model notice channel); `modifiedInput` rewriting (DeepSeek Harness freezes tool arguments before policy). Windows runs hooks through the system shell rather than CodeBuddy Code's forced Git Bash.
+- **Plugins**: only plugin *skills* and plugin *hooks* are acknowledged as limitations; plugin-bundled commands, agents, `.mcp.json` MCP servers, `.lsp.json` LSP servers, settings overrides, and `bin/` helpers are not bridged either (plugins need the marketplace runtime).
 
 ## The opencode bridge
 
@@ -408,7 +410,7 @@ Reads `approval_policy`, `sandbox_mode`, and `default_permissions` from the merg
 - **`default_permissions`**: applies only when it names a built-in profile — `:read-only`, `:workspace`, `:danger-full-access` — and then wins over `sandbox_mode`, as the profile is Codex's current mechanism. Custom `[permissions.<name>]` profiles are read but not applied.
 - **Only explicitly configured values apply**: Codex's own defaults (read-only sandbox, `untrusted` approvals) never override the DeepSeek Harness deployment's policy.
 
-Not bridged (recorded as limitations): `[sandbox_workspace_write]` `writable_roots` / `network_access` / `exclude_tmpdir_env_var` / `exclude_slash_tmp` (DeepSeek Harness sessions have no per-session writable-roots override), custom permission profiles' filesystem/network rule tables, `approvals_reviewer` / `[auto_review]` guardian policy, and per-category granular approval switches.
+Not bridged (recorded as limitations): `[sandbox_workspace_write]` `writable_roots` / `network_access` / `exclude_tmpdir_env_var` / `exclude_slash_tmp` (DeepSeek Harness sessions have no per-session writable-roots override), custom permission profiles' filesystem/network rule tables, `approvals_reviewer` / `[auto_review]` guardian policy (no reviewer-subagent approval flow in DeepSeek Harness), and per-category granular approval switches.
 
 ### MCP servers
 
@@ -421,4 +423,4 @@ Not bridged yet (documented per subsystem):
 - **Skills**: `agents/openai.yaml` metadata (`allow_implicit_invocation`, tool dependencies), plugin-bundled skills, symlinked skill folders (the bridge reads them through the filesystem, but does not resolve symlink identity), the curated plugin catalog.
 - **Memory**: `model_instructions_file` (replaces the built-in instructions — out of scope), Codex's 8,000-character initial-list budget (DeepSeek Harness applies its own catalog budgets).
 - **Hooks**: `PermissionRequest` (no DeepSeek Harness seam for "about to ask for approval"), `PreCompact`/`PostCompact` (no pre-compaction seam; the `compact` session-start source runs SessionStart hooks instead), Codex's hook trust-review flow (`/hooks` — the bridge runs hooks the way the other bridges do, without a trust gate), background-hook output delivery at the next safe point, `systemMessage`/`suppressOutput` user-only channels, `additionalContextLimit` spilling (the bridge caps context by characters instead), plugin-bundled and managed `requirements.toml` hooks, `transcript_path` (the bridge has no transcript file to point at), `updatedInput` rewriting (DeepSeek Harness freezes tool arguments before policy).
-- **Rules / config**: `rules/*.rules` (experimental Starlark DSL), `notify`, `[agents]` subagent roles, `requirements.toml`, profile files (`--profile`), and untrusted-project gating (project `.codex/` layers are read unconditionally — the bridge has no trust state).
+- **Rules / config**: `rules/*.rules` (experimental Starlark DSL), `notify`, `[agents]` subagent roles, `requirements.toml`, profile files (`--profile`), plugin-bundled MCP servers (`plugins.<plugin>.mcp_servers`), and untrusted-project gating (project `.codex/` layers are read unconditionally — the bridge has no trust state).
