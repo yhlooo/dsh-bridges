@@ -73,6 +73,7 @@ ZSH_THEME="avit"
 plugins=(
     z
     git
+    gh
     zsh-autosuggestions
     zsh-syntax-highlighting
 )

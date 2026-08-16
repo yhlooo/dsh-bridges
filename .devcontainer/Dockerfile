@@ -1,12 +1,12 @@
 # Dev container image based on Ubuntu 26.04 with zsh + Oh My Zsh + dsh
 FROM ubuntu:26.04
 
-# 安装基础组件
+# 安装基础组件（gh = GitHub CLI，用于在容器内创建/审查 PR）
 RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         tzdata build-essential xz-utils python3 \
         ca-certificates dnsutils \
-        curl git zsh vim gnupg pinentry-curses jq ssh
+        curl git zsh vim gnupg pinentry-curses jq ssh gh
 
 ENV LC_ALL=C.utf8
 
