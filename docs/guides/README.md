@@ -45,6 +45,7 @@ Every tool bridge owns a config section under the `bridges` row; a later patch l
       skills: true                # discover .claude / ~/.claude skills and commands
       memory: true                # inject ~/.claude/CLAUDE.md and .claude/CLAUDE.md
       hooks: true                 # run Claude Code hooks from settings.json
+      permissions: true           # enforce permissions.allow/ask/deny rules from settings.json
       userClaudeDir: '~/.claude'  # user-level Claude Code directory
       watch: true                 # watch skill roots and republish on change
       hookTimeoutMs: 600000
@@ -119,7 +120,7 @@ Loads the merged `hooks` field from `~/.claude/settings.json` → `.claude/setti
 | :--- | :--- | :--- |
 | `SessionStart` | `agent/session-start` | `additionalContext` (and exit-0 plain stdout) injected before the first prompt |
 | `UserPromptSubmit` | `agent/pre-step` | `decision: "block"` / exit 2 / `continue: false` erase the prompt and show the reason; context is appended to the step |
-| `PreToolUse` | `tools/pre-execute` | `permissionDecision` `deny` → deny, `ask` → approval, `allow` → allow, `defer` → deny (not supported); exit 2 → deny with stderr; `additionalContext` is injected |
+| `PreToolUse` | `tools/pre-execute` | `permissionDecision` `deny` → deny, `ask` → approval, `allow` → allow and skip further permission checks (deny/ask permission rules are still evaluated — see Permissions), `defer` → deny (not supported); exit 2 → deny with stderr; `additionalContext` is injected |
 | `PostToolUse` | `tools/post-execute` | `additionalContext`/`decision: "block"` reason/exit-2 stderr → context next to the result; `updatedToolOutput` replaces the rendered content |
 | `PostToolUseFailure` | `tools/post-execute` (error results) | same as PostToolUse |
 | `Stop` | `agent/turn-stopping` | `decision: "block"` / exit 2 / `additionalContext` steer a continuation, capped at Claude Code's 8 consecutive continuations |
@@ -134,6 +135,20 @@ Compatibility details:
 - The `if` filter supports the common `ToolName(glob)` form against one primary argument field for the mapped tools (`Bash(rm *)`, `Edit(*.ts)`, …); uninterpretable rules and tools without a mapped field fail open, matching Claude Code's best-effort contract (its deeper Bash subcommand analysis is not replicated).
 - Timeouts and handler failures fail open (never block the action), as in Claude Code.
 - Subagents: `UserPromptSubmit`, `Stop`, `SessionStart`, and `SessionEnd` run only for the main conversation, as in Claude Code; `PreToolUse`/`PostToolUse` also run for subagent tool calls (`SubagentStart`/`SubagentStop` are not bridged yet).
+
+### Permissions
+
+Reads the `permissions.allow/ask/deny` rules from the same settings files (merged additively across scopes, deduplicated) and enforces them at the `tools/pre-execute` seam with Claude Code's semantics:
+
+- Rule grammar: `Tool` or `Tool(specifier)`; tool names accept globs (`*`, `mcp__*`). Evaluation order is **deny → ask → allow**; the first match decides regardless of specificity.
+- `Bash(...)` matches by command prefix (`Bash(npm run *)` matches `npm run build`; prefix matching keeps the bypass caveats the upstream docs call out, e.g. via `sudo` or pipes).
+- `Read`/`Edit`/`Write` match path globs: `//path` absolute, `/path` project-relative, `~` home-relative, `./` project-relative; `permissions.additionalDirectories` also resolve `./`-style rules. Both rule and argument paths are normalized to absolute paths before comparing.
+- `WebFetch(domain:example.com)` / `domain:*.example.com` matches the URL hostname (subdomain suffix); without the `domain:` prefix the whole URL is glob-matched.
+- Hooks and rules compose per the upstream contract: PreToolUse hooks run first; a hook `deny` denies outright; **deny/ask rules are always evaluated — a hook `allow` cannot override a matching deny rule, and a matching ask rule still prompts**; when hooks stay silent the rules decide (deny → deny, ask → approval, allow → allow), and with no rule match the call falls back to DeepSeek Harness's own approval policy.
+- Rules apply to main-conversation and subagent tool calls alike (upstream permission settings are inherited by subagents).
+- Calls matching no rule keep their existing behavior; with `hooks: false` the rules still apply (the `permissions` and `hooks` switches are independent).
+
+Not bridged (recorded as limitations): `permissions.defaultMode` and `permissions.disableBypassPermissionsMode` are read but not enforced — DeepSeek Harness owns its approval modes and the bridge has no seam to switch them; project `.claude/settings.json` allow rules apply without the workspace-trust gate upstream requires for them (the bridge has no trust state; deny/ask rules are not trust-gated upstream either).
 
 ### Limitations
 

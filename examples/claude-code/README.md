@@ -11,7 +11,7 @@ claude-code 桥接如何将 Claude Code 的资产桥接进来。
 ```
 .claude/
 ├── CLAUDE.md                    项目记忆（会话开始注入）
-├── settings.json                hooks 配置（见下）
+├── settings.json                hooks + permissions 配置（见下）
 ├── skills/
 │   ├── changelog-writer/        目录型技能（带支撑脚本 scripts/）
 │   │   ├── SKILL.md
@@ -37,6 +37,7 @@ claude-code 桥接如何将 Claude Code 的资产桥接进来。
 | `.claude/commands/<name>.md` | 同上（命令即技能）；同级同名时技能优先 |
 | `.claude/CLAUDE.md` | 会话开始以 system-reminder 框架注入 |
 | `.claude/settings.json` 的 `hooks` | 映射到 DeepSeek Harness 生命周期（`agent/session-start`、`agent/pre-step`、`tools/pre-execute`、`tools/post-execute`、`agent/turn-stopping`、`agent/disposed`） |
+| `.claude/settings.json` 的 `permissions` | allow/ask/deny 规则在 `tools/pre-execute` 执行（示例：`Bash(rm -rf *)` 直接拒绝、`Bash(git push *)` 触发审批、`Read(./README.md)` 免审批放行） |
 
 hook 脚本收到的 JSON 里，工具名是 **Claude Code 的名字**（`Bash`、`Edit`……，
 桥接做了翻译），matcher 与 `if` 规则按 Claude Code 语义求值，因此为
@@ -62,3 +63,5 @@ dsh --profile <name>
   `.claude/hook-logs/tools.jsonl` 追加一行、`prompts.jsonl` 记录提示词；
   让模型运行 `rm -rf /tmp/xxx` 会被 guard 以退出码 2 拒绝；
   回合结束 `stops.log` 追加一行。
+- **Permissions**：让模型运行 `rm -rf /tmp/xxx` 会被 deny 规则直接拒绝
+  （无需 hook）；`git push` 触发审批；`Read(./README.md)` 免审批。

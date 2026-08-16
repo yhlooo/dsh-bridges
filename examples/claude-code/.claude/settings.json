@@ -72,5 +72,19 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf *)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "WebFetch(domain:api.example.com)"
+    ],
+    "allow": [
+      "Read(./README.md)",
+      "Glob",
+      "Grep"
+    ]
   }
 }

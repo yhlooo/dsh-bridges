@@ -40,6 +40,7 @@ dsh --profile <name> "list the skills available in your catalog"
       skills: true      # .claude 技能与命令
       memory: true      # CLAUDE.md 记忆
       hooks: true       # settings.json hooks
+      permissions: true # settings.json 权限规则（allow/ask/deny）
 ```
 
 各桥接的完整配置与行为说明：[`docs/guides/`](docs/guides/README.zh.md)
@@ -51,15 +52,16 @@ dsh --profile <name> "list the skills available in your catalog"
 | `.claude/` `.codebuddy/` `.opencode/` `.agents/` 技能与命令 | 模型技能目录 + `/名字` 调用 |
 | `CLAUDE.md`、`CODEBUDDY.md`、`AGENTS.md` 链与规则 | 会话开始时的记忆注入 |
 | `settings.json`、`hooks.json`、`config.toml` hooks | 同样的 hooks 运行在 DeepSeek Harness 生命周期 |
+| `settings.json` 的 `permissions` 规则 | 同样的 allow/ask/deny 决策作用于工具调用 |
 
 ## 支持的 agent 工具
 
-| 工具 | Skills / commands | Memory | Hooks |
-| :--- | :--- | :--- | :--- |
-| Claude Code | `.claude/skills`、`.claude/commands`（含 `~/.claude`） | `.claude/CLAUDE.md`、`~/.claude/CLAUDE.md` | `settings.json` hooks（SessionStart、UserPromptSubmit、Pre/PostToolUse(+Failure)、Stop、SessionEnd） |
-| CodeBuddy Code | `.codebuddy/skills`、`.codebuddy/commands`（含 `~/.codebuddy`） | `CODEBUDDY.md`、`~/.codebuddy/CODEBUDDY.md`、`.codebuddy/rules/` | `settings.json` hooks（SessionStart、UserPromptSubmit、Pre/PostToolUse(+Failure)、Stop、SessionEnd） |
-| opencode | `.opencode/skills`、`.opencode/commands`（含 `~/.config/opencode`）、`opencode.json` 的 `command.*` | `AGENTS.md`（含 `CLAUDE.md` 回退）、`instructions` 文件 | —（opencode 无 hooks 配置；其插件 API 不在范围内） |
-| Codex | `.agents/skills`（cwd → 仓库根）、`~/.agents/skills`、`/etc/codex/skills` | `~/.codex/AGENTS.md` + 逐目录 `AGENTS.md` 链 | `hooks.json` / `config.toml` hooks（SessionStart、SubagentStart、UserPromptSubmit、Pre/PostToolUse、Stop、SubagentStop、SessionEnd） |
+| 工具 | Skills / commands | Memory | Hooks | Permissions |
+| :--- | :--- | :--- | :--- | :--- |
+| Claude Code | `.claude/skills`、`.claude/commands`（含 `~/.claude`） | `.claude/CLAUDE.md`、`~/.claude/CLAUDE.md` | `settings.json` hooks（SessionStart、UserPromptSubmit、Pre/PostToolUse(+Failure)、Stop、SessionEnd） | `settings.json` permissions 规则（allow/ask/deny，含 Bash 前缀、路径、域名匹配） |
+| CodeBuddy Code | `.codebuddy/skills`、`.codebuddy/commands`（含 `~/.codebuddy`） | `CODEBUDDY.md`、`~/.codebuddy/CODEBUDDY.md`、`.codebuddy/rules/` | `settings.json` hooks（SessionStart、UserPromptSubmit、Pre/PostToolUse(+Failure)、Stop、SessionEnd） | — |
+| opencode | `.opencode/skills`、`.opencode/commands`（含 `~/.config/opencode`）、`opencode.json` 的 `command.*` | `AGENTS.md`（含 `CLAUDE.md` 回退）、`instructions` 文件 | —（opencode 无 hooks 配置；其插件 API 不在范围内） | — |
+| Codex | `.agents/skills`（cwd → 仓库根）、`~/.agents/skills`、`/etc/codex/skills` | `~/.codex/AGENTS.md` + 逐目录 `AGENTS.md` 链 | `hooks.json` / `config.toml` hooks（SessionStart、SubagentStart、UserPromptSubmit、Pre/PostToolUse、Stop、SubagentStop、SessionEnd） | — |
 
 ## 资源
 

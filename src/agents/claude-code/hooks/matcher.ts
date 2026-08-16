@@ -13,7 +13,11 @@
  * analysis is not replicated.
  * @module dsh-bridges/agents/claude-code/hooks/matcher
  */
+import { primaryField } from '../../../permissions/fields.js'
+import { globMatch } from '../../../permissions/glob.js'
 import { isPlainObject } from '../../../util.js'
+
+export { globMatch }
 
 const EXACT_SET_RE = /^[A-Za-z0-9_\-, |]*$/
 
@@ -58,45 +62,8 @@ export function matchIf(rule: string | undefined, toolName: string, args: unknow
 
 /** The input field an `if` rule compares per tool, mirroring Claude Code's docs. */
 export function primaryMatchField(toolName: string, args: unknown): string | undefined {
+  // The shared permission-rule field map covers the same tool names; only
+  // values from the plain-object argument shape are comparable.
   if (!isPlainObject(args)) return undefined
-  switch (toolName) {
-    case 'Bash':
-    case 'PowerShell':
-      return stringField(args, 'command')
-    case 'Edit':
-    case 'Write':
-    case 'Read':
-      return stringField(args, 'file_path')
-    case 'Glob':
-      return stringField(args, 'pattern')
-    case 'Grep':
-      return stringField(args, 'pattern')
-    case 'WebFetch':
-      return stringField(args, 'url')
-    case 'WebSearch':
-      return stringField(args, 'query')
-    default:
-      return undefined
-  }
-}
-
-function stringField(args: Record<string, unknown>, key: string): string | undefined {
-  const value = args[key]
-  return typeof value === 'string' ? value : undefined
-}
-
-/** Glob-to-regex translation for `if` patterns (`*` and `?` wildcards). */
-export function globMatch(pattern: string, value: string): boolean {
-  let regex = '^'
-  for (const char of pattern) {
-    if (char === '*') regex += '.*'
-    else if (char === '?') regex += '.'
-    else regex += escapeRegExp(char)
-  }
-  regex += '$'
-  return new RegExp(regex).test(value)
-}
-
-function escapeRegExp(char: string): string {
-  return /[\\^$.*+?()[\]{}|]/.test(char) ? `\\${char}` : char
+  return primaryField(toolName, args)
 }

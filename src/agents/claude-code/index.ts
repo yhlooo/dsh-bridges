@@ -14,6 +14,7 @@ import type { BridgeLogger } from '../../util.js'
 import { createHookBridge } from './hooks/bridge.js'
 import { SettingsLoader } from './hooks/settings.js'
 import { registerMemory } from './memory.js'
+import { createPermissionEvaluator, createPermissionsOnlyBridge } from './permissions.js'
 import { ClaudeSkillProvider } from './skills/provider.js'
 
 export interface ClaudeCodeConfig {
@@ -25,6 +26,8 @@ export interface ClaudeCodeConfig {
   memory?: boolean
   /** Run Claude Code hooks from settings.json at DSH lifecycle seams. */
   hooks?: boolean
+  /** Enforce `permissions.allow/ask/deny` rules from settings.json. */
+  permissions?: boolean
   /** User-level Claude Code directory (usually `~/.claude`). */
   userClaudeDir?: string
   /** Watch existing skill roots and republish the catalog on change. */
@@ -44,6 +47,7 @@ export const CLAUDE_CODE_DEFAULTS: Required<ClaudeCodeConfig> = {
   skills: true,
   memory: true,
   hooks: true,
+  permissions: true,
   userClaudeDir: '~/.claude',
   watch: true,
   hookTimeoutMs: 600_000,
@@ -75,12 +79,27 @@ export function registerClaudeCodeBridge(ctx: Context, logger: BridgeLogger, fs:
     registerMemory(ctx, logger, fs, { userClaudeDir: resolved.userClaudeDir, maxBytes: resolved.memoryMaxBytes })
   }
 
-  if (resolved.hooks) {
+  if (resolved.hooks || resolved.permissions) {
     const loader = new SettingsLoader(logger, fs, { userClaudeDir: resolved.userClaudeDir })
-    createHookBridge(ctx, logger, fs, loader, {
-      hookTimeoutMs: resolved.hookTimeoutMs,
-      userPromptHookTimeoutMs: resolved.userPromptHookTimeoutMs,
-      maxHookOutputChars: resolved.maxHookOutputChars,
-    })
+    if (resolved.hooks) {
+      // The hook bridge owns the PreToolUse composition: hook decisions run
+      // first and the permission evaluator is consulted with upstream
+      // precedence (deny rules always win; ask rules outrank a hook allow).
+      createHookBridge(
+        ctx,
+        logger,
+        fs,
+        loader,
+        {
+          hookTimeoutMs: resolved.hookTimeoutMs,
+          userPromptHookTimeoutMs: resolved.userPromptHookTimeoutMs,
+          maxHookOutputChars: resolved.maxHookOutputChars,
+        },
+        resolved.permissions ? createPermissionEvaluator(logger, loader) : undefined,
+      )
+    } else {
+      // Permissions without hooks: a standalone pre-execute listener.
+      createPermissionsOnlyBridge(ctx, logger, loader)
+    }
   }
 }

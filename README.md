@@ -38,6 +38,7 @@ All bridges are enabled by default and can be configured or disabled individuall
       skills: true      # .claude skills and commands
       memory: true      # CLAUDE.md memory
       hooks: true       # settings.json hooks
+      permissions: true # settings.json permission rules (allow/ask/deny)
 ```
 
 Full per-bridge configuration and behavior: [`docs/guides/`](docs/guides/README.md)
@@ -49,15 +50,16 @@ Full per-bridge configuration and behavior: [`docs/guides/`](docs/guides/README.
 | `.claude/` `.codebuddy/` `.opencode/` `.agents/` skills and commands | model skill catalog + `/name` invocation |
 | `CLAUDE.md`, `CODEBUDDY.md`, `AGENTS.md` chains and rules | session-start memory injection |
 | `settings.json`, `hooks.json`, `config.toml` hooks | the same hooks at DeepSeek Harness lifecycles |
+| `settings.json` `permissions` rules | the same allow/ask/deny decisions on tool calls |
 
 ## Supported agents
 
-| Agent | Skills / commands | Memory | Hooks |
-| :--- | :--- | :--- | :--- |
-| Claude Code | `.claude/skills`, `.claude/commands` (+ `~/.claude`) | `.claude/CLAUDE.md`, `~/.claude/CLAUDE.md` | `settings.json` hooks (SessionStart, UserPromptSubmit, Pre/PostToolUse(+Failure), Stop, SessionEnd) |
-| CodeBuddy Code | `.codebuddy/skills`, `.codebuddy/commands` (+ `~/.codebuddy`) | `CODEBUDDY.md`, `~/.codebuddy/CODEBUDDY.md`, `.codebuddy/rules/` | `settings.json` hooks (SessionStart, UserPromptSubmit, Pre/PostToolUse(+Failure), Stop, SessionEnd) |
-| opencode | `.opencode/skills`, `.opencode/commands` (+ `~/.config/opencode`), `command.*` in `opencode.json` | `AGENTS.md` (+ `CLAUDE.md` fallback), `instructions` files | — (opencode has no hooks config; its plugin API is out of scope) |
-| Codex | `.agents/skills` (cwd → repo root), `~/.agents/skills`, `/etc/codex/skills` | `~/.codex/AGENTS.md` + per-directory `AGENTS.md` chain | `hooks.json` / `config.toml` hooks (SessionStart, SubagentStart, UserPromptSubmit, Pre/PostToolUse, Stop, SubagentStop, SessionEnd) |
+| Agent | Skills / commands | Memory | Hooks | Permissions |
+| :--- | :--- | :--- | :--- | :--- |
+| Claude Code | `.claude/skills`, `.claude/commands` (+ `~/.claude`) | `.claude/CLAUDE.md`, `~/.claude/CLAUDE.md` | `settings.json` hooks (SessionStart, UserPromptSubmit, Pre/PostToolUse(+Failure), Stop, SessionEnd) | `settings.json` permission rules (allow/ask/deny: Bash prefixes, paths, domains) |
+| CodeBuddy Code | `.codebuddy/skills`, `.codebuddy/commands` (+ `~/.codebuddy`) | `CODEBUDDY.md`, `~/.codebuddy/CODEBUDDY.md`, `.codebuddy/rules/` | `settings.json` hooks (SessionStart, UserPromptSubmit, Pre/PostToolUse(+Failure), Stop, SessionEnd) | — |
+| opencode | `.opencode/skills`, `.opencode/commands` (+ `~/.config/opencode`), `command.*` in `opencode.json` | `AGENTS.md` (+ `CLAUDE.md` fallback), `instructions` files | — (opencode has no hooks config; its plugin API is out of scope) | — |
+| Codex | `.agents/skills` (cwd → repo root), `~/.agents/skills`, `/etc/codex/skills` | `~/.codex/AGENTS.md` + per-directory `AGENTS.md` chain | `hooks.json` / `config.toml` hooks (SessionStart, SubagentStart, UserPromptSubmit, Pre/PostToolUse, Stop, SubagentStop, SessionEnd) | — |
 
 ## Resources
 

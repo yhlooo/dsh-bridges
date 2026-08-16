@@ -11,10 +11,12 @@
  * @module dsh-bridges/agents/claude-code/hooks/settings
  */
 import { join } from 'node:path'
+import { parseToolSpecifierRules } from '../../../permissions/parse.js'
+import type { MergedPermissionConfig } from '../../../permissions/types.js'
 import type { FsAdapter } from '../../../fs-adapter.js'
 import type { BridgeLogger } from '../../../util.js'
 import { expandHome, isPlainObject } from '../../../util.js'
-import type { HookDef, HookSettings, LoadedHookSettings, MatcherGroup } from './types.js'
+import type { HookDef, HookSettings, LoadedHookSettings, MatcherGroup, RawPermissionSettings } from './types.js'
 
 export interface SettingsLoaderConfig {
   userClaudeDir: string
@@ -99,6 +101,10 @@ export class SettingsLoader {
     const allowedHttpHookUrls = new Set<string>()
     const httpHookAllowedEnvVars = new Set<string>()
     let disableAllHooks: boolean | undefined
+    const permissionBuckets = { allow: new Set<string>(), ask: new Set<string>(), deny: new Set<string>() }
+    const additionalDirectories = new Set<string>()
+    let defaultMode: string | undefined
+    let disableBypassPermissionsMode: boolean | undefined
 
     for (const { settings } of parsed) {
       for (const [event, groups] of Object.entries(settings.hooks ?? {})) {
@@ -119,6 +125,15 @@ export class SettingsLoader {
       for (const url of settings.allowedHttpHookUrls ?? []) allowedHttpHookUrls.add(url)
       for (const name of settings.httpHookAllowedEnvVars ?? []) httpHookAllowedEnvVars.add(name)
       if (settings.disableAllHooks !== undefined) disableAllHooks = settings.disableAllHooks
+      const permissions = settings.permissions
+      if (permissions !== undefined) {
+        for (const rule of permissions.allow ?? []) permissionBuckets.allow.add(rule)
+        for (const rule of permissions.ask ?? []) permissionBuckets.ask.add(rule)
+        for (const rule of permissions.deny ?? []) permissionBuckets.deny.add(rule)
+        for (const dir of permissions.additionalDirectories ?? []) additionalDirectories.add(dir)
+        if (permissions.defaultMode !== undefined) defaultMode = permissions.defaultMode
+        if (permissions.disableBypassPermissionsMode !== undefined) disableBypassPermissionsMode = permissions.disableBypassPermissionsMode
+      }
     }
 
     return {
@@ -127,6 +142,14 @@ export class SettingsLoader {
       env,
       allowedHttpHookUrls: allowedHttpHookUrls.size > 0 ? [...allowedHttpHookUrls] : undefined,
       httpHookAllowedEnvVars: httpHookAllowedEnvVars.size > 0 ? [...httpHookAllowedEnvVars] : undefined,
+      permissions: {
+        allow: parseToolSpecifierRules('allow', [...permissionBuckets.allow]),
+        ask: parseToolSpecifierRules('ask', [...permissionBuckets.ask]),
+        deny: parseToolSpecifierRules('deny', [...permissionBuckets.deny]),
+        defaultMode,
+        disableBypassPermissionsMode,
+        additionalDirectories: [...additionalDirectories],
+      },
     }
   }
 }
@@ -137,6 +160,7 @@ function normalizeSettings(value: Record<string, unknown>, logger: BridgeLogger,
     disableAllHooks: typeof value['disableAllHooks'] === 'boolean' ? value['disableAllHooks'] : undefined,
     allowedHttpHookUrls: readStringArray(value['allowedHttpHookUrls']),
     httpHookAllowedEnvVars: readStringArray(value['httpHookAllowedEnvVars']),
+    permissions: readPermissions(value['permissions'], logger, path),
   }
   const hooks = value['hooks']
   if (hooks === undefined) return result
@@ -195,4 +219,20 @@ function readEnv(value: unknown, logger: BridgeLogger, path: string): Record<str
 function readStringArray(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined
   return value.filter((entry): entry is string => typeof entry === 'string')
+}
+
+function readPermissions(value: unknown, logger: BridgeLogger, path: string): RawPermissionSettings | undefined {
+  if (value === undefined) return undefined
+  if (!isPlainObject(value)) {
+    logger.warn(`claude-code: ignoring malformed permissions field in ${path}: must be an object`)
+    return undefined
+  }
+  return {
+    allow: readStringArray(value['allow']),
+    ask: readStringArray(value['ask']),
+    deny: readStringArray(value['deny']),
+    defaultMode: typeof value['defaultMode'] === 'string' ? value['defaultMode'] : undefined,
+    additionalDirectories: readStringArray(value['additionalDirectories']),
+    disableBypassPermissionsMode: typeof value['disableBypassPermissionsMode'] === 'boolean' ? value['disableBypassPermissionsMode'] : undefined,
+  }
 }
