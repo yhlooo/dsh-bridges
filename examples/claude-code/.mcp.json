@@ -1,0 +1,11 @@
+{
+  // Project-scoped MCP servers, bridged by dsh-bridges at session start.
+  // The filesystem server exposes filesystem tools under
+  // mcp__claude__filesystem__*.
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
+    }
+  }
+}

@@ -69,9 +69,16 @@
 
 ### P0.1 MCP 服务器配置（四工具全缺）
 
-- [ ] **claude-code**：项目 `.mcp.json` + 用户/本地 `~/.claude.json` 的 `mcpServers`；
+- [x] **claude-code**：项目 `.mcp.json` + 用户/本地 `~/.claude.json` 的 `mcpServers`；
   settings 键 `enableAllProjectMcpServers` / `enabledMcpjsonServers` /
   `disabledMcpjsonServers`（项目 MCP 审批策略）。
+  **已实现**（2026-08-15，方案 B）：`src/agents/claude-code/mcp.ts` 解析两个
+  配置文件（项目同名覆盖用户、`${VAR}` 环境展开、stdio/http/sse →
+  stdio/streamable-http），逐服务器 `ctx.plugin` 动态实例化 dsh-mcp-client
+  （工具 `mcp__claude__<server>__<tool>`、fiber disposal 断开注销）；按工作区
+  对齐 + chokidar 监听重对齐；项目服务器审批语义（未审批跳过 + 告警，
+  `disabledMcpjsonServers` 跳过）。`managed-mcp.json`/`local` 作用域/插件
+  MCP/`sdk` 条目记限制。示例与中英文档已同步。
 - [ ] **codebuddy-code**：项目 `.mcp.json`（旧 `mcp.json`）、用户
   `~/.codebuddy/.mcp.json`（旧 `~/.codebuddy/mcp.json`、`~/.codebuddy.json`）；
   settings 键 `enableAllProjectMcpServers` / `enabledMcpjsonServers` /

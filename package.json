@@ -62,6 +62,7 @@
     "prepublishOnly": "pnpm test"
   },
   "dependencies": {
+    "@deepseek-ai/dsh-mcp-client": "0.1.0-rc.6",
     "@deepseek-ai/dsh-sandbox-policy": "0.1.0-rc.6",
     "@deepseek-ai/dsh-user-approval": "0.1.0-rc.6",
     "chokidar": "^5.0.0",

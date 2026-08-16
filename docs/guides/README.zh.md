@@ -43,12 +43,14 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
       memory: true                # 注入 ~/.claude/CLAUDE.md 与 .claude/CLAUDE.md
       hooks: true                 # 运行 settings.json 里的 Claude Code hooks
       permissions: true           # 执行 settings.json 里的 permissions.allow/ask/deny 规则
+      mcp: true                    # 桥接 .mcp.json / ~/.claude.json 的 MCP 服务器
       userClaudeDir: '~/.claude'  # 用户级 Claude Code 目录
       watch: true                 # 监听技能根目录，变更即重新发布
       hookTimeoutMs: 600000
       userPromptHookTimeoutMs: 30000
       maxHookOutputChars: 10000
       memoryMaxBytes: 32768
+      mcpToolCallTimeoutMs: 120000
     codebuddyCode:
       enabled: true                     # CodeBuddy Code 桥接的总开关
       skills: true                      # 发现 .codebuddy / ~/.codebuddy 的 skills 与 commands
@@ -163,7 +165,15 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 
 DeepSeek Harness 没有命名 subagent 注册表——技能指示模型按上述参数内联委派。未桥接（记录为限制）：`permissionMode`、`skills`、`mcpServers`、`hooks`、`memory`（及 `.claude/agent-memory*`、`~/.claude/agent-memory`）、`background`、`effort`、`isolation`、`color`、`initialPrompt`；核心侧"命名 subagent 注册表"列为后续增强候选。
 
-### 限制### Subagents（自定义子代理）
+### MCP 服务器
+
+把 Claude Code 的 MCP 服务器桥接为 DeepSeek Harness 工具。读取 `~/.claude.json` 的 `mcpServers`（用户作用域，始终连接）与 `<cwd>/.mcp.json`（项目作用域）——同名时项目覆盖用户，与 Claude Code 一致。每个服务器动态实例化一个 `@deepseek-ai/dsh-mcp-client` 插件，其工具注册为 `mcp__<server>__<tool>`；实例按工作区管理，会话开始对齐，配置文件变更时重新对齐。
+
+- stdio 条目（`command` / `args` / `env` / `cwd`）映射 stdio 传输；带 `url` 的 `type: "http"` / `"sse"` 条目映射 streamable-http 传输（SSE 降级 + 告警）。`env` 里的 `${VAR}` 从进程环境展开。
+- 项目 `.mcp.json` 服务器在上游需要审批（`enableAllProjectMcpServers` / `enabledMcpjsonServers`）；未审批的项目服务器跳过 + 告警（而不是静默连接），`disabledMcpjsonServers` 一律跳过——与 Claude Code 的"审批后才连接"行为一致。
+- 启动失败一律放行（告警 + 跳过该服务器）。服务器名加命名空间（`claude__<name>`，净化到 `[A-Za-z0-9_-]`、上限 32 字符）。
+
+### 限制### 限制### Subagents（自定义子代理）
 
 读取 `.codebuddy/agents/*.md` 与 `~/.codebuddy/agents/*.md`（项目覆盖用户，与 CodeBuddy 技能一致），把每个自定义 subagent 定义注册为以 frontmatter `name` 命名的技能（`description` 必填、kebab-case 校验）。技能正文 = 上游系统提示原文 + 委派规格：`name` → 技能名与 `label`、正文 → `persona`、`tools` → `toolFilter.allow`、`disallowedTools` → `toolFilter.deny`（工具名翻译；无法翻译的条目丢弃 + 告警）、`model`（`inherit`/`default` 除外）→ `agentOptions.model`、`maxTurns` → `maxDepth`（近似映射）。
 
@@ -176,6 +186,7 @@ DeepSeek Harness 没有命名 subagent 注册表——技能指示模型按上�
 - **Skills**：工作区以下的嵌套 `.claude/skills/`（其限定名非 kebab-case）、企业 / managed 技能、插件技能、claude.ai 同步技能；`allowed-tools`/`disallowed-tools`、`model`、`effort`、`context: fork`/`agent`/`background`、`paths`、`shell` 以及正文中的 `$ARGUMENTS` 替换；skill/agent frontmatter 里的 `hooks`。
 - **Memory**：`.claude/rules/*.md`、CLAUDE.md 的 `@import`、嵌套 CLAUDE.md。
 - **Hooks**：`mcp_tool`、`prompt`、`agent` 三种 handler 类型；`PreCompact`/`PostCompact`、`Notification`、`SubagentStart`/`SubagentStop`、`PermissionRequest`/`PermissionDenied` 及其余异步事件；`CLAUDE_ENV_FILE`；`asyncRewake`；`updatedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）；`permissionDecision: "defer"`（映射为拒绝）。
+- **MCP**：`managed-mcp.json` 与服务端托管的企业服务器、`~/.claude.json` 内的逐项目 `local` 作用域服务器、插件捆绑的 MCP 服务器、进程内 `type: "sdk"` 条目；SSE 服务器以 streamable-http 传输连接。
 
 ## CodeBuddy Code 桥接
 

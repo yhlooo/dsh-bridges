@@ -47,12 +47,14 @@ Every tool bridge owns a config section under the `bridges` row; a later patch l
       memory: true                # inject ~/.claude/CLAUDE.md and .claude/CLAUDE.md
       hooks: true                 # run Claude Code hooks from settings.json
       permissions: true           # enforce permissions.allow/ask/deny rules from settings.json
+      mcp: true                    # bridge .mcp.json / ~/.claude.json MCP servers
       userClaudeDir: '~/.claude'  # user-level Claude Code directory
       watch: true                 # watch skill roots and republish on change
       hookTimeoutMs: 600000
       userPromptHookTimeoutMs: 30000
       maxHookOutputChars: 10000
       memoryMaxBytes: 32768
+      mcpToolCallTimeoutMs: 120000
     codebuddyCode:
       enabled: true                   # master switch for the CodeBuddy Code bridge
       skills: true                    # discover .codebuddy / ~/.codebuddy skills and commands
@@ -167,7 +169,15 @@ Reads `.claude/agents/*.md` and `~/.claude/agents/*.md` (personal overrides proj
 
 DeepSeek Harness has no named-subagent registry — the skill instructs the model to delegate inline with those parameters. Not bridged (recorded as limitations): `permissionMode`, `skills`, `mcpServers`, `hooks`, `memory` (and `.claude/agent-memory*`/`~/.claude/agent-memory`), `background`, `effort`, `isolation`, `color`, `initialPrompt`; a native named-subagent registry is a core-side enhancement candidate.
 
-### Limitations### Subagents
+### MCP servers
+
+Bridges Claude Code's MCP servers into DeepSeek Harness tools. Reads `~/.claude.json` `mcpServers` (user scope, always connected) and `<cwd>/.mcp.json` (project scope) — a project server overrides a same-name user server, as in Claude Code. Each server becomes one dynamically instantiated `@deepseek-ai/dsh-mcp-client` plugin whose tools register as `mcp__<server>__<tool>`; instances are keyed by workspace, reconciled at session start, and re-reconciled when the config files change.
+
+- stdio entries (`command` / `args` / `env` / `cwd`) map onto the stdio transport; `type: "http"` / `"sse"` entries with a `url` map onto the streamable-http transport (SSE degrades, a warning is logged). `${VAR}` references in `env` expand from the process environment.
+- Project `.mcp.json` servers need approval upstream (`enableAllProjectMcpServers` / `enabledMcpjsonServers`); unapproved project servers are skipped with a warning instead of being silently connected, and `disabledMcpjsonServers` always skips — matching Claude Code's connect-on-approval behavior.
+- Startup failures fail open (warn + skip the server). Server names are namespaced (`claude__<name>`, sanitized to `[A-Za-z0-9_-]`, capped at 32 characters).
+
+### Limitations### Limitations### Subagents
 
 Reads `.codebuddy/agents/*.md` and `~/.codebuddy/agents/*.md` (project overrides user, as for CodeBuddy skills) and registers each custom subagent definition as a skill named by its frontmatter `name` (`description` required; kebab-case enforced). The skill body carries the upstream system prompt verbatim plus a delegation spec telling the model which inline `subagent`-tool parameters to pass: `name` → skill name and `label`, the body → `persona`, `tools` → `toolFilter.allow`, `disallowedTools` → `toolFilter.deny` (tool names translated; unknown entries dropped with a warning), `model` (other than `inherit`/`default`) → `agentOptions.model`, `maxTurns` → `maxDepth` (approximation).
 
@@ -180,6 +190,7 @@ Not bridged yet (documented per subsystem):
 - **Skills**: nested `.claude/skills/` below the workspace (their qualified names are not kebab-case), enterprise/managed skills, plugin skills, synced claude.ai skills; `allowed-tools`/`disallowed-tools`, `model`, `effort`, `context: fork`/`agent`/`background`, `paths`, `shell`, and `$ARGUMENTS` substitution in bodies; skill/agent frontmatter `hooks`.
 - **Memory**: `.claude/rules/*.md`, CLAUDE.md `@import`s, and nested CLAUDE.md files.
 - **Hooks**: handler types `mcp_tool`, `prompt`, `agent`; `PreCompact`/`PostCompact`, `Notification`, `SubagentStart`/`SubagentStop`, `PermissionRequest`/`PermissionDenied`, and the remaining async events; `CLAUDE_ENV_FILE`; `asyncRewake`; `updatedInput` rewriting (DeepSeek Harness freezes tool arguments before policy); `permissionDecision: "defer"` (mapped to deny).
+- **MCP**: `managed-mcp.json` and server-managed enterprise servers, per-project `local`-scope servers inside `~/.claude.json`, plugin-bundled MCP servers, and in-process `type: "sdk"` entries; SSE servers connect over the streamable-http transport instead.
 
 ## The CodeBuddy Code bridge
 

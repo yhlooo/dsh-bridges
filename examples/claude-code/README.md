@@ -21,6 +21,7 @@ claude-code 桥接如何将 Claude Code 的资产桥接进来。
 │   └── explain-code.md          命令（即技能，可 /explain-code 调用）
 ├── agents/
 │   └── code-reviewer.md         自定义 subagent 定义（桥接为技能 + 委派规格）
+├── .mcp.json                   项目级 MCP 服务器（桥接为 mcp__claude__* 工具）
 └── hooks/                       每个 hook 事件一个处理器
     ├── session-start.sh         SessionStart：纯文本 stdout → 首条提示词前注入
     ├── log-prompt.mjs            UserPromptSubmit：将提示词写入 hook-logs/
@@ -41,6 +42,7 @@ claude-code 桥接如何将 Claude Code 的资产桥接进来。
 | `.claude/settings.json` 的 `hooks` | 映射到 DeepSeek Harness 生命周期（`agent/session-start`、`agent/pre-step`、`tools/pre-execute`、`tools/post-execute`、`agent/turn-stopping`、`agent/disposed`） |
 | `.claude/settings.json` 的 `permissions` | allow/ask/deny 规则在 `tools/pre-execute` 执行（示例：`Bash(rm -rf *)` 直接拒绝、`Bash(git push *)` 触发审批、`Read(./README.md)` 免审批放行） |
 | `.claude/agents/<name>.md` | 自定义 subagent 定义注册为技能：正文携带系统提示与委派规格（label / persona / toolFilter / agentOptions.model / maxDepth） |
+| `.mcp.json` 的 `mcpServers` | 每个服务器动态实例化 dsh MCP 客户端，工具注册为 `mcp__claude__<server>__<tool>` |
 
 hook 脚本收到的 JSON 里，工具名是 **Claude Code 的名字**（`Bash`、`Edit`……，
 桥接做了翻译），matcher 与 `if` 规则按 Claude Code 语义求值，因此为
@@ -71,3 +73,5 @@ dsh --profile <name>
 - **Subagents**：`skill code-reviewer` 后模型会按委派规格用 `subagent`
   工具派生子代理（label `code-reviewer`、只读工具白名单），而不是自己
   直接改代码。
+- **MCP**：会话开始后出现 `mcp__claude__filesystem__*` 工具（示例 .mcp.json
+  的 filesystem 服务器）。

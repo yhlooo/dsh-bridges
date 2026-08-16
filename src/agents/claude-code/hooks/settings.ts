@@ -105,6 +105,9 @@ export class SettingsLoader {
     const additionalDirectories = new Set<string>()
     let defaultMode: string | undefined
     let disableBypassPermissionsMode: boolean | undefined
+    let enableAllProjectMcpServers = false
+    let enabledMcpjsonServers: Set<string> | undefined
+    let disabledMcpjsonServers = new Set<string>()
 
     for (const { settings } of parsed) {
       for (const [event, groups] of Object.entries(settings.hooks ?? {})) {
@@ -125,6 +128,9 @@ export class SettingsLoader {
       for (const url of settings.allowedHttpHookUrls ?? []) allowedHttpHookUrls.add(url)
       for (const name of settings.httpHookAllowedEnvVars ?? []) httpHookAllowedEnvVars.add(name)
       if (settings.disableAllHooks !== undefined) disableAllHooks = settings.disableAllHooks
+      if (settings.enableAllProjectMcpServers !== undefined) enableAllProjectMcpServers = settings.enableAllProjectMcpServers
+      if (settings.enabledMcpjsonServers !== undefined) enabledMcpjsonServers = new Set(settings.enabledMcpjsonServers)
+      if (settings.disabledMcpjsonServers !== undefined) disabledMcpjsonServers = new Set(settings.disabledMcpjsonServers)
       const permissions = settings.permissions
       if (permissions !== undefined) {
         for (const rule of permissions.allow ?? []) permissionBuckets.allow.add(rule)
@@ -150,6 +156,11 @@ export class SettingsLoader {
         disableBypassPermissionsMode,
         additionalDirectories: [...additionalDirectories],
       },
+      mcpjsonServers: {
+        enableAll: enableAllProjectMcpServers,
+        enabled: enabledMcpjsonServers ?? new Set(),
+        disabled: disabledMcpjsonServers,
+      },
     }
   }
 }
@@ -161,6 +172,9 @@ function normalizeSettings(value: Record<string, unknown>, logger: BridgeLogger,
     allowedHttpHookUrls: readStringArray(value['allowedHttpHookUrls']),
     httpHookAllowedEnvVars: readStringArray(value['httpHookAllowedEnvVars']),
     permissions: readPermissions(value['permissions'], logger, path),
+    enableAllProjectMcpServers: typeof value['enableAllProjectMcpServers'] === 'boolean' ? value['enableAllProjectMcpServers'] : undefined,
+    enabledMcpjsonServers: readStringArray(value['enabledMcpjsonServers']),
+    disabledMcpjsonServers: readStringArray(value['disabledMcpjsonServers']),
   }
   const hooks = value['hooks']
   if (hooks === undefined) return result
