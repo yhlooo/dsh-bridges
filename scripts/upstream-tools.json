@@ -1,0 +1,18 @@
+[
+  {
+    "tool": "claude-code",
+    "bin": "claude",
+    "pkg": "@anthropic-ai/claude-code",
+    "pin": "2.1.233",
+    "probes": [{ "args": ["doctor"], "marker": "Claude Code doctor" }]
+  },
+  {
+    "tool": "codex",
+    "bin": "codex",
+    "pkg": "@openai/codex",
+    "pin": "0.147.0",
+    "probes": [{ "args": ["doctor"], "marker": "Configuration" }]
+  },
+  { "tool": "opencode", "bin": "opencode", "pkg": "opencode-ai", "pin": "1.18.18" },
+  { "tool": "codebuddy-code", "bin": "codebuddy", "pkg": "@tencent-ai/codebuddy-code", "pin": "2.137.0" }
+]

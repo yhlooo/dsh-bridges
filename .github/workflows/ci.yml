@@ -35,6 +35,7 @@ jobs:
       - run: pnpm test:coverage
       - run: pnpm lint
       - run: pnpm format:check
+      - run: pnpm audit
       - run: npm pack --dry-run
 
       - name: Install the dsh CLI for the pack smoke

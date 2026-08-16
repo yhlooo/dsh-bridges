@@ -54,6 +54,7 @@
     "test:all": "vitest run",
     "test:coverage": "vitest run --coverage",
     "smoke": "node scripts/pack-smoke.mjs",
+    "probe:upstream": "node scripts/upstream-probe.mjs",
     "lint": "eslint src e2e",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
