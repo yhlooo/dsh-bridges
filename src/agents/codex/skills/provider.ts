@@ -19,7 +19,7 @@
  * (`allow_implicit_invocation`) is not bridged yet.
  * @module dsh-bridges/agents/codex/skills/provider
  */
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { watch } from 'chokidar'
 import type { SkillCandidate, SkillDefinition, SkillLookupOptions, SkillProvider, SkillProviderControl } from '@deepseek-ai/dsh-skill'
 import { isSkillName } from '@deepseek-ai/dsh-skill'
@@ -128,9 +128,11 @@ export class CodexSkillProvider implements SkillProvider {
     const roots: SkillRoot[] = []
     if (cwd) roots.push(...(await this.resolveProjectRoots(cwd)))
     // Codex keeps user skills in `$HOME/.agents/skills`, independent of
-    // `CODEX_HOME` / `~/.codex`.
+    // `CODEX_HOME` / `~/.codex`. The system root mirrors settings.ts:
+    // `resolve('/etc/codex')` stays the same on POSIX and becomes the
+    // current-drive absolute `D:\etc\codex` on Windows.
     roots.push({ kind: 'user', path: expandHome(this.config.userSkillsDir), rank: RANK_USER_SKILLS })
-    roots.push({ kind: 'system', path: join('/etc/codex', 'skills'), rank: RANK_SYSTEM_SKILLS })
+    roots.push({ kind: 'system', path: join(resolve('/etc/codex'), 'skills'), rank: RANK_SYSTEM_SKILLS })
     return roots
   }
 
