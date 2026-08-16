@@ -22,11 +22,11 @@
 
 | 层 | 内容 | 状态 | 关键点 |
 | :--- | :--- | :--- | :--- |
-| L0 静态 | typecheck、lint/format、依赖审计 | typecheck 已有，其余待补 | ESLint + Prettier 入 CI |
+| L0 静态 | typecheck、lint/format、依赖审计 | 已接入（依赖审计待补） | ESLint + Prettier 已入 CI（`pnpm lint` / `pnpm format:check`） |
 | L1 纯函数单元 | parse/matcher/decision 逻辑 | 已有 | 补错误路径与边界：空 frontmatter、非法 regex、重复 name |
 | L2 文件系统级 | 技能发现、settings 加载、记忆合并 | 已有雏形 | 用真实磁盘 fixture（见 §3）替代手写 Map |
 | L3 真实进程 | hook 命令执行契约 | 已有雏形 | 补：信号/进程组回收断言、stdin JSON 载荷断言、环境变量、输出上限、Windows 分支 |
-| L4 真实 dsh 集成 | composition + bridges bundle + 假模型 | 骨架已建 | 见 [e2e-testing.md](e2e-testing.md) 环 A（首批：技能发现、记忆注入、hook 阻断、teardown 杀进程） |
+| L4 真实 dsh 集成 | composition + bridges bundle + 假模型 | 已建（12 例，7 类场景齐） | 见 [e2e-testing.md](e2e-testing.md) 环 A |
 | L5 真实上游 CLI 兼容性 | 与真实 claude/codebuddy/opencode/codex 输出对齐 | 待建 | 见 [e2e-testing.md](e2e-testing.md) 环 C |
 | L6 打包冒烟 | `npm pack` 产物安装进干净项目并真实加载 | 待建 | 见 [e2e-testing.md](e2e-testing.md) 环 B |
 | L7 手动 E2E | 发布前逐项过一遍 docs/guides 功能表 | 已有习惯 | 固化为发布清单 |
@@ -49,13 +49,13 @@ L1–L3 是"对不对"的主力防线；L4–L6 守住单元测试覆盖不到�
 
 ## 5. CI 门禁与指标
 
-- 保留现有四连；新增：lint、覆盖率门槛（行覆盖 ≥80%，hook/run、skills/provider 关键路径 ≥90%）、**Windows job**、L4 集成 job（`typecheck:e2e` + `test:e2e`，已接入）、L5 上游兼容性 job。
+- 保留原有四连；已接入：lint（`pnpm lint`）、format 检查（`pnpm format:check`）、L4 集成 job（`typecheck:e2e` + `test:e2e`）、覆盖率门槛（`pnpm test:coverage`，合并 unit+e2e 报告，行与语句 60 / 分支与函数 70，当前基线 63/76/72——低于 §4 的 80/90 目标值，随用例补齐逐步上调）。待补：**Windows job**、L5 上游兼容性 job、依赖审计。
 - L5 依赖外部 CLI，做成**固定版本 + weekly scheduled 漂移检测**：上游工具升级或输出格式变化时，CI 在发布前报警，而不是用户先踩到。
 - 指标红线：单元测试 <30s（当前约 2s）、集成 <10min、测试不得残留子进程/句柄（open-handle 检测）。
 
 ## 6. 分阶段路线图
 
-- **P0 地基**（约 1–2 周）：lint/format 入 CI、fixture 库化、Windows job、覆盖率门槛。验收：CI 矩阵全绿 + 覆盖率达标。
+- **P0 地基**（约 1–2 周）：~~lint/format 入 CI~~ ✅、~~覆盖率门槛~~ ✅（先立 60/70 底线，目标 80/90）、fixture 库化（e2e 侧已建，单元测试侧待迁移）、**Windows job（待做）**。验收：CI 矩阵全绿 + 覆盖率达标。
 - **P1 集成**（约 2 周）：L4 真实 dsh 集成测试、L6 打包冒烟。验收：任何 bundle 加载/注册回归都能被本地测试抓住。
 - **P2 对外符合性**：L5 上游 CLI 兼容性 + golden 契约表 + 漂移检测。验收：上游升级导致的语义变化在 CI 可见。
 - **持续机制**：bug 修复三件套（回归测试 → 修复 → 补 [pitfalls.md](pitfalls.md)）；新增桥接按 [adding-an-agent-bridge.md](adding-an-agent-bridge.md) 五阶段走，每阶段同步交付对应层级测试。
