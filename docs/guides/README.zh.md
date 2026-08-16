@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-各桥接的详细使用文档：安装与验证、完整配置参考、每个工具的逐项行为（skills/commands、记忆、hooks）与限制。快速上手指南见[根目录 README](../../README.md)。
+各桥接的详细使用文档：安装与验证、完整配置参考、每个工具的逐项行为（skills/commands、记忆、hooks）与限制。快速上手指南见[根目录 README](../../README_CN.md)。
 
 ## 安装
 
@@ -23,7 +23,7 @@ dsh plugin --profile <profile-name> add dsh-bridges
 dsh --profile <profile-name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 ```
 
-然后在带有 agent 资产（`.claude/`、`.codebuddy/`、`.opencode/`、`.agents/skills/`、`.codex/`，以及它们 `~/` 下的用户级对应目录，如 `~/.claude/`）的项目里启动 DeepSeek Harness；资产按会话工作区发现。
+然后在带有 agent 资产（`.claude/`、`.codebuddy/`、`.opencode/`、`.agents/skills/`、`.codex/`、`.pi/`、`.gemini/`、`.cursor/`，以及它们 `~/` 下的用户级对应目录，如 `~/.claude/`、`~/.gemini/`、`~/.cursor/`）的项目里启动 DeepSeek Harness；资产按会话工作区发现。
 
 每个受支持的 agent 工具在 [`examples/`](../../examples/) 下各有一个完整示例
 项目：以示例目录作为会话工作区打开，即可观察其 skills、memory 与 hooks 的
@@ -219,7 +219,7 @@ DeepSeek Harness 没有命名 subagent 注册表——技能指示模型按上�
 
 ### MCP 服务器
 
-把 Claude Code 的 MCP 服务器桥接为 DeepSeek Harness 工具。读取 `~/.claude.json` 的 `mcpServers`（用户作用域，始终连接）与 `<cwd>/.mcp.json`（项目作用域）——同名时项目覆盖用户，与 Claude Code 一致。每个服务器动态实例化一个 `@deepseek-ai/dsh-mcp-client` 插件，其工具注册为 `mcp__<server>__<tool>`；实例按工作区管理，会话开始对齐，配置文件变更时重新对齐。
+把 Claude Code 的 MCP 服务器桥接为 DeepSeek Harness 工具。读取 `~/.claude.json` 的 `mcpServers`（用户作用域，始终连接）与 `<cwd>/.mcp.json`（项目作用域）——同名时项目覆盖用户，与 Claude Code 一致。每个服务器动态实例化一个 `@deepseek-ai/dsh-mcp-client` 插件，其工具注册为 `mcp__claude__<server>__<tool>`；实例按工作区管理，会话开始对齐，配置文件变更时重新对齐。
 
 - stdio 条目（`command` / `args` / `env` / `cwd`）映射 stdio 传输；带 `url` 的 `type: "http"` / `"sse"` 条目映射 streamable-http 传输（SSE 降级 + 告警）。`env` 里的 `${VAR}` 从进程环境展开。
 - 项目 `.mcp.json` 服务器在上游需要审批（`enableAllProjectMcpServers` / `enabledMcpjsonServers`）；未审批的项目服务器跳过 + 告警（而不是静默连接），`disabledMcpjsonServers` 一律跳过——与 Claude Code 的"审批后才连接"行为一致。
@@ -375,9 +375,9 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md` 与 `CLAUDE.md`。�
 - 语法：裸字符串（`permission: "allow" | "ask" | "deny"`）或按家族分组的对象——`*`（默认）、`read`、`edit`（覆盖 `edit`/`write`）、`glob`、`grep`、`bash`、`task`、`skill`、`question`、`websearch`、`external_directory`，另有 `lsp`/`doom_loop`（见限制）。每个家族要么是一个动作，要么是有序的 `pattern → action` 规则，**最后一条命中的规则胜出**（与 opencode 文档一致：`"*"` 放前面、具体规则放后面）。
 - 通配符为 opencode 语义（`*` 任意字符、`?` 单字符）；模式开头支持 `~`/`$HOME` 展开；工作区相对模式按相对工作目录的路径匹配。
 - 配置了 `permission` 时内置默认生效：多数家族 allow、`external_directory` ask、read 拒绝 `.env` / `.env.*`（`.env.example` 除外）——即上游默认。
-- DeepSeek Harness 工具映射：`read`→read、`edit`/`write`→edit、`glob`→glob、`grep`→grep、`bash`→bash、`subagent`→task（仅家族级；子代理类型模式没有对应字段）、`skill`→skill（匹配技能名）、`ask_user_question`→question、`web`/`web_search`→websearch（匹配查询词）。未映射的工具经 `*` / 默认值解析。
+- DeepSeek Harness 工具映射：`read`→read、`edit`/`write`→edit、`glob`→glob、`grep`→grep、`bash`→bash、`subagent`→task（仅家族级；子代理类型模式没有对应字段）、`skill`→skill（匹配技能名）、`ask_user_question`→question、`web`/`web_search`→websearch（匹配查询词）。没有 opencode 家族的工具（`todo_write`、`pwsh`、`exit_plan_mode`、MCP 工具等）一律交还 DeepSeek Harness 自身的审批策略。
 - `external_directory` 在 read/edit/write 的路径落在工作目录之外时触发，默认 ask，与 opencode 一致。
-- **没有**配置层定义 `permission` 时，桥接完全让位，DeepSeek Harness 自身策略不变；定义了之后，未命中的调用按 opencode 的宽松默认解析——上游姿态原样带过来（allow 免审批、ask 弹审批、deny 拒绝）。
+- **没有**配置层定义 `permission` 时，桥接完全让位，DeepSeek Harness 自身策略不变；定义了之后，已映射家族中未命中规则的调用按 opencode 的宽松默认解析——上游姿态原样带过来（allow 免审批、ask 弹审批、deny 拒绝）；未映射工具一律交还 DeepSeek Harness 审批。
 
 未桥接（记录为限制）：`doom_loop`（重复调用检测无接缝）、`webfetch`（无 URL 抓取工具）、`lsp`（无 LSP 工具）、已废弃的 `tools` 布尔配置、按 agent 的权限覆盖（`agent.<name>.permission`——DeepSeek Harness 会话没有 opencode agent 身份）。
 
@@ -652,7 +652,7 @@ Cursor 的资产分布在 IDE 与 CLI（`agent` 二进制）之间。本桥接�
 
 兼容性细节：
 
-- hooks 以 Cursor 工具名为键，桥接做翻译：`bash`/`pwsh`→`Shell`、`read`→`Read`、`write`→`Write`、`edit`→`Edit`、`glob`→`Glob`、`grep`→`Grep`、`web`→`WebFetch`、`web_search`→`WebSearch`、`subagent`→`Task`、`todo_write`→`TodoWrite`；MCP 工具保留原名。matcher 与 `tool_name` 载荷用翻译后的名字。
+- hooks 以 Cursor 工具名为键，桥接做翻译：`bash`/`pwsh`→`Shell`、`read`→`Read`、`write`→`Write`、`edit`→`Edit`、`glob`→`Glob`、`grep`→`Grep`、`web`→`WebFetch`、`web_search`→`WebSearch`、`ask_user_question`→`AskUserQuestion`、`exit_plan_mode`→`ExitPlanMode`、`subagent`→`Task`、`todo_write`→`TodoWrite`；MCP 工具保留原名。matcher 与 `tool_name` 载荷用翻译后的名字。
 - matcher 语义：非锚定正则作用于事件对应字段（工具名用 `Shell|Read|Write`、命令文本用 `curl|wget` 包含匹配）；`*` / 空匹配全部；不可解析的模式永不匹配。
 - 退出码遵循 Cursor：`0` 使用 JSON 输出、`2` 阻断（≡ `permission: "deny"`）、其余放行——除非 handler 设了 `failClosed: true`（崩溃/超时/非法 JSON 转为阻断）。超时按 handler 配置（秒，默认 30）。
 - 未桥接：prompt 型 hooks（需要 LLM）、`preCompact`、`afterAgentThought`、`workspaceOpen`、Tab hooks（IDE 专属）。
@@ -664,7 +664,7 @@ Cursor 的资产分布在 IDE 与 CLI（`agent` 二进制）之间。本桥接�
 - `Shell(commandBase)` — 对命令首词做 glob，另有 `command:args`（args 部分对命令行其余部分做 glob）
 - `Read(pathOrGlob)` / `Write(pathOrGlob)` — 对文件路径做 `**` / `*` / `?` glob；一类令牌绝不匹配另一类工具
 - `WebFetch(domainOrPattern)` — 精确主机名或 `*.domain` 子域名后缀
-- `Mcp(server:tool)` — 对 `mcp__<server>__<tool>` 名逐段 glob
+- `Mcp(server:tool)` — 对运行时 `mcp__cursor__<server>__<tool>` 名逐段 glob（桥接命名空间被剥除，规则按 Cursor 的 `mcp__<server>__<tool>` 写法即可命中）
 
 **deny 优先于 allow**；没有 ask 层级，未命中的调用落到 DeepSeek Harness 自身的审批策略。hook 决策先组合（hook deny 直接拒绝；hook allow 不能覆盖命中的 deny 规则）。已记限制：`approvalMode` 读取但不执行（DeepSeek Harness 拥有其审批模式）；`permissions.json`（`mcpAllowlist` / `terminalAllowlist` / `autoRun`）调的是 Cursor 自身的提示流，读取但不执行。
 

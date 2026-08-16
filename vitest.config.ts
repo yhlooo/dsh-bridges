@@ -5,7 +5,7 @@ export default defineConfig({
     // Coverage config lives at the root: in projects mode the root `--coverage`
     // run merges unit + e2e into one report, and the gate is the combined
     // number (`pnpm test:coverage`). Floors sit below the current baseline
-    // (63/76/72) so they trip on regressions, not on noise.
+    // (70/78/79) so they trip on regressions, not on noise.
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],

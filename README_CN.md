@@ -55,10 +55,11 @@ dsh --profile headless "list the skills available in your catalog"
 
 | 项目里已有的资产 | DeepSeek Harness 提供的桥接 |
 | :--- | :--- |
-| `.claude/` `.codebuddy/` `.opencode/` `.agents/` 技能与命令 | 模型技能目录 + `/名字` 调用 |
-| `CLAUDE.md`、`CODEBUDDY.md`、`AGENTS.md` 链与规则 | 会话开始时的记忆注入 |
+| `.claude/` `.codebuddy/` `.opencode/` `.agents/` `.pi/` `.gemini/` `.cursor/` 技能与命令 | 模型技能目录 + `/名字` 调用 |
+| `CLAUDE.md`、`CODEBUDDY.md`、`AGENTS.md`、`GEMINI.md` 链与规则 | 会话开始时的记忆注入 |
 | `settings.json`、`hooks.json`、`config.toml` hooks | 同样的 hooks 运行在 DeepSeek Harness 生命周期 |
-| `settings.json` 的 `permissions` 规则 | 同样的 allow/ask/deny 决策作用于工具调用 |
+| `settings.json` 的 `permissions` 规则、策略文件、CLI 规则 | 同样的 allow/ask/deny 决策作用于工具调用 |
+| `.mcp.json`、`config.toml`、`opencode.json`、`mcp.json` 的 MCP 服务器 | 桥接的 MCP 工具 |
 
 ## 支持的 agent 工具
 

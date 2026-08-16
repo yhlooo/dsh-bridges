@@ -65,11 +65,11 @@ devDependencies 已备齐全套 `@deepseek-ai/dsh-*`，可以在测试里启动�
 
 ## 7. 实施状态
 
-环 A 骨架已落地（`e2e/`），12 个用例全绿并接入 CI（`pnpm typecheck:e2e` + `pnpm test:e2e` + `pnpm test:coverage`）：
+环 A 骨架已落地（`e2e/`），34 个用例全绿并接入 CI（`pnpm typecheck:e2e` + `pnpm test:e2e` + `pnpm test:coverage`）：
 
 - **`e2e/harness.ts`**：`bootHarness()` 启动真实 composition——真实 `skills` 注册表（`@deepseek-ai/dsh-skill`）+ 从 `src/index.ts` 加载的真实 bundle。事件走宿主同一批接缝：`emit` 派发 `agent/session-start`，`waterfall` 派发 `tools/pre-execute` / `tools/post-execute` / `agent/pre-step` 且由调用方提供最内层 `next`（默认策略决策），与宿主运行时语义一致。
 - **与设计的一处偏差**：agent 侧用记录式 `E2eAgent` 桩（实现 `session.header.cwd` / `session.id` / `inject()` / `steer()`）而非完整 mock-LLM 驱动循环——dsh 的 agent 循环包不在 devDependencies 里。桩站在真实循环驱动事件的那条接缝上，断言的是"桥会注入什么、会拦下什么"；未来若循环包可引入，替换桩即可，断言不变。
 - **fixtures**：`e2e/fixtures/claude-code/` 下按场景分目录（skills / user / memory / memory-dedup / hooks / hooks-live / hooks-timeout / broken-settings / hooks-prompt / hooks-post），测试先复制到临时目录再运行，保证不可变与并行安全。注意 `userClaudeDir` 参数就是 `.claude` 目录本身（provider 直接在其下扫 `skills/`）。fixtures 目录对 prettier/eslint 豁免（`broken-settings` 故意包含非法 JSON）。
 - **场景覆盖（7 类矩阵已齐）**：技能发现与同名遮蔽（用户级胜出，按加载出的正文断言而非 rank 数字）、记忆注入与去重坍缩、hook 放行（matcher 未命中）、hook 阻断（真实子进程、stdin 真实载荷、exit 2 → deny；UserPromptSubmit 阻断会擦除原提示词并进入可见的 block notice）、超时 fail-open、坏配置 fail-soft、teardown 杀死存活 hook 子进程（含孙进程——此断言曾暴露并修复了 [pitfalls.md](pitfalls.md) #23 的孤儿进程 bug）。
-- **工程机制**：vitest projects 拆分（`unit` / `e2e`），`pnpm test` 只跑单元，`pnpm test:e2e` 显式跑，`pnpm test:coverage` 出合并报告；e2e 串行执行（`fileParallelism: false`）；覆盖率门槛 60/70（行与语句 60、分支与函数 70，当前基线 63/76/72）；环 B `pnpm smoke`、环 C `pnpm probe:upstream`。
+- **工程机制**：vitest projects 拆分（`unit` / `e2e`），`pnpm test` 只跑单元，`pnpm test:e2e` 显式跑，`pnpm test:coverage` 出合并报告；e2e 串行执行（`fileParallelism: false`）；覆盖率门槛 60/70（行与语句 60、分支与函数 70，当前基线 70/78/79）；环 B `pnpm smoke`、环 C `pnpm probe:upstream`。
 - **已知限制**：hook fixtures 通过 `node <脚本>.cjs` 命令跨平台运行，CI 矩阵含 windows-latest；Windows 无进程组 kill，teardown 组杀断言在 win32 跳过（孙进程泄漏是已知平台限制）。

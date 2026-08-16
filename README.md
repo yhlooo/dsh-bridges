@@ -53,10 +53,11 @@ Full per-bridge configuration and behavior: [`docs/guides/`](docs/guides/README.
 
 | Assets already in your project | What DeepSeek Harness provides |
 | :--- | :--- |
-| `.claude/` `.codebuddy/` `.opencode/` `.agents/` skills and commands | model skill catalog + `/name` invocation |
-| `CLAUDE.md`, `CODEBUDDY.md`, `AGENTS.md` chains and rules | session-start memory injection |
+| `.claude/` `.codebuddy/` `.opencode/` `.agents/` `.pi/` `.gemini/` `.cursor/` skills and commands | model skill catalog + `/name` invocation |
+| `CLAUDE.md`, `CODEBUDDY.md`, `AGENTS.md`, `GEMINI.md` chains and rules | session-start memory injection |
 | `settings.json`, `hooks.json`, `config.toml` hooks | the same hooks at DeepSeek Harness lifecycles |
-| `settings.json` `permissions` rules | the same allow/ask/deny decisions on tool calls |
+| `settings.json` `permissions` rules, policy files, CLI rules | the same allow/ask/deny decisions on tool calls |
+| `.mcp.json`, `config.toml`, `opencode.json`, `mcp.json` MCP servers | bridged MCP tools |
 
 ## Supported agents
 

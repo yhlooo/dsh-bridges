@@ -14,6 +14,14 @@
  * - **codex** (implemented): `.agents/skills` → `ctx.skills` provider,
  *   AGENTS.md instruction-chain memory, config.toml/hooks.json hooks → dsh
  *   lifecycle events.
+ * - **pi** (implemented): `.pi` skills/prompt templates → `ctx.skills`
+ *   provider (project side trust-gated), AGENTS.md / CLAUDE.md chain memory.
+ * - **gemini-cli** (implemented): skills/commands/subagents →
+ *   `ctx.skills` provider, GEMINI.md memory, settings.json hooks, policy
+ *   engine permissions, settings.json MCP servers.
+ * - **cursor** (implemented): skills/subagents → `ctx.skills` provider,
+ *   always-apply rules memory, hooks.json hooks, cli.json permission rules,
+ *   mcp.json MCP servers.
  *
  * A subsystem registers under this plugin's single bundle row (`id: bridges`
  * in `cordis.patch.yml`), so one installation covers every supported tool and

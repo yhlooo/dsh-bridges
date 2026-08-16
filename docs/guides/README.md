@@ -26,7 +26,7 @@ The plugin manager appends the package to the profile's `dsh.profile.bundles`, a
 dsh --profile <profile-name> --dump-config   # the row "dsh-bridges" should appear
 ```
 
-Then start DeepSeek Harness in a project that has agent assets — `.claude/`, `.codebuddy/`, `.opencode/`, `.agents/skills/`, or `.codex/` (plus their user-level counterparts, e.g. `~/.claude/`); assets are discovered per session workspace.
+Then start DeepSeek Harness in a project that has agent assets — `.claude/`, `.codebuddy/`, `.opencode/`, `.agents/skills/`, `.codex/`, `.pi/`, `.gemini/`, or `.cursor/` (plus their user-level counterparts, e.g. `~/.claude/`, `~/.gemini/`, `~/.cursor/`); assets are discovered per session workspace.
 
 A complete example project exists for each supported agent tool
 ([`examples/`](../../examples/)): open one as the session workspace to observe
@@ -379,9 +379,9 @@ Reads the `permission` field from `opencode.json(c)` (global + project layers; p
 - Grammar: a bare string (`permission: "allow" | "ask" | "deny"`) or an object keyed by family — `*` (default), `read`, `edit` (covers `edit`/`write`), `glob`, `grep`, `bash`, `task`, `skill`, `question`, `websearch`, `external_directory`, plus `lsp`/`doom_loop` (see limitations). Families hold either an action or ordered `pattern → action` rules where the **last matching rule wins** (put `"*"` first, specific rules after, as opencode documents).
 - Wildcards are opencode's (`*` any chars, `?` one char); `~`/`$HOME` expand at the pattern start; worktree-relative patterns match paths relative to the working directory.
 - Built-in defaults apply when `permission` is configured: most families allow, `external_directory` asks, and reads deny `.env` / `.env.*` except `.env.example` — the upstream defaults.
-- DSH tool mapping: `read`→read, `edit`/`write`→edit, `glob`→glob, `grep`→grep, `bash`→bash, `subagent`→task (family-level only; subagent-type patterns have no DSH field), `skill`→skill (matches the skill name), `ask_user_question`→question, `web`/`web_search`→websearch (matches the query). Unmapped tools resolve through `*` / the defaults.
+- DeepSeek Harness tool mapping: `read`→read, `edit`/`write`→edit, `glob`→glob, `grep`→grep, `bash`→bash, `subagent`→task (family-level only; subagent-type patterns have no DeepSeek Harness field), `skill`→skill (matches the skill name), `ask_user_question`→question, `web`/`web_search`→websearch (matches the query). Tools with no opencode family (`todo_write`, `pwsh`, `exit_plan_mode`, MCP tools, …) defer to DeepSeek Harness's own approval policy.
 - `external_directory` triggers when a read/edit/write path falls outside the working directory; its default is `ask`, matching opencode.
-- When **no** config layer defines `permission`, the bridge stays out of the way and DeepSeek Harness policy applies unchanged. When it is defined, unmatched calls resolve to opencode's permissive defaults — the upstream posture carries over (allow skips approval, ask prompts, deny blocks).
+- When **no** config layer defines `permission`, the bridge stays out of the way and DeepSeek Harness policy applies unchanged. When it is defined, calls on mapped families that match no rule resolve to opencode's permissive defaults — the upstream posture carries over (allow skips approval, ask prompts, deny blocks); unmapped tools always defer to DeepSeek Harness.
 
 Not bridged (recorded as limitations): `doom_loop` (repeat-detection has no seam), `webfetch` (no URL-fetch tool), `lsp` (no LSP tool), the deprecated legacy `tools` boolean config, and per-agent permission overrides (`agent.<name>.permission` — DeepSeek Harness sessions carry no opencode agent identity).
 
@@ -656,7 +656,7 @@ Loads the merged hooks from `.cursor/hooks.json` (project) and `~/.cursor/hooks.
 
 Compatibility details:
 
-- Hooks key on Cursor tool names; the bridge translates: `bash`/`pwsh`→`Shell`, `read`→`Read`, `write`→`Write`, `edit`→`Edit`, `glob`→`Glob`, `grep`→`Grep`, `web`→`WebFetch`, `web_search`→`WebSearch`, `subagent`→`Task`, `todo_write`→`TodoWrite`; MCP tools keep their own name. Matchers and the `tool_name` payload use the translated name.
+- Hooks key on Cursor tool names; the bridge translates: `bash`/`pwsh`→`Shell`, `read`→`Read`, `write`→`Write`, `edit`→`Edit`, `glob`→`Glob`, `grep`→`Grep`, `web`→`WebFetch`, `web_search`→`WebSearch`, `ask_user_question`→`AskUserQuestion`, `exit_plan_mode`→`ExitPlanMode`, `subagent`→`Task`, `todo_write`→`TodoWrite`; MCP tools keep their own name. Matchers and the `tool_name` payload use the translated name.
 - Matcher semantics: a regex tested unanchored against the hook-specific field (`Shell|Read|Write` for tool names, `curl|wget` containment for command text); `*` / empty matches all; unparseable patterns never match.
 - Exit codes follow Cursor: `0` uses the JSON output, `2` blocks (≡ `permission: "deny"`), anything else fails open — unless the handler sets `failClosed: true`, which turns crash/timeout/invalid-JSON into a block. Timeouts are per-handler (seconds; default 30).
 - Not bridged: prompt-type hooks (they need an LLM), `preCompact`, `afterAgentThought`, `workspaceOpen`, and the Tab hooks (IDE-only).
@@ -668,7 +668,7 @@ Enforces the CLI permission tokens from `~/.cursor/cli-config.json` → `.cursor
 - `Shell(commandBase)` — glob on the command's first token, plus `command:args` (the args part is globbed against the rest of the command line)
 - `Read(pathOrGlob)` / `Write(pathOrGlob)` — `**` / `*` / `?` globs against the file path; a token of one type never matches another tool
 - `WebFetch(domainOrPattern)` — exact hostname or `*.domain` subdomain suffix
-- `Mcp(server:tool)` — globs per part against `mcp__<server>__<tool>` names
+- `Mcp(server:tool)` — globs per part against the runtime `mcp__cursor__<server>__<tool>` names (the bridge namespace is stripped, so rules written as Cursor's `mcp__<server>__<tool>` hit their target)
 
 **deny wins over allow**; there is no ask level, so unmatched calls fall through to the DeepSeek Harness approval policy. Hook decisions compose first (a hook deny wins; a hook allow does not override a matching deny rule). Recorded limitations: `approvalMode` is read but not enforced (DeepSeek Harness owns its approval modes), and `permissions.json` (`mcpAllowlist` / `terminalAllowlist` / `autoRun`) tunes Cursor's own prompt flows and is read but not enforced.
 

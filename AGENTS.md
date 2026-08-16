@@ -24,16 +24,20 @@ CodeBuddy……）。在本仓库的所有工作中请遵守以下约定。
   `bridges`，如同 `@deepseek-ai/dsh-skill-filesystem` → `skill-filesystem`）。
   `id` 是后续 patch 层覆盖配置所用的稳定键——绝不要用完整包名作 `id`。
 - 技能 provider：每个 agent 工具一个，以工具命名（`claude-code`、
-  `codebuddy-code`、`opencode`、`codex`）。每个 provider 独占一段 rank（claude
-  105–120、codebuddy 125–140、opencode 145–160、codex 165–175）；同层内 rank
-  越小越优先，段内资产遵循上游工具的优先级（Claude Code：个人 > 项目；
-  CodeBuddy Code / opencode / Codex：项目 > 用户），且技能优先于同级同名命令。
+  `codebuddy-code`、`opencode`、`codex`、`pi`、`gemini-cli`、`cursor`）。每个
+  provider 独占一段 rank（claude 105–120、codebuddy 125–140、opencode 145–160、
+  codex 165–175、pi 180–195、gemini-cli 205–220、cursor 225–240；段分配避开
+  filesystem provider 的整百点，详见 `docs/development/dsh-integration-surface.md`）；
+  同层内 rank 越小越优先，段内资产遵循上游工具的优先级（Claude Code：个人 >
+  项目；CodeBuddy Code / opencode / Codex：项目 > 用户；pi：个人 > 项目；
+  gemini-cli：工作区 > 用户；cursor：项目 > 用户），且技能优先于同级同名命令。
 - 每个桥接的技能 provider 都注册在**全局**技能层，因此 preset 层的 DeepSeek
   Harness 原生技能（`.dsh/skills`、`.agents/skills`、运行时技能）通过层序在
   同名冲突时遮蔽桥接资产。绝不要用 rank 数字论证这一优先级——同层内桥接段的
   数字其实高于运行时技能（250），保住该优先级的是层序。
 - `bridges` 行上的配置段以工具命名（`claudeCode`、`codebuddyCode`、`opencode`、
-  `codex`），各自带 `enabled` 总开关和每桥接的具体参数。
+  `codex`、`pi`、`geminiCli`、`cursor`），各自带 `enabled` 总开关和每桥接的
+  具体参数。
 - 注入消息的 `source.plugin` id 按子系统区分（`<tool>-memory`、
   `<tool>-hooks`，如 `claude-code-memory`、`codebuddy-code-hooks`）；hook 的
   `tool_name` 载荷携带上游工具的名字（`Bash`、`Edit`……），绝不携带 dsh 的

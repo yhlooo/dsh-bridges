@@ -1,11 +1,12 @@
 # The dsh-bridges bundle patch: one plugin row over the composed tree.
 #
 # The single `dsh-bridges` plugin hosts one bridge subsystem per supported
-# agent tool (claude-code, codebuddy-code, opencode, and codex today).
+# agent tool (claude-code, codebuddy-code, opencode, codex, pi, gemini-cli,
+# and cursor today).
 # Each subsystem registers a skill provider on the host `skills` registry
-# (global layer) and wires the tool's hooks into DSH agent and tool
-# lifecycles. A preset's nearer skill layer shadows its entries on name
-# conflicts, so DSH-native skills always win collisions.
+# (global layer) and wires the tool's hooks into DeepSeek Harness agent and
+# tool lifecycles. A preset's nearer skill layer shadows its entries on name
+# conflicts, so DeepSeek Harness-native skills always win collisions.
 #
 # Each tool's bridge can be toggled from a later patch layer, e.g.:
 #   - id: bridges

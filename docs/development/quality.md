@@ -14,7 +14,7 @@
 
 ## 1. 现状盘点
 
-**已具备（保持）**：按子系统组织的单元测试（parse/matcher/provider/run/settings/memory 各桥接一份，共 221 例）、内存 `TreeFs` 夹具、真实 shell 进程的 hook 执行测试（超时 fail-open、exit 2 阻断、JSON/纯文本分流）、CI 四连（typecheck/build/test/pack dry-run）。
+**已具备（保持）**：按子系统组织的单元测试（parse/matcher/provider/run/settings/memory 各桥接一份，共 495 例）、内存 `TreeFs` 夹具、真实 shell 进程的 hook 执行测试（超时 fail-open、exit 2 阻断、JSON/纯文本分流）、CI 四连（typecheck/build/test/pack dry-run）。
 
 **缺口**：无 lint/format、无覆盖率门槛、无 Windows CI（代码里有 `win32` 分支却从未在 Windows 上跑过）、无真实 dsh 集成测试、无真实上游 CLI 兼容性测试、无打包产物消费冒烟、`examples/` 未作为测试夹具使用。
 
@@ -26,7 +26,7 @@
 | L1 纯函数单元 | parse/matcher/decision 逻辑 | 已有 | 补错误路径与边界：空 frontmatter、非法 regex、重复 name |
 | L2 文件系统级 | 技能发现、settings 加载、记忆合并 | 已有雏形 | 用真实磁盘 fixture（见 §3）替代手写 Map |
 | L3 真实进程 | hook 命令执行契约 | 已有雏形 | 补：信号/进程组回收断言、stdin JSON 载荷断言、环境变量、输出上限、Windows 分支 |
-| L4 真实 dsh 集成 | composition + bridges bundle + 假模型 | 已建（12 例，7 类场景齐） | 见 [e2e-testing.md](e2e-testing.md) 环 A |
+| L4 真实 dsh 集成 | composition + bridges bundle + 假模型 | 已建（34 例，7 类场景齐） | 见 [e2e-testing.md](e2e-testing.md) 环 A |
 | L5 真实上游 CLI 兼容性 | 与真实 claude/codebuddy/opencode/codex 输出对齐 | 哨兵已建 | 见 [e2e-testing.md](e2e-testing.md) 环 C（固定版本 + weekly 漂移报警 + doctor 探针；深层行为对标保留人工） |
 | L6 打包冒烟 | `npm pack` 产物安装进干净项目并真实加载 | 已建 | 见 [e2e-testing.md](e2e-testing.md) 环 B（`pnpm smoke`，真实 dsh CLI + scratch profile） |
 | L7 手动 E2E | 发布前逐项过一遍 docs/guides 功能表 | 已有习惯 | 固化为发布清单 |
@@ -49,7 +49,7 @@ L1–L3 是"对不对"的主力防线；L4–L6 守住单元测试覆盖不到�
 
 ## 5. CI 门禁与指标
 
-- 保留原有四连；已接入：lint（`pnpm lint`）、format 检查（`pnpm format:check`）、依赖审计（`pnpm audit`）、L4 集成 job（`typecheck:e2e` + `test:e2e`）、覆盖率门槛（`pnpm test:coverage`，合并 unit+e2e 报告，行与语句 60 / 分支与函数 70，当前基线 63/76/72——低于 §4 的 80/90 目标值，随用例补齐逐步上调）、**双平台矩阵（ubuntu + windows）**、L6 打包冒烟（`pnpm smoke`，固定版本 `@deepseek-ai/dsh@0.1.0-rc.6`）、L5 上游漂移哨兵（weekly `conformance.yml`）。
+- 保留原有四连；已接入：lint（`pnpm lint`）、format 检查（`pnpm format:check`）、依赖审计（`pnpm audit`）、L4 集成 job（`typecheck:e2e` + `test:e2e`）、覆盖率门槛（`pnpm test:coverage`，合并 unit+e2e 报告，行与语句 60 / 分支与函数 70，当前基线 70/78/79——低于 §4 的 80/90 目标值，随用例补齐逐步上调）、**双平台矩阵（ubuntu + windows）**、L6 打包冒烟（`pnpm smoke`，固定版本 `@deepseek-ai/dsh@0.1.0-rc.6`）、L5 上游漂移哨兵（weekly `conformance.yml`）。
 - L5 依赖外部 CLI，做成**固定版本 + weekly scheduled 漂移检测**：上游工具升级或输出格式变化时，CI 在发布前报警，而不是用户先踩到。
 - 指标红线：单元测试 <30s（当前约 2s）、集成 <10min、测试不得残留子进程/句柄（open-handle 检测）。
 

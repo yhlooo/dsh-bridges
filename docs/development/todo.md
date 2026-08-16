@@ -365,3 +365,106 @@
 ## 已完成
 
 （暂无。条目完成后勾选、注明 commit，移入本表。）
+
+## 2026-08-16 全面审察遗留（中低危待办）
+
+来源：2026-08-16 对全仓（7 个桥接 + 共享模块 + 文档 + CI/发布）的一次全面审察。
+高危与发布阻断已当场修复（见下"本次已修复"）；以下为中低危待办，按优先级排列，
+实施时自上而下取。
+
+### 本次已修复（2026-08-16）
+
+- [x] **发布版本过时**：npm 上 0.1.0 只含 4 个桥接（早于 PR #2/#3 合入）；`package.json`
+  version → 0.2.0（暂不发布，全部问题解决后再按发布流程 tag/publish）。
+- [x] **cursor/gemini-cli hook 输出未转义 `</system-reminder>`**（注入逃逸）：
+  两个 hooks/bridge 的三处消息构造补 `escapeReminderClose`，e2e 新增
+  hooks-escape fixture 覆盖。commit a6b027e。
+- [x] **opencode 权限桥对未映射 DSH 工具强制 allow**（`?? 'allow'` 覆盖 Harness
+  审批）：改为无 opencode 家族的工具一律返回 undefined 交还审批；guides 中英同步。
+  commit fd9f6d3。
+- [x] **cursor `Mcp(server:tool)` 匹配失效**：运行时名 `mcp__cursor__<server>__<tool>`
+  被误解析；`splitMcp` 剥除 `cursor__` 命名空间，测试改用真实运行时名。
+- [x] **gemini-cli 策略 `mcpName`/`mcp_*` 无法命中**：`mcp__gemini__<server>__<tool>`
+  归一为 Gemini FQN `mcp_<server>_<tool>` 后匹配；`mcpServerName` 拒绝空 server 段。
+  与 cursor 项同批修复，commit 5efafef。
+- [x] **配置驱动路径遍历**：claude `outputStyle` 校验为纯文件名；codex
+  `[agents].config_file` 限定在声明目录内（越界跳过+告警）；gemini
+  `context.fileName` 拒绝路径型名称。commit f3c163b。
+  （`additionalDirectories`/`autoMemoryDirectory` 读固定文件名，剩余信任门禁
+  风险见下方中危待办）
+
+### 中危（待办）
+
+- [ ] **MCP 变更检测比较对象写错**：`src/mcp-bridge.ts` reconcile 用
+  `JSON.stringify(next)`（含 name 包裹）对比 `running.config`（无包裹）恒不等 →
+  每次 session-start/watcher 事件重启该工作区全部 MCP 服务器；应为 `next.config`
+  （2026-08-16 审察）。
+- [ ] **cursor handler 级 `matcher` 被丢弃**：`src/agents/cursor/settings.ts`
+  normalizeHooks 把 handler 包成 `{matcher: undefined, hooks:[...]}`，上游
+  hooks.md 明确 `matcher` 是 handler 级字段 → 带 matcher 的 guard hook 对全部
+  命令运行（2026-08-16 审察）。
+- [ ] **async hook 子进程 stdin 不写入、管道不排空**：claude/codebuddy/codex
+  `hooks/run.ts` async 分支只 spawn（stdio 三个 pipe）→ 输出超管道缓冲（约 64KB）
+  死锁；且上游 async hook 会收到 stdin JSON，桥接完全不发（2026-08-16 审察）。
+- [ ] **超时/取消 hook 的部分 stdout 仍被解析为决策**：`run.ts` 置
+  timedOut/cancelled 但 bridge 只检查 ran/detached；上游语义为超时即丢弃输出
+  （2026-08-16 审察）。
+- [ ] **claude `permissionDecision: "defer"` 被映射为 deny**：上游优先级
+  deny > defer > ask > allow，defer 意为"稍后恢复"；建议降级为 ask/放行 + 告警
+  （2026-08-16 审察）。
+- [ ] **`capString` 输出超出 maxChars 约 1.4 倍**：`src/util.ts` `tail =
+  value.length - head`；应为 `tail = value.length - (maxChars - head -
+  marker.length)` 并取整（2026-08-16 审察）。
+- [ ] **cursor 用户级 hook 相对命令路径解析到项目目录**：`cursor/hooks/run.ts`
+  统一 cwd = session cwd；上游用户 hook 从 `~/.cursor/` 运行（2026-08-16 审察）。
+- [ ] **opencode/gemini-cli stdio MCP `cwd` 硬编码 `process.cwd()`**（cursor 已
+  正确实现）（2026-08-16 审察）。
+- [ ] **opencode 内置 `.env` 拒绝在 `*` 通配符对象形式下被替换**：
+  `opencode/permissions.ts` evaluateFamily 规则选择逻辑；`{"*":{"*":"allow"}}`
+  时读 `.env` 被放行（2026-08-16 审察）。
+- [ ] **gemini `modes`/`interactive` 门控 deny 被丢弃**（fail-open；已记限制，
+  建议核对上游方向并显式化）（2026-08-16 审察）。
+- [ ] **cursor `cli.json`/`cli-config.json` 权限列表整体替换而非合并**：需核实
+  Cursor 上游合并语义后再定（2026-08-16 审察）。
+- [ ] **claude `additionalDirectories`/`autoMemoryDirectory` 无项目信任门禁**：
+  上游项目级设置需工作区信任；桥接无条件读取（固定文件名，风险低于任意文件，
+  但应评估信任门禁）（2026-08-16 审察）。
+- [ ] **`if` 规则解析失败 fail-open**（claude/codebuddy matcher）：与上游
+  best-effort 契约一致且已文档化，但与 AGENTS.md「fail closed」约定存在张力——
+  在 guides 显式记录该例外或改为 fail-closed（2026-08-16 审察）。
+
+### 低危（待办）
+
+- [ ] `translateAgentToolList` 注释（未知条目丢弃）与实现（原样透传）矛盾：
+  `src/agent-definitions.ts`（2026-08-16 审察）。
+- [ ] MCP 启动失败的 fiber 不重试；淘汰 workspace 不回收 watcher；
+  `ensureWatched` 不 await ready：`src/mcp-bridge.ts`（2026-08-16 审察）。
+- [ ] `sanitizeServerName` 32 字符截断可能碰撞：`src/mcp-bridge.ts`
+  （2026-08-16 审察）。
+- [ ] 设置加载器缓存按 cwd 无界增长（claude/codebuddy/codex settings）
+  （2026-08-16 审察）。
+- [ ] codebuddy 为 MCP 单独新建 loader（双缓存）：`src/agents/codebuddy-code/index.ts`
+  （2026-08-16 审察）。
+- [ ] `memoryMaxBytes` 按 UTF-16 码元而非字节计数（各 memory 模块）
+  （2026-08-16 审察）。
+- [ ] `escapeReminderClose` 只转义闭合标签（开标签可伪造外观）；`expandHome`
+  不支持 `~user` 且未记录：`src/util.ts`（2026-08-16 审察）。
+- [ ] opencode `expandGlob` 的 `**` 只展开一层；项目层 JSON/JSONC 命令后者覆盖
+  前者（用户层是累积）：`src/agents/opencode/`（2026-08-16 审察）。
+- [ ] pi `resolveTrust` 目录键未规范化（fail-closed，过度保守）：
+  `src/agents/pi/settings.ts`（2026-08-16 审察）。
+- [ ] Windows 下 `relativeLabel` 反斜杠拼接失效（codex/opencode/cursor/
+  gemini/pi，展示问题）（2026-08-16 审察）。
+- [ ] 符号链接可穿出技能根：`src/fs-adapter.ts` NodeFsAdapter 用 stat 跟随
+  symlink（2026-08-16 审察）。
+- [ ] `void provider?.dispose()` 未 await（各桥 index.ts）（2026-08-16 审察）。
+- [ ] cursor `userDir()` 未实现注释声称的 `XDG_CONFIG_HOME` 覆盖：
+  `src/agents/cursor/settings.ts`（2026-08-16 审察）。
+- [ ] gemini `expandEnvReferences` 不支持 `${VAR:-default}` 与注释不符；opencode
+  MCP 未对 command/args 做 env 展开（2026-08-16 审察）。
+- [ ] 事件 handler `void` 派发 + `loader.load` 在 try 外，存在理论未处理拒绝风险
+  （claude/codebuddy/codex hooks/bridge.ts）（2026-08-16 审察）。
+- [ ] opencode `web`(WebFetch) 映射到 websearch 族且按 query 取值（映射不准）：
+  `src/agents/opencode/permissions.ts`（2026-08-16 审察）。
+- [ ] CI 依赖的 GH Actions（checkout/setup-node/pnpm/action-setup@v4）出现
+  Node 20 运行时弃用注解，跟进上游升级（2026-08-16 审察）。
