@@ -63,7 +63,7 @@ dsh --profile headless "list the skills available in your catalog"
 ## 支持的 agent 工具
 
 | 工具 | Skills / commands | Memory | Hooks | Permissions | MCP |
-| :--- | :--- | :--- | :--- | :--- |
+| :--- | :--- | :--- | :--- | :--- | :--- |
 | Claude Code | `.claude/skills`、`.claude/commands`、`.claude/agents`（含 `~/.claude`） | `.claude/CLAUDE.md`、`~/.claude/CLAUDE.md` | `settings.json` hooks（SessionStart、UserPromptSubmit、Pre/PostToolUse(+Failure)、Stop、SessionEnd） | `settings.json` permissions 规则（allow/ask/deny，含 Bash 前缀、路径、域名匹配） | `.mcp.json` + `~/.claude.json` MCP 服务器 |
 | CodeBuddy Code | `.codebuddy/skills`、`.codebuddy/commands`、`.codebuddy/agents`（含 `~/.codebuddy`） | `CODEBUDDY.md`、`~/.codebuddy/CODEBUDDY.md`、`.codebuddy/rules/` | `settings.json` hooks（SessionStart、UserPromptSubmit、Pre/PostToolUse(+Failure)、Stop、SessionEnd） | `settings.json` permissions 规则（allow/ask/deny：精确/前缀/glob Bash、大小写不敏感路径、MCP、Skill） | `.mcp.json` + `~/.codebuddy/.mcp.json` MCP 服务器 |
 | opencode | `.opencode/skills`、`.opencode/commands`（含 `~/.config/opencode`）、`opencode.json` 的 `command.*` | `AGENTS.md`（含 `CLAUDE.md` 回退）、`instructions` 文件 | —（opencode 无 hooks 配置；其插件 API 不在范围内） | `opencode.json(c)` 的 `permission` 规则（家族分组、末条命中、`external_directory`、内置默认） | `opencode.json(c)` 的 `mcp` 服务器 |

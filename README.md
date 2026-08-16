@@ -61,7 +61,7 @@ Full per-bridge configuration and behavior: [`docs/guides/`](docs/guides/README.
 ## Supported agents
 
 | Agent | Skills / commands | Memory | Hooks | Permissions | MCP |
-| :--- | :--- | :--- | :--- | :--- |
+| :--- | :--- | :--- | :--- | :--- | :--- |
 | Claude Code | `.claude/skills`, `.claude/commands`, `.claude/agents` (+ `~/.claude`) | `.claude/CLAUDE.md`, `~/.claude/CLAUDE.md` | `settings.json` hooks (SessionStart, UserPromptSubmit, Pre/PostToolUse(+Failure), Stop, SessionEnd) | `settings.json` permission rules (allow/ask/deny: Bash prefixes, paths, domains) | `.mcp.json` + `~/.claude.json` MCP servers |
 | CodeBuddy Code | `.codebuddy/skills`, `.codebuddy/commands`, `.codebuddy/agents` (+ `~/.codebuddy`) | `CODEBUDDY.md`, `~/.codebuddy/CODEBUDDY.md`, `.codebuddy/rules/` | `settings.json` hooks (SessionStart, UserPromptSubmit, Pre/PostToolUse(+Failure), Stop, SessionEnd) | `settings.json` permission rules (allow/ask/deny: exact/prefix/glob Bash, case-insensitive paths, MCP, Skill) | `.mcp.json` + `~/.codebuddy/.mcp.json` MCP servers |
 | opencode | `.opencode/skills`, `.opencode/commands` (+ `~/.config/opencode`), `command.*` in `opencode.json` | `AGENTS.md` (+ `CLAUDE.md` fallback), `instructions` files | — (opencode has no hooks config; its plugin API is out of scope) | `permission` rules from `opencode.json(c)` (families, last-match-wins patterns, `external_directory`, built-in defaults) | `opencode.json(c)` `mcp` servers |
