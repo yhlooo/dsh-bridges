@@ -170,9 +170,13 @@
 
 ## P1 · 高频体验项
 
-- [ ] **claude-code 记忆**：`CLAUDE.local.md`（根 + 目录层级，跟随 CLAUDE.md 发现
+- [x] **claude-code 记忆**：`CLAUDE.local.md`（根 + 目录层级，跟随 CLAUDE.md 发现
   规则）；向上层级 CLAUDE.md 发现 + `additionalDirectories` 记忆加载（现有限制表述
   只有含糊的 "nested CLAUDE.md files"，实现或明确化）。
+  **已实现**（2026-08-15）：`src/agents/claude-code/memory.ts` 重构为
+  导出的 `collectMemorySections`，注入用户级、祖先层级（CLAUDE.md +
+  CLAUDE.local.md，根在前）、`additionalDirectories`、`.claude/CLAUDE.md`、
+  cwd 的 `CLAUDE.local.md`（核心已加载的重复内容跳过）。
 - [x] **codex**：`developer_instructions`（会话注入，与 AGENTS.md 链同接缝）。
   **已实现**（2026-08-15）：settings 解析（最具体层生效），memory 桥在
   AGENTS.md 链之前注入（与上游顺序一致）。
@@ -201,28 +205,39 @@
 
 ## P2 · 低优先级
 
-- [ ] **claude-code**：Auto memory（`autoMemoryEnabled`/`autoMemoryDirectory`、
+- [x] **claude-code**：Auto memory（`autoMemoryEnabled`/`autoMemoryDirectory`、
   `~/.claude/projects/<project>/memory/`；降级映射 = 注入 MEMORY.md 索引）。
+  **部分实现**（2026-08-16）：显式 `autoMemoryDirectory` 的 `MEMORY.md`
+  已注入；默认逐项目哈希目录无法推导 → 记限制（guides 已写明）。
 - [x] **claude-code**：`outputStyle` + `~/.claude/output-styles/`、
   `.claude/output-styles/`（降级映射 = 会话注入 prompt 片段）。
   **已实现**（2026-08-15）：settings 解析 `outputStyle`（最具体层），
   memory 桥注入样式文件（项目文件优先、用户文件回退）。
-- [ ] **claude-code**：`.claude/workflows/*.js` + `~/.claude/workflows/*.js`
-  （先进限制清单，再评估降级映射）。
-- [ ] **codebuddy-code**：`models.json`（`.codebuddy/models.json` +
+- [x] **claude-code**：`.claude/workflows/*.js` + `~/.claude/workflows/*.js`
+  （先进限制清单，再评估降级映射）。**已记限制**（2026-08-16，plugins
+  限制行中注明；动态 JS 编排无对应接缝，不实施）。
+- [x] **codebuddy-code**：`models.json`（`.codebuddy/models.json` +
   `~/.codebuddy/models.json`；dsh 有原生模型配置，降级映射）。
-- [ ] **各工具 `model` 路由**：claude/codebuddy settings `model`、codex
+  **已记限制**（2026-08-16：dsh 模型路由为 host-plane，无降级映射价值）。
+- [x] **各工具 `model` 路由**：claude/codebuddy settings `model`、codex
   `model`/`review_model`/`model_provider`/`[model_providers]`/`model_reasoning_*`/
   `model_auto_compact_token_limit*`、opencode `model`/`small_model`/自定义
   `provider`——dsh 模型路由为 host-plane，默认记 out-of-scope，评估降级映射。
-- [ ] **codex**：`web_search` / `tools.web_search`（disabled/cached/indexed/live）
-  映射 dsh web_search 开关。
-- [ ] **codex**：`[features].*` 中与 dsh 有对应物的项（`multi_agent`/`goals`/
-  `memories`/…；仅 `features.hooks` 已实现）。
-- [ ] **codex**：`[shell_environment_policy]`（同"先决调研-会话 shell env 接缝"）。
-- [ ] **codex**：`[apps]` connectors（映射 dsh MCP/connector 行）。
-- [ ] **codex**：`[memories]`、`[history]`、`tool_output_token_limit`、
-  `background_terminal_max_timeout`、`file_opener`。
+  **已记限制**（2026-08-16：guides 四工具各自写明 out-of-scope，不实施）。
+- [x] **codex**：`web_search` / `tools.web_search`（disabled/cached/indexed/live）
+  映射 dsh web_search 开关。**已记限制**（2026-08-16：dsh 无逐会话工具
+  启停接缝，不实施）。
+- [x] **codex**：`[features].*` 中与 dsh 有对应物的项（`multi_agent`/`goals`/
+  `memories`/…；仅 `features.hooks` 已实现）。**已记限制**（2026-08-16：
+  运行期开关，dsh 有自己的对应机制，不实施）。
+- [x] **codex**：`[shell_environment_policy]`（同"先决调研-会话 shell env 接缝"）。
+  **已记限制**（2026-08-16：与 settings `env` 同接缝——仅桥接自 spawn 的
+  子进程；模型 bash 无法注入）。
+- [x] **codex**：`[apps]` connectors（映射 dsh MCP/connector 行）。
+  **已记限制**（2026-08-16：连接器需要凭据/托管运行时，无接缝）。
+- [x] **codex**：`[memories]`、`[history]`、`tool_output_token_limit`、
+  `background_terminal_max_timeout`、`file_opener`。**已记限制**
+  （2026-08-16：dsh 拥有自己的转录/记忆/截断层）。
 - [x] **codex**：`projects.<path>.trust_level` 具体键（补齐现有"不信任项目门禁"
   缺失——实现该键即可恢复上游的门禁语义）。**已实现**（2026-08-15）：
   settings 加载器合并各层 `projects.<path>.trust_level`，cwd 显式

@@ -31,7 +31,7 @@ const MAX_READ_CHARS = 1024 * 1024
 const MAX_WALK_DEPTH = 32
 
 export interface MemorySection {
-  kind: 'user' | 'project' | 'hierarchy' | 'additional' | 'output-style'
+  kind: 'user' | 'project' | 'hierarchy' | 'additional' | 'output-style' | 'auto-memory'
   label: string
   content: string
 }
@@ -133,12 +133,22 @@ export async function collectMemorySections(
   // `outputStyle`: the named style's prompt section (project file first, then
   // user file — the upstream lookup order).
   if (config.settingsLoader !== undefined) {
-    const styleName = (await config.settingsLoader.load(cwd)).outputStyle
+    const loadedSettings = await config.settingsLoader.load(cwd)
+    const styleName = loadedSettings.outputStyle
     if (styleName !== undefined) {
       const styleText =
         (await readOptional(fs, join(cwd, '.claude', 'output-styles', `${styleName}.md`))) ??
         (await readOptional(fs, join(userClaudeDir, 'output-styles', `${styleName}.md`)))
       if (styleText !== undefined) sections.push({ kind: 'output-style', label: `outputStyle: ${styleName}`, content: styleText })
+    }
+    // Auto memory: with an explicit `autoMemoryDirectory`, the MEMORY.md
+    // index (plus topic files it references are loaded by the agent's reads)
+    // is injected. The default per-project hashed directory cannot be
+    // derived, so only the explicit form is bridged (documented limitation).
+    if (loadedSettings.autoMemoryDirectory !== undefined) {
+      const memoryFile = join(expandHome(loadedSettings.autoMemoryDirectory), 'MEMORY.md')
+      const memoryText = await readOptional(fs, memoryFile)
+      if (memoryText !== undefined) sections.push({ kind: 'auto-memory', label: `${loadedSettings.autoMemoryDirectory}/MEMORY.md`, content: memoryText })
     }
   }
   return sections

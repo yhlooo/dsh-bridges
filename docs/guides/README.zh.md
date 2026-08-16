@@ -194,10 +194,11 @@ DeepSeek Harness 没有命名 subagent 注册表——技能指示模型按上�
 
 尚未桥接（按子系统记录）：
 
-- **Skills**：工作区以下的嵌套 `.claude/skills/`（其限定名非 kebab-case）、企业 / managed 技能、插件技能、claude.ai 同步技能；`allowed-tools`/`disallowed-tools`、`model`、`effort`、`context: fork`/`agent`/`background`、`paths`、`shell` 以及正文中的 `$ARGUMENTS` 替换；skill/agent frontmatter 里的 `hooks`。
-- **Memory**：`.claude/rules/*.md`、CLAUDE.md 的 `@import`、子目录级 `CLAUDE.md` 的懒加载（工作目录以上的层级与 `CLAUDE.local.md` 已桥接）、auto memory。
-- **Hooks**：`mcp_tool`、`prompt`、`agent` 三种 handler 类型；`PreCompact`/`PostCompact`、`Notification`、`PermissionRequest`/`PermissionDenied` 及其余异步事件；`CLAUDE_ENV_FILE`；`asyncRewake`；`updatedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）；`permissionDecision: "defer"`（映射为拒绝）。
+- **Skills**：工作区以下的嵌套 `.claude/skills/`（其限定名非 kebab-case）、企业 / managed 技能、插件技能、claude.ai 同步技能；`allowed-tools`/`disallowed-tools`、`model`、`effort`、`context: fork`/`agent`/`background`、`paths`、`shell` 以及正文中的 `$ARGUMENTS` 替换；仅展示用途的 frontmatter `name`/`argument-hint`/`arguments`/`license`/`compatibility` 与正文 `$name`/`${CLAUDE_SKILL_DIR}`/`${CLAUDE_SESSION_ID}` 替换；skill/agent frontmatter 里的 `hooks`。
+- **Memory**：`.claude/rules/*.md`、CLAUDE.md 的 `@import`、子目录级 `CLAUDE.md` 的懒加载（工作目录以上的层级与 `CLAUDE.local.md` 已桥接）、默认逐项目哈希目录下的 auto memory（显式 `autoMemoryDirectory` 已支持——其 `MEMORY.md` 会被注入）。
+- **Hooks**：`mcp_tool`、`prompt`、`agent` 三种 handler 类型；其余事件（`PreCompact`/`PostCompact`、`Notification`、`PermissionRequest`/`PermissionDenied`、`Setup`、`UserPromptExpansion`、`PostToolBatch`、`StopFailure`、`TeammateIdle`、`TaskCreated`/`TaskCompleted`、`Elicitation`/`ElicitationResult`、`WorktreeCreate`/`WorktreeRemove`、`ConfigChange`、`InstructionsLoaded`、`CwdChanged`、`FileChanged`、`DirectoryAdded`、`MessageDisplay`）；SessionStart 决策字段 `initialUserMessage`/`watchPaths`/`sessionTitle`/`reloadSkills`；`suppressOutput`/`systemMessage`/`terminalSequence` 仅用户通道；`CLAUDE_ENV_FILE`；`asyncRewake`；`updatedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）；`permissionDecision: "defer"`（映射为拒绝）。
 - **MCP**：`managed-mcp.json` 与服务端托管的企业服务器、`~/.claude.json` 内的逐项目 `local` 作用域服务器、插件捆绑的 MCP 服务器、进程内 `type: "sdk"` 条目；SSE 服务器以 streamable-http 传输连接。
+- **Settings**：`model`（DeepSeek Harness 拥有模型路由）、`statusLine`/`statusline.json` 与 `plansDirectory`（CLI-UI / 临时状态）、托管/企业策略文件（`managed-settings.json`、`managed-mcp.json`）、`.worktreeinclude`/`keybindings.json`/`themes/`（无 DeepSeek Harness 对应物）。
 - **Plugins**：仅插件 *skills* 已桥接；插件捆绑的 agents、MCP 服务器、hooks（`hooks/hooks.json`）、output styles、commands、workflows 未桥接（插件装在 `~/.claude/plugins/`，需要 marketplace 运行时）。
 
 ## CodeBuddy Code 桥接
@@ -291,8 +292,9 @@ DeepSeek Harness 核心自行加载 `AGENTS.md` 与根目录 `CLAUDE.md`，但�
 
 - **Skills**：扁平 `.md` 技能、嵌套命令（`group:name` 非 kebab-case）、插件技能；`allowed-tools`、`model`、`context: fork`、`agent`、frontmatter `hooks`；正文内联 Shell 命令执行、`$ARGUMENTS` 替换、`@file` 引用。
 - **Memory**：条件规则（`alwaysApply: false` + `paths`）、`@import` 展开、向上递归查找、嵌套子树动态加载、Auto Memory。
-- **Hooks**：`prompt` / `agent` handler 类型（需要 LLM 判定）；`Notification`、`PreCompact`/`PostCompact`、`PermissionRequest`/`PermissionDenied`、`Elicitation`、`FileChanged`、`Setup` 等事件；frontmatter hooks（及 `allowUntrustedFrontmatterHooks` 闸门）；插件 `hooks/hooks.json`；`transcript_path` 输入字段（桥接没有真实转录文件）；`suppressOutput` / `systemMessage` 仅面向用户的通道（DeepSeek Harness 无此通道）；`modifiedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）。Windows 上 hook 走系统 shell 而非 CodeBuddy Code 强制的 Git Bash。
+- **Hooks**：`prompt` / `agent` handler 类型（需要 LLM 判定）；`Notification`、`PreCompact`/`PostCompact`、`PermissionRequest`/`PermissionDenied`、`Elicitation`、`FileChanged`、`Setup`、`StopFailure`、`TeammateIdle`、`InstructionsLoaded`、`ConfigChange`、`CwdChanged`、`WorktreeCreate`/`WorktreeRemove`、`TaskCreated`/`TaskCompleted`、`ElicitationResult` 等事件；frontmatter hooks（及 `allowUntrustedFrontmatterHooks` 闸门）；插件 `hooks/hooks.json`；`transcript_path` 输入字段（桥接没有真实转录文件）；`suppressOutput` / `systemMessage` 仅面向用户的通道（DeepSeek Harness 无此通道）；`modifiedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）。Windows 上 hook 走系统 shell 而非 CodeBuddy Code 强制的 Git Bash。
 - **Plugins**：仅插件 *skills* 与插件 *hooks* 已列入限制；插件捆绑的 commands、agents、`.mcp.json` MCP 服务器、`.lsp.json` LSP 服务器、settings 覆盖与 `bin/` 助手也未桥接（插件需要 marketplace 运行时）。
+- **Settings / 模型路由**：`models.json`（`.codebuddy/models.json` / `~/.codebuddy/models.json`）、`model`、`agent`、`subagents`/`variantModels`、`trustAll`/`trustedDirectories`——DeepSeek Harness 拥有模型路由与目录信任，不在范围内。
 
 ## opencode 桥接
 
@@ -354,6 +356,7 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md` 与 `CLAUDE.md`。�
 - **Skills / Commands**：嵌套命令目录（opencode 未记载）、命令模板的 `$ARGUMENTS`/`$1`/`!`command``/`@file` 替换、`agent`/`model`/`subtask` 选项、自定义 agents、`skills.urls`（网络）、`references` 的 git 仓库（网络）。
 - **Memory**：`OPENCODE_CONFIG` / `OPENCODE_CONFIG_DIR` / `OPENCODE_CONFIG_CONTENT` 覆盖、远程 / 托管配置层、配置文件向上查找（项目 `opencode.json` 仅在 cwd 读取；`.opencode/skills` 的向上发现已桥接）、配置里的 `{env:…}`/`{file:…}` 替换。
 - **插件 / 自定义工具**：opencode 的 JavaScript 插件系统（事件 hook 需要 opencode 运行时）与自定义工具没有文件格式层面的桥接面。
+- **运行时 / 模型配置**：`formatter`、`lsp`、`experimental.*`（含已文档化的 `policies`）、自定义 `provider` 定义、`model`/`small_model` 默认——DeepSeek Harness 拥有模型路由、格式化与诊断，这些不在范围内（无文件格式桥接面）。
 - **重叠提示**：若同时开启 `claudeCode.memory`，`~/.claude/CLAUDE.md` 回退可能被注入两次（每个桥接各一次）；关闭其一或接受重复块。
 
 ## Codex 桥接
@@ -433,3 +436,4 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md`。本桥接在会话
 - **Memory**：`model_instructions_file`（替换内置指令——不在范围内）、Codex 的 8,000 字符初始列表预算（DeepSeek Harness 有自己的目录预算）。
 - **Hooks**：`PermissionRequest`（DeepSeek Harness 没有"即将请求审批"的接缝）、`PreCompact`/`PostCompact`（无压缩前接缝；`compact` 会话来源会触发 SessionStart hooks 代替）、Codex 的 hook trust 审核流程（`/hooks`——桥接与其他桥接一致、无 trust 闸门运行）、后台 hook 输出在下个安全点投递、`systemMessage`/`suppressOutput` 仅用户通道、`additionalContextLimit` 溢出落盘（桥接按字符截断替代）、插件捆绑与托管 `requirements.toml` hooks、`transcript_path`（桥接没有真实转录文件）、`updatedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）。
 - **Rules / 配置**：`rules/*.rules`（实验性 Starlark DSL）、`notify`、`[agents]` 子代理角色、`requirements.toml`、profile 文件（`--profile`）、插件捆绑的 MCP 服务器（`plugins.<plugin>.mcp_servers`）、未信任项目门禁——仅支持显式 `projects["<path>"].trust_level = "untrusted"` 条目（现在会跳过项目 `.codex/` 层；桥接没有交互式信任流程，未列出的路径仍无条件读取）。
+- **其余配置**：`web_search`/`tools.web_search` 模式、`[features].*` 运行时开关（仅 `features.hooks` 被读取）、`[shell_environment_policy]`（仅作用于桥接自 spawn 的子进程——与 settings `env` 同一接缝）、`[apps]` 连接器、`[memories]`、`[history]`、`tool_output_token_limit`、`file_opener`、`[otel]`、`[desktop]`/`[tui]`、认证/通知/日志键——DeepSeek Harness 拥有这些层；模型/供应商选择（`model`、`review_model`、`model_provider`、`[model_providers]`、`model_reasoning_*`、`model_auto_compact_token_limit*`）为 host-plane，不在范围内。

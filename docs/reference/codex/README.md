@@ -1,6 +1,6 @@
 # Codex 参考资料
 
-来源：<https://learn.chatgpt.com/docs>（OpenAI 官方 ChatGPT/Codex 文档 markdown 版，英文）。抓取日期 2026-08-15 (UTC)，原文未改动。
+来源：<https://learn.chatgpt.com/docs>（OpenAI 官方 ChatGPT/Codex 文档 markdown 版，英文；当前主源已迁移至 <https://developers.openai.com/codex>，两者内容一致）。抓取日期 2026-08-15 (UTC)，原文未改动。
 
 ## 文件清单
 
@@ -15,6 +15,7 @@
 | [subagents.md](subagents.md) | 子代理工作流与自定义 agents |
 | [config-basic.md](config-basic.md) | **config.toml 基础**：位置、优先级、常用选项、feature flags |
 | [config-reference.md](config-reference.md) | **config.toml / requirements.toml 完整参考** |
+| [config-sample.md](config-sample.md) | 示例配置（补齐于 2026-08-15） |
 | [config-advanced.md](config-advanced.md) | 高级配置：profiles、**hooks**、[agents] 角色、项目根检测 |
 | [hooks.md](hooks.md) | **Hooks 完整规范**：事件全集、输入/输出 JSON、matcher、async、trust 流程 |
 | [environment-variables.md](environment-variables.md) | 环境变量参考 |
