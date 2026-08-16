@@ -63,6 +63,7 @@ export const Config = z.object({
     enabled: z.boolean().default(true),
     skills: z.boolean().default(true),
     memory: z.boolean().default(true),
+    permissions: z.boolean().default(true),
     userOpencodeDir: z.string().default('~/.config/opencode'),
     userClaudeDir: z.string().default('~/.claude'),
     claudeCompat: z.boolean().default(true),

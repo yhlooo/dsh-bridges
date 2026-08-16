@@ -35,6 +35,7 @@ opencode 桥接如何将 opencode 的资产桥接进来。
 | `.opencode/commands/<name>.md` | 命令即技能；`description` frontmatter 缺省时回退正文首段 |
 | `opencode.json(c)` 的 `command.<name>` | JSON 命令；**覆盖**同级同名命令文件 |
 | `opencode.json(c)` 的 `instructions` | 本地文件与 `*`/`**` glob（相对配置文件目录解析），会话开始注入 |
+| `opencode.json(c)` 的 `permission` | allow/ask/deny 规则在 `tools/pre-execute` 执行（示例：`rm *` 拒绝、`git *` 放行、其余 bash 弹审批；`docs/**` 编辑放行） |
 | `AGENTS.md`（向上到 git 根最近的） | 注入；cwd 层的 `AGENTS.md` 是 DeepSeek Harness 已加载文件，跳过 |
 
 opencode 没有 hooks 文件格式，因此本示例不含 hooks——它属于 opencode
@@ -56,5 +57,7 @@ dsh --profile <name>
   输入 `/summarize`、`/greet`（JSON 命令）。
 - **Memory**：会话开始后能看到 `docs/notes.md` 与 `docs/tips/*.md` 的
   内容被注入；根 `AGENTS.md` 由 DeepSeek Harness 核心加载（不重复）。
+- **Permissions**：让模型运行 `rm -rf /tmp/xxx` 会被 `rm *` 规则直接拒绝；
+  `git status` 免审批；其他 bash 命令触发审批；编辑 `docs/**` 免审批。
 - **热更新**：改动 `opencode.jsonc`（如新增 command 或 instructions 条目）
   无需重启，桥接监听该文件并重新发布。

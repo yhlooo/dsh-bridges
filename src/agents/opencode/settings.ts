@@ -43,6 +43,31 @@ export interface LoadedOpencodeSettings {
   projectCommands: ReadonlyMap<string, OpencodeJsonCommand>
   /** Effective `instructions` entries plus the directory they resolve against. */
   instructions: { entries: readonly string[]; baseDir: string }
+  /** Effective `permission` rules; undefined when no config defines them. */
+  permissions?: OpencodePermissionConfig
+}
+
+export type OpencodeAction = 'allow' | 'ask' | 'deny'
+
+/** One family's permission entry: a plain action and/or ordered rules. */
+export interface OpencodePermissionFamily {
+  /** Family-level action for non-matching inputs (string form). */
+  action?: OpencodeAction
+  /** Ordered `pattern → action` rules; the LAST matching rule wins. */
+  rules: [pattern: string, action: OpencodeAction][]
+}
+
+/**
+ * Merged opencode `permission` config. Per family, the most specific config
+ * layer that defines the family wins entirely (opencode overrides conflicting
+ * keys per layer). The special `external_directory` family keeps its own slot
+ * because it evaluates against paths outside the working directory.
+ */
+export interface OpencodePermissionConfig {
+  /** `permission: "allow" | "ask" | "deny"` string form (default for all). */
+  defaultAction?: OpencodeAction
+  /** family name → family entry (includes `external_directory`). */
+  families: ReadonlyMap<string, OpencodePermissionFamily>
 }
 
 interface SettingsSource {
@@ -126,28 +151,85 @@ export class OpencodeSettingsLoader {
     }
 
     // Broadest to most specific: the project layer overrides the global one
-    // per key (commands per name, instructions as a whole array).
+    // per key (commands per name, instructions as a whole array, permission
+    // per family).
     const commands = new Map<string, OpencodeJsonCommand>()
     let projectCommands = new Map<string, OpencodeJsonCommand>()
     let instructions: { entries: readonly string[]; baseDir: string } | undefined
+    const permissions = new Map<string, OpencodePermissionFamily>()
+    let defaultAction: OpencodeAction | undefined
+    let permissionConfigured = false
     for (const { source, value } of parsed) {
       if (source.kind === 'project') projectCommands = readJsonCommands(value['command'], new Map(), this.logger, source.path)
       else readJsonCommands(value['command'], commands, this.logger, source.path)
       const entries = readStringArray(value['instructions'])
       if (entries !== undefined) instructions = { entries, baseDir: source.dir }
+      const layerPermission = readPermission(value['permission'], this.logger, source.path)
+      if (layerPermission !== undefined) {
+        permissionConfigured = true
+        if (layerPermission.defaultAction !== undefined) defaultAction = layerPermission.defaultAction
+        for (const [family, entry] of layerPermission.families) permissions.set(family, entry)
+      }
     }
     for (const [name, command] of projectCommands) commands.set(name, command)
 
-    return { commands, projectCommands, instructions: instructions ?? { entries: [], baseDir: process.cwd() } }
+    return {
+      commands,
+      projectCommands,
+      instructions: instructions ?? { entries: [], baseDir: process.cwd() },
+      permissions: permissionConfigured
+        ? {
+            defaultAction,
+            families: permissions,
+          }
+        : undefined,
+    }
   }
 }
 
-function readJsonCommands(
-  value: unknown,
-  commands: Map<string, OpencodeJsonCommand>,
-  logger: BridgeLogger,
-  path: string,
-): Map<string, OpencodeJsonCommand> {
+const OPENCODE_ACTIONS: readonly OpencodeAction[] = ['allow', 'ask', 'deny']
+
+/** Parse the `permission` field: a bare action or a family → rules object. */
+function readPermission(value: unknown, logger: BridgeLogger, path: string): { defaultAction?: OpencodeAction; families: Map<string, OpencodePermissionFamily> } | undefined {
+  if (value === undefined) return undefined
+  if (typeof value === 'string') {
+    if ((OPENCODE_ACTIONS as readonly string[]).includes(value)) return { families: new Map(), defaultAction: value as OpencodeAction }
+    logger.warn(`opencode: ignoring unsupported permission action in ${path}: ${JSON.stringify(value)}`)
+    return undefined
+  }
+  if (!isPlainObject(value)) {
+    logger.warn(`opencode: ignoring malformed permission field in ${path}: must be a string or an object`)
+    return undefined
+  }
+  const families = new Map<string, OpencodePermissionFamily>()
+  for (const [family, entry] of Object.entries(value)) {
+    const parsed = readPermissionFamily(entry, logger, path, family)
+    if (parsed !== undefined) families.set(family, parsed)
+  }
+  return { families }
+}
+
+function readPermissionFamily(value: unknown, logger: BridgeLogger, path: string, family: string): OpencodePermissionFamily | undefined {
+  if (typeof value === 'string') {
+    if (!(OPENCODE_ACTIONS as readonly string[]).includes(value)) {
+      logger.warn(`opencode: ignoring unsupported permission action for ${family} in ${path}: ${JSON.stringify(value)}`)
+      return undefined
+    }
+    return { action: value as OpencodeAction, rules: [] }
+  }
+  if (!isPlainObject(value)) {
+    logger.warn(`opencode: ignoring malformed permission entry for ${family} in ${path}: must be a string or an object`)
+    return undefined
+  }
+  const rules: [string, OpencodeAction][] = []
+  for (const [pattern, entry] of Object.entries(value)) {
+    if (typeof entry !== 'string' || !(OPENCODE_ACTIONS as readonly string[]).includes(entry)) continue
+    rules.push([pattern, entry as OpencodeAction])
+  }
+  return { rules }
+}
+
+function readJsonCommands(value: unknown, commands: Map<string, OpencodeJsonCommand>, logger: BridgeLogger, path: string): Map<string, OpencodeJsonCommand> {
   if (value === undefined) return commands
   if (!isPlainObject(value)) {
     logger.warn(`opencode: ignoring malformed command field in ${path}: must be an object`)

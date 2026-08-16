@@ -18,5 +18,19 @@
   "instructions": [
     "docs/notes.md",
     "docs/tips/*.md"
-  ]
+  ],
+
+  // Permission rules enforced at the tools seam (see README). The last
+  // matching rule wins, so the catch-all "*" comes first.
+  "permission": {
+    "bash": {
+      "*": "ask",
+      "git *": "allow",
+      "rm *": "deny"
+    },
+    "edit": {
+      "*": "ask",
+      "docs/**": "allow"
+    }
+  }
 }

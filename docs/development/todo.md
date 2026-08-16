@@ -119,7 +119,14 @@
   自定义权限档案读取不执行（均记限制，dsh 无逐会话可写根接缝）。示例与
   中英文档已同步；新增依赖 `dsh-sandbox-policy`/`dsh-user-approval`
   （dependencies）+ `dsh-sandbox`（devDependencies，仅类型）。
-- [ ] **opencode**：`permission` 规则（已有"列为限制"文档，复用同一规则引擎实现）。
+- [x] **opencode**：`permission` 规则（已有"列为限制"文档，复用同一规则引擎实现）。
+  **已实现**（2026-08-15）：opencode 语义独立于 claude/codebuddy 的
+  `Tool(specifier)` 语法（家族分组 + 有序 pattern→action、**末条命中**、
+  `~`/`$HOME` 展开、工作区相对路径、`external_directory` 守卫、内置
+  `.env` 读取保护与宽松默认），实现于 `src/agents/opencode/permissions.ts`
+  （共享 glob 复用）；无配置层定义 `permission` 时完全让位。`doom_loop`/
+  `webfetch`/`lsp`/废弃 `tools` 布尔/按 agent 覆盖记限制。示例与中英文档
+  已同步。
 
 ### P0.3 自定义 subagent 定义（团队定义整体丢失）
 
