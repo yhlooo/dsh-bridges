@@ -361,6 +361,7 @@ Not bridged yet (documented per subsystem):
 - **Memory**: `OPENCODE_CONFIG` / `OPENCODE_CONFIG_DIR` / `OPENCODE_CONFIG_CONTENT` overrides, remote/managed config layers, upward config-file discovery (project `opencode.json` is read at the cwd only; `.opencode/skills` upward discovery is bridged), `{env:…}`/`{file:…}` substitution in config.
 - **Plugins / tools**: opencode's JavaScript plugin system (its event hooks need the opencode runtime) and custom tools have no file-format bridge here.
 - **Runtime / model config**: `formatter`, `lsp`, `experimental.*` (including the documented `policies`), custom `provider` definitions, and `model`/`small_model` defaults — DeepSeek Harness owns model routing, formatting, and diagnostics; these are out of scope (no file-format bridge).
+- **CLI / UI**: `share`/`autoshare`/`username`/`logLevel`/`layout`/`tool_output`/`enterprise`/`server`/`shell`/`watcher`/`snapshot`/`compaction`/`attachment.image`/`autoupdate`/provider switches/`default_agent`/`subagent_depth`, `.opencode/themes/`, `tui.json`/`OPENCODE_TUI_CONFIG`, `keybinds`, and `.opencode/modes/` — cosmetic or runtime concerns with no DeepSeek Harness equivalent.
 - **Overlap note**: when `claudeCode.memory` is also enabled, the `~/.claude/CLAUDE.md` fallback can be injected twice (once per bridge); keep one of the two memory switches off, or accept the duplicate block.
 
 ## The Codex bridge

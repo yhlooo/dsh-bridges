@@ -357,6 +357,7 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md` 与 `CLAUDE.md`。�
 - **Memory**：`OPENCODE_CONFIG` / `OPENCODE_CONFIG_DIR` / `OPENCODE_CONFIG_CONTENT` 覆盖、远程 / 托管配置层、配置文件向上查找（项目 `opencode.json` 仅在 cwd 读取；`.opencode/skills` 的向上发现已桥接）、配置里的 `{env:…}`/`{file:…}` 替换。
 - **插件 / 自定义工具**：opencode 的 JavaScript 插件系统（事件 hook 需要 opencode 运行时）与自定义工具没有文件格式层面的桥接面。
 - **运行时 / 模型配置**：`formatter`、`lsp`、`experimental.*`（含已文档化的 `policies`）、自定义 `provider` 定义、`model`/`small_model` 默认——DeepSeek Harness 拥有模型路由、格式化与诊断，这些不在范围内（无文件格式桥接面）。
+- **CLI / UI**：`share`/`autoshare`/`username`/`logLevel`/`layout`/`tool_output`/`enterprise`/`server`/`shell`/`watcher`/`snapshot`/`compaction`/`attachment.image`/`autoupdate`/provider 开关/`default_agent`/`subagent_depth`、`.opencode/themes/`、`tui.json`/`OPENCODE_TUI_CONFIG`、`keybinds`、`.opencode/modes/`——装饰性或运行时关注点，无 DeepSeek Harness 对应物。
 - **重叠提示**：若同时开启 `claudeCode.memory`，`~/.claude/CLAUDE.md` 回退可能被注入两次（每个桥接各一次）；关闭其一或接受重复块。
 
 ## Codex 桥接

@@ -101,8 +101,10 @@
   `src/agents/opencode/mcp.ts` 归一（`type:local` 的 command 数组 +
   environment → stdio；`type:remote` 的 url + headers → streamable-http；
   `enabled=false` 跳过）。远程 OAuth 凭据流程记限制。
-- [ ] **插件贡献的 MCP**（claude 插件、codebuddy 插件、codex
+- [x] **插件贡献的 MCP**（claude 插件、codebuddy 插件、codex
   `plugins.<plugin>.mcp_servers.*`）：依赖插件桥接，先按 P1-插件项补文档，实施排后。
+  **已记限制**（2026-08-15/16：guides 三工具 Plugins 限制行已写明，
+  实施依赖插件桥接本身，仍排后）。
 
 ### P0.2 权限 / 审批规则（安全姿态静默改变）
 
@@ -243,7 +245,8 @@
   settings 加载器合并各层 `projects.<path>.trust_level`，cwd 显式
   `untrusted` 时跳过项目 `.codex/` 层（hooks/MCP/skills 配置等）；
   AGENTS.md 链不受影响（上游始终读取）；未列出路径维持无条件读取。
-- [ ] **opencode**：`formatter`、`lsp`、`experimental.*`（含已文档化的 `policies`）。
+- [x] **opencode**：`formatter`、`lsp`、`experimental.*`（含已文档化的 `policies`）。
+  **已记限制**（2026-08-16：dsh 拥有格式化/诊断/实验层，无文件格式桥接面）。
 - [x] **hooks 事件扩展**（可行性评估 + 实现可行子集）：`SubagentStart`/
   `SubagentStop` **已实现**（2026-08-15，claude + codebuddy）：
   `agent/session-start`/`agent/turn-stopping` 按 `delegationDepth` 分流到子代理
@@ -254,47 +257,57 @@
   `CwdChanged`/`FileChanged`/`DirectoryAdded`/`MessageDisplay`、`PreCompact`/
   `PostCompact`、`PermissionRequest`/`PermissionDenied` 等）无对应 dsh 接缝，
   记限制。
-- [ ] **claude hooks**：SessionStart JSON 决策字段（`initialUserMessage`/
+- [x] **claude hooks**：SessionStart JSON 决策字段（`initialUserMessage`/
   `watchPaths`/`sessionTitle`/`reloadSkills`）、`suppressOutput`/`systemMessage`/
-  `terminalSequence`。
-- [ ] **claude 技能 frontmatter 补齐**：`name`/`argument-hint`/`arguments`/
+  `terminalSequence`。**已记限制**（2026-08-16：guides Hooks 限制行已枚举；
+  `initialUserMessage` 可经注入实现、`reloadSkills` 可经 provider invalidate
+  实现——列为后续增强，暂不实施）。
+- [x] **claude 技能 frontmatter 补齐**：`name`/`argument-hint`/`arguments`/
   `license`/`compatibility` + 替换变量（`$name`/`${CLAUDE_SKILL_DIR}` 等；属已列
-  限制的"参数替换"大项）。
+  限制的"参数替换"大项）。**已记限制**（2026-08-16：guides Skills 限制行
+  已枚举这些字段与替换变量；DSH 技能正文为静态内容，无调用时替换接缝）。
 
 ## P3 · 文档即完成（明确 out-of-scope，不实现）
 
 以下资产在 guides 中明确写"不桥接 + 原因"（无 dsh 对应物 / CLI-UI 专属 / 认证与
 迁移无关），不进代码：
 
-- [ ] **claude-code**：`managed-settings.json` / `managed-settings.d` /
+- [x] **claude-code**：`managed-settings.json` / `managed-settings.d` /
   `managed-mcp.json` / 企业托管策略、`statusLine`/`statusline.json`、
   `plansDirectory`、`keybindings.json`、`themes/`、`.worktreeinclude`、
-  `.claude.json` UI 开关（`autoConnectIde` 等）。
-- [ ] **codebuddy-code**：`trustAll`/`trustedDirectories`（CLI 信任概念）、
-  `apiKeyHelper`（自家后端认证）。
-- [ ] **opencode**：`share`/`autoshare`/`username`/`logLevel`/`layout`/
+  `.claude.json` UI 开关（`autoConnectIde` 等）。**已记 out-of-scope**
+  （2026-08-16：guides claude Settings 限制行）。
+- [x] **codebuddy-code**：`trustAll`/`trustedDirectories`（CLI 信任概念）、
+  `apiKeyHelper`（自家后端认证）。**已记 out-of-scope**（2026-08-16：
+  guides codebuddy Settings/模型路由限制行）。
+- [x] **opencode**：`share`/`autoshare`/`username`/`logLevel`/`layout`/
   `tool_output`/`enterprise`/`server`/`shell`/`watcher`/`snapshot`/`compaction`/
   `attachment.image`/`autoupdate`/`disabled_providers`/`enabled_providers`/
   `default_agent`/`subagent_depth`；`.opencode/themes/`、`tui.json`/
   `OPENCODE_TUI_CONFIG`、`keybinds`、`.opencode/modes/`。
-- [ ] **codex**：`[otel]`、`[desktop]`/`[tui]`、auth/notice/logging 键
+  **已记 out-of-scope**（2026-08-16：guides opencode CLI/UI 限制行）。
+- [x] **codex**：`[otel]`、`[desktop]`/`[tui]`、auth/notice/logging 键
   （`chatgpt_base_url`/`forced_login_method`/`check_for_update_on_startup`/
   `[feedback]`/`[analytics]`/`[notice]`/`log_dir`/`sqlite_home`…）、schema-only 键
   （`audio`/`orchestrator`/`realtime`/`experimental_realtime_*`/`ghost_snapshot`/
-  `include_*_instructions`/`apps_mcp_product_sku`…）。
+  `include_*_instructions`/`apps_mcp_product_sku`…）。**已记 out-of-scope**
+  （2026-08-16：guides codex 其余配置限制行）。
 
 ## 文档修正（不实现也要补）
 
-- [ ] 四工具 guides（`docs/guides/README.md` + `README.zh.md`）Limitations 补全本次
+- [x] 四工具 guides（`docs/guides/README.md` + `README.zh.md`）Limitations 补全本次
   审计的全部"未提及"项（即上表 P0–P3 的资产清单在各自 Limitations 中可见）。
-- [ ] reference 副本补全：codebuddy-code 的 `mcp.md` / `iam.md` / `models.md`；
-  codex 的 `config-sample.md`。
-- [ ] codex reference README 与各文件头部：文档源 URL 更新（
+  **已补**（2026-08-16）。
+- [x] reference 副本补全：codebuddy-code 的 `mcp.md` / `iam.md` / `models.md`；
+  codex 的 `config-sample.md`。**已补**（2026-08-16，带来源头）。
+- [x] codex reference README 与各文件头部：文档源 URL 更新（
   `developers.openai.com/codex` 为当前主源，`learn.chatgpt.com` 保留）。
+  **已更新**（2026-08-16：README 来源行注明迁移，两源内容一致）。
 - [x] codex 限制清单笔误：`rules/*.rules` 语言名 "Python DSL" → **Starlark**。（2026-08-15 已修：guides 中英两版 + reference README）
-- [ ] claude-code hooks 限制逐事件枚举（17 个），替换含糊的 "remaining async
-  events"；codebuddy-code 同。
-- [ ] 根 README 两版的 supported-agents 表随 P0–P2 实现结果同步更新。
+- [x] claude-code hooks 限制逐事件枚举（17 个），替换含糊的 "remaining async
+  events"；codebuddy-code 同。**已枚举**（2026-08-16，guides 中英两版）。
+- [x] 根 README 两版的 supported-agents 表随 P0–P2 实现结果同步更新。
+  **已同步**（2026-08-15/16：Permissions 与 MCP 列随实现填充）。
 
 ## 建议实施顺序
 
