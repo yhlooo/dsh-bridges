@@ -37,6 +37,7 @@ export const Config = z.object({
   claudeCode: z.object({
     enabled: z.boolean().default(true),
     skills: z.boolean().default(true),
+    agents: z.boolean().default(true),
     memory: z.boolean().default(true),
     hooks: z.boolean().default(true),
     permissions: z.boolean().default(true),
@@ -50,6 +51,7 @@ export const Config = z.object({
   codebuddyCode: z.object({
     enabled: z.boolean().default(true),
     skills: z.boolean().default(true),
+    agents: z.boolean().default(true),
     memory: z.boolean().default(true),
     hooks: z.boolean().default(true),
     permissions: z.boolean().default(true),

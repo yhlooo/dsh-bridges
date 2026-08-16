@@ -39,6 +39,7 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
     claudeCode:
       enabled: true               # Claude Code 桥接的总开关
       skills: true                # 发现 .claude / ~/.claude 的 skills 与 commands
+      agents: true                # 发现 .claude / ~/.claude 的 subagent 定义
       memory: true                # 注入 ~/.claude/CLAUDE.md 与 .claude/CLAUDE.md
       hooks: true                 # 运行 settings.json 里的 Claude Code hooks
       permissions: true           # 执行 settings.json 里的 permissions.allow/ask/deny 规则
@@ -51,6 +52,7 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
     codebuddyCode:
       enabled: true                     # CodeBuddy Code 桥接的总开关
       skills: true                      # 发现 .codebuddy / ~/.codebuddy 的 skills 与 commands
+      agents: true                       # 发现 .codebuddy / ~/.codebuddy 的 subagent 定义
       memory: true                      # 注入 CODEBUDDY.md 记忆与始终应用规则
       hooks: true                       # 运行 settings.json 里的 CodeBuddy Code hooks
       permissions: true                 # 执行 settings.json 里的 permissions.allow/ask/deny 规则
@@ -149,7 +151,25 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 
 未桥接（记录为限制）：`permissions.defaultMode` 与 `permissions.disableBypassPermissionsMode` 会被读取但不生效——DeepSeek Harness 拥有自己的审批模式，插件没有切换它的接缝；项目 `.claude/settings.json` 的 allow 规则在 Claude Code 中需要工作区信任才生效，桥接没有信任状态、一律生效（deny/ask 规则上游本就不受信任门禁影响）。
 
-### 限制
+### Subagents（自定义子代理）
+
+读取 `.claude/agents/*.md` 与 `~/.claude/agents/*.md`（个人覆盖项目，与 Claude 技能一致），把每个自定义 subagent 定义注册为以 frontmatter `name` 命名的技能（`description` 必填、kebab-case 校验、`plugin:name` 限定名跳过——与上游一致）。技能正文 = 上游系统提示原文 + 委派规格，告诉模型内联传递哪些 `subagent` 工具参数：
+
+- frontmatter `name` → 技能名与委派 `label`
+- 系统提示正文 → `persona`
+- `tools` → `toolFilter.allow`、`disallowedTools` → `toolFilter.deny`（上游工具名翻译为 DeepSeek Harness 名；无法翻译的条目丢弃 + 告警）
+- `model`（`inherit` 除外）→ `agentOptions.model`
+- `maxTurns` → `maxDepth`（近似映射）
+
+DeepSeek Harness 没有命名 subagent 注册表——技能指示模型按上述参数内联委派。未桥接（记录为限制）：`permissionMode`、`skills`、`mcpServers`、`hooks`、`memory`（及 `.claude/agent-memory*`、`~/.claude/agent-memory`）、`background`、`effort`、`isolation`、`color`、`initialPrompt`；核心侧"命名 subagent 注册表"列为后续增强候选。
+
+### 限制### Subagents（自定义子代理）
+
+读取 `.codebuddy/agents/*.md` 与 `~/.codebuddy/agents/*.md`（项目覆盖用户，与 CodeBuddy 技能一致），把每个自定义 subagent 定义注册为以 frontmatter `name` 命名的技能（`description` 必填、kebab-case 校验）。技能正文 = 上游系统提示原文 + 委派规格：`name` → 技能名与 `label`、正文 → `persona`、`tools` → `toolFilter.allow`、`disallowedTools` → `toolFilter.deny`（工具名翻译；无法翻译的条目丢弃 + 告警）、`model`（`inherit`/`default` 除外）→ `agentOptions.model`、`maxTurns` → `maxDepth`（近似映射）。
+
+未桥接（记录为限制）：`permissionMode`、`skills`、`mcpServers`、`hooks`、`memory`（及 `agent-memory` 目录）、`background`、`effort`、`initialPrompt`；DeepSeek Harness 没有命名 subagent 注册表，技能指示模型内联委派。
+
+### 限制### 限制
 
 尚未桥接（按子系统记录）：
 

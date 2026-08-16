@@ -22,6 +22,8 @@ export interface ClaudeCodeConfig {
   enabled?: boolean
   /** Discover and register Claude Code skills and commands. */
   skills?: boolean
+  /** Discover `.claude/agents` / `~/.claude/agents` subagent definitions (as skills with a delegation spec). */
+  agents?: boolean
   /** Inject `~/.claude/CLAUDE.md` and `.claude/CLAUDE.md` at session start. */
   memory?: boolean
   /** Run Claude Code hooks from settings.json at DSH lifecycle seams. */
@@ -45,6 +47,7 @@ export interface ClaudeCodeConfig {
 export const CLAUDE_CODE_DEFAULTS: Required<ClaudeCodeConfig> = {
   enabled: true,
   skills: true,
+  agents: true,
   memory: true,
   hooks: true,
   permissions: true,
@@ -64,7 +67,7 @@ export function registerClaudeCodeBridge(ctx: Context, logger: BridgeLogger, fs:
   if (resolved.skills) {
     let provider: ClaudeSkillProvider | undefined
     ctx.skills.registerProvider((control) => {
-      provider = new ClaudeSkillProvider(logger, fs, { userClaudeDir: resolved.userClaudeDir, watch: resolved.watch }, control.invalidate)
+      provider = new ClaudeSkillProvider(logger, fs, { userClaudeDir: resolved.userClaudeDir, watch: resolved.watch, agents: resolved.agents }, control.invalidate)
       return provider
     })
     ctx.effect(

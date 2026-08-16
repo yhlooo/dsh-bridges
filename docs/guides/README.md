@@ -43,6 +43,7 @@ Every tool bridge owns a config section under the `bridges` row; a later patch l
     claudeCode:
       enabled: true               # master switch for the Claude Code bridge
       skills: true                # discover .claude / ~/.claude skills and commands
+      agents: true                # discover .claude / ~/.claude subagent definitions
       memory: true                # inject ~/.claude/CLAUDE.md and .claude/CLAUDE.md
       hooks: true                 # run Claude Code hooks from settings.json
       permissions: true           # enforce permissions.allow/ask/deny rules from settings.json
@@ -55,6 +56,7 @@ Every tool bridge owns a config section under the `bridges` row; a later patch l
     codebuddyCode:
       enabled: true                   # master switch for the CodeBuddy Code bridge
       skills: true                    # discover .codebuddy / ~/.codebuddy skills and commands
+      agents: true                     # discover .codebuddy / ~/.codebuddy subagent definitions
       memory: true                    # inject CODEBUDDY.md memory and always-apply rules
       hooks: true                     # run CodeBuddy Code hooks from settings.json
       permissions: true               # enforce permissions.allow/ask/deny rules from settings.json
@@ -153,7 +155,25 @@ Reads the `permissions.allow/ask/deny` rules from the same settings files (merge
 
 Not bridged (recorded as limitations): `permissions.defaultMode` and `permissions.disableBypassPermissionsMode` are read but not enforced — DeepSeek Harness owns its approval modes and the bridge has no seam to switch them; project `.claude/settings.json` allow rules apply without the workspace-trust gate upstream requires for them (the bridge has no trust state; deny/ask rules are not trust-gated upstream either).
 
-### Limitations
+### Subagents
+
+Reads `.claude/agents/*.md` and `~/.claude/agents/*.md` (personal overrides project, as for Claude skills) and registers each custom subagent definition as a skill named by its frontmatter `name` (`description` required, exactly as upstream; kebab-case enforced, `plugin:name`-scoped names skipped). The skill body carries the upstream system prompt verbatim plus a delegation spec telling the model which inline `subagent`-tool parameters to pass:
+
+- frontmatter `name` → skill name and delegation `label`
+- the system-prompt body → `persona`
+- `tools` → `toolFilter.allow`, `disallowedTools` → `toolFilter.deny` (upstream tool names translated to DeepSeek Harness names; unknown entries dropped with a warning)
+- `model` (other than `inherit`) → `agentOptions.model`
+- `maxTurns` → `maxDepth` (approximation)
+
+DeepSeek Harness has no named-subagent registry — the skill instructs the model to delegate inline with those parameters. Not bridged (recorded as limitations): `permissionMode`, `skills`, `mcpServers`, `hooks`, `memory` (and `.claude/agent-memory*`/`~/.claude/agent-memory`), `background`, `effort`, `isolation`, `color`, `initialPrompt`; a native named-subagent registry is a core-side enhancement candidate.
+
+### Limitations### Subagents
+
+Reads `.codebuddy/agents/*.md` and `~/.codebuddy/agents/*.md` (project overrides user, as for CodeBuddy skills) and registers each custom subagent definition as a skill named by its frontmatter `name` (`description` required; kebab-case enforced). The skill body carries the upstream system prompt verbatim plus a delegation spec telling the model which inline `subagent`-tool parameters to pass: `name` → skill name and `label`, the body → `persona`, `tools` → `toolFilter.allow`, `disallowedTools` → `toolFilter.deny` (tool names translated; unknown entries dropped with a warning), `model` (other than `inherit`/`default`) → `agentOptions.model`, `maxTurns` → `maxDepth` (approximation).
+
+Not bridged (recorded as limitations): `permissionMode`, `skills`, `mcpServers`, `hooks`, `memory` (and the `agent-memory` directories), `background`, `effort`, `initialPrompt`; DeepSeek Harness has no named-subagent registry, so these skills instruct the model to delegate inline.
+
+### Limitations### Limitations
 
 Not bridged yet (documented per subsystem):
 

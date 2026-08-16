@@ -19,6 +19,7 @@ import { join, dirname } from 'node:path'
 import { watch } from 'chokidar'
 import type { SkillCandidate, SkillDefinition, SkillLookupOptions, SkillProvider, SkillProviderControl } from '@deepseek-ai/dsh-skill'
 import { isSkillName } from '@deepseek-ai/dsh-skill'
+import { AgentDefinitionError, buildAgentSkillBody, parseAgentDefinition } from '../../../agent-definitions.js'
 import type { FsAdapter } from '../../../fs-adapter.js'
 import type { BridgeLogger } from '../../../util.js'
 import { capString, expandHome, stripMarkdownExtension } from '../../../util.js'
@@ -29,15 +30,17 @@ export const PROVIDER_NAME = 'claude-code'
 /** Precedence ranks: personal overrides project (Claude Code semantics); a skill overrides a same-name command at the same level. */
 const RANK_USER_SKILLS = 105
 const RANK_USER_COMMANDS = 110
+const RANK_USER_AGENTS = 107
 const RANK_PROJECT_SKILLS = 115
 const RANK_PROJECT_COMMANDS = 120
+const RANK_PROJECT_AGENTS = 117
 
 /** Claude Code truncates the combined description + when_to_use listing text at 1,536 characters. */
 const MAX_DESCRIPTION_CHARS = 1536
 /** Reserved directory name in the personal skills location. */
 const SYNCED_DIR = 'synced'
 
-type RootKind = 'user-skills' | 'user-commands' | 'project-skills' | 'project-commands'
+type RootKind = 'user-skills' | 'user-commands' | 'user-agents' | 'project-skills' | 'project-commands' | 'project-agents'
 
 interface SkillRoot {
   kind: RootKind
@@ -50,7 +53,7 @@ interface CandidateLocator {
   rootKind: RootKind
   /** Directory name (bundle) or file name without extension (flat). */
   entry: string
-  kind: 'bundle' | 'flat'
+  kind: 'bundle' | 'flat' | 'agent'
   /** Absolute path of the SKILL.md / flat markdown file. */
   file: string
 }
@@ -58,6 +61,8 @@ interface CandidateLocator {
 export interface SkillProviderConfig {
   userClaudeDir: string
   watch: boolean
+  /** Discover `.claude/agents` / `~/.claude/agents` subagent definitions. */
+  agents: boolean
 }
 
 /** Maximum distinct project roots whose `.claude` directories stay watched. */
@@ -83,12 +88,14 @@ export class ClaudeSkillProvider implements SkillProvider {
     const roots: SkillRoot[] = [
       { kind: 'user-skills', path: join(userClaudeDir, 'skills'), rank: RANK_USER_SKILLS },
       { kind: 'user-commands', path: join(userClaudeDir, 'commands'), rank: RANK_USER_COMMANDS },
+      ...(this.config.agents ? [{ kind: 'user-agents' as const, path: join(userClaudeDir, 'agents'), rank: RANK_USER_AGENTS }] : []),
     ]
     if (cwd) {
       const projectClaudeDir = join(cwd, '.claude')
       roots.push(
         { kind: 'project-skills', path: join(projectClaudeDir, 'skills'), rank: RANK_PROJECT_SKILLS },
         { kind: 'project-commands', path: join(projectClaudeDir, 'commands'), rank: RANK_PROJECT_COMMANDS },
+        ...(this.config.agents ? [{ kind: 'project-agents' as const, path: join(projectClaudeDir, 'agents'), rank: RANK_PROJECT_AGENTS }] : []),
       )
     }
     return roots
@@ -114,6 +121,14 @@ export class ClaudeSkillProvider implements SkillProvider {
         // The `synced` folder name is reserved in the personal skills location.
         if (root.kind === 'user-skills' && entry.name.toLowerCase() === SYNCED_DIR) continue
         try {
+          if (root.kind === 'user-agents' || root.kind === 'project-agents') {
+            if (entry.isFile && entry.name.toLowerCase().endsWith('.md')) {
+              const file = join(root.path, entry.name)
+              const text = await this.fs.readText(file, options.signal)
+              candidates.push(this.summaryAgent(root, file, text))
+            }
+            continue
+          }
           if (entry.isDir) {
             const file = join(root.path, entry.name, 'SKILL.md')
             if (!(await this.fs.fileExists(file, options.signal))) continue
@@ -127,8 +142,8 @@ export class ClaudeSkillProvider implements SkillProvider {
         } catch (error) {
           if (isAbort(error)) return { candidates, complete: false }
           if (isMissing(error)) continue // vanished mid-scan
-          if (error instanceof FrontmatterError) {
-            this.logger.warn(`claude-code: skipping malformed skill ${root.path}: ${error.message}`)
+          if (error instanceof FrontmatterError || error instanceof AgentDefinitionError) {
+            this.logger.warn(`claude-code: skipping malformed asset under ${root.path}: ${error.message}`)
             continue
           }
           this.logger.warn(`claude-code: cannot read skill entry under ${root.path}: ${errorMessage(error)}`)
@@ -172,6 +187,27 @@ export class ClaudeSkillProvider implements SkillProvider {
     return capString(combined, MAX_DESCRIPTION_CHARS)
   }
 
+  /** Candidate summary for one custom subagent definition file. */
+  private summaryAgent(root: SkillRoot, file: string, text: string): SkillCandidate {
+    const definition = parseAgentDefinition(text)
+    if (!isSkillName(definition.name)) {
+      throw new AgentDefinitionError(
+        `subagent name ${JSON.stringify(definition.name)} is not kebab-case; DSH skills require kebab-case names`,
+      )
+    }
+    const locator: CandidateLocator = { root: root.path, rootKind: root.kind, entry: definition.name, kind: 'agent', file }
+    return {
+      name: definition.name,
+      description: capString(definition.description, MAX_DESCRIPTION_CHARS),
+      invocation: { modelInvocable: true, userInvocable: true },
+      source: root.kind.startsWith('user') ? 'user-claude' : 'project-claude',
+      provider: PROVIDER_NAME,
+      rank: root.rank,
+      locator,
+      path: file,
+    }
+  }
+
   async get(candidate: SkillCandidate, options: SkillLookupOptions): Promise<SkillDefinition | undefined> {
     const locator = candidate.locator as CandidateLocator
     let text: string
@@ -180,6 +216,27 @@ export class ClaudeSkillProvider implements SkillProvider {
     } catch (error) {
       if (isAbort(error)) throw error
       return undefined // file disappeared: the skill is no longer loadable
+    }
+    if (locator.kind === 'agent') {
+      let definition
+      try {
+        definition = parseAgentDefinition(text)
+      } catch (error) {
+        if (error instanceof AgentDefinitionError) {
+          this.logger.warn(`claude-code: cannot load malformed subagent ${locator.file}: ${error.message}`)
+          return undefined
+        }
+        throw error
+      }
+      return {
+        name: definition.name,
+        description: capString(definition.description, MAX_DESCRIPTION_CHARS),
+        invocation: { modelInvocable: true, userInvocable: true },
+        source: locator.rootKind.startsWith('user') ? 'user-claude' : 'project-claude',
+        provider: PROVIDER_NAME,
+        content: buildAgentSkillBody(definition, this.logger),
+        path: locator.file,
+      }
     }
     let parsed
     try {

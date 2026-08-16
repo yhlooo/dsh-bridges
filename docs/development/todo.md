@@ -130,13 +130,21 @@
 
 ### P0.3 自定义 subagent 定义（团队定义整体丢失）
 
-- [ ] **claude-code**：`.claude/agents/*.md` + `~/.claude/agents/*.md`
+- [x] **claude-code**：`.claude/agents/*.md` + `~/.claude/agents/*.md`
   （frontmatter：`name`/`description`/`tools`/`disallowedTools`/`model`/
   `permissionMode`/`maxTurns`/`skills`/`mcpServers`/`hooks`/`memory`/`background`/
   `effort`/`isolation`/`color`/`initialPrompt`）；附 `.claude/agent-memory/`、
   `.claude/agent-memory-local/`、`~/.claude/agent-memory/` 持久记忆。
-- [ ] **codebuddy-code**：`.codebuddy/agents/*.md` + `~/.codebuddy/agents/*.md`
-  （同名 frontmatter 集合）。
+  **已实现**（2026-08-15，方案 B 技能载体 + 委派规格）：共享
+  `src/agent-definitions.ts`（frontmatter 解析 fail-closed、工具名反向翻译、
+  委派规格正文：label/persona/toolFilter.allow+deny/agentOptions.model/
+  maxDepth）；claude provider 新增 user-agents(107)/project-agents(117) 根、
+  `agents` 配置开关。`permissionMode`/`skills`/`mcpServers`/`hooks`/`memory`/
+  `background`/`effort`/`isolation`/`color`/`initialPrompt` 与
+  `agent-memory*` 目录记限制；方案 A（核心命名注册表）列上游提案。
+- [x] **codebuddy-code**：`.codebuddy/agents/*.md` + `~/.codebuddy/agents/*.md`
+  （同名 frontmatter 集合）。**已实现**（2026-08-15，同 claude；rank
+  project-agents(132) < user-agents(137)，项目覆盖用户）。
 - [ ] **codex** `[agents]` 角色、**opencode** `agent` 自定义代理：均已列限制，
   实施时复用同一映射（接缝决策见"先决调研"）。
 
