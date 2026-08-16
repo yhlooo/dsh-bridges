@@ -174,3 +174,11 @@ Codex 的用户技能固定是 `$HOME/.agents/skills`（与 `~/.codex`、`CODEX_
 ## 22. 记忆去重要用"路径级"判断，别用内容比对
 
 opencode / codex 的规则文件去重：DSH 核心已加载的只有**工作区根**的 `AGENTS.md` 与 `CLAUDE.md`（即 session cwd 下的这两个文件）。判断"该不该注入"要按**路径**（找到的项目规则文件 === `cwd/AGENTS.md` / `cwd/CLAUDE.md` 就跳过），而不是按内容比对——内容比对会把"父目录规则恰好与根文件同文"误判为重复而漏注入（父目录文件 DSH 并没有加载）。
+
+## 23. teardown 只 kill 直接子进程会留下孤儿孙进程
+
+**现象**：hook 命令经 `shell: true` 包装，`spawn` 返回的 child 是 shell，真正的 hook 进程是孙进程。teardown 时 `child.kill('SIGTERM')` 只杀了 shell，"杀干净"的假象来自 `close` 事件（shell 已死）；孙进程成为孤儿继续跑满整个存活期。
+
+**原因**：`run.ts` 的超时/取消路径用的是**进程组 kill**（POSIX：`process.kill(-child.pid)`，配合 `detached: true` 让 shell 成为新进程组组长），而三个 bridge 的 `ctx.effect` teardown 写的是普通 `child.kill`——两条路径语义不一致。
+
+**正确写法**：共享 `killHookChild`（`src/util.ts`），teardown 与超时/取消走同一套组杀逻辑。用 e2e 验证时，fixture 的 pid 要写**孙进程**的 pid（`node` 脚本写 `process.pid`），写 shell 的 pid（`$$`）会掩盖这个泄漏。Windows 没有进程组 kill，只能杀直接子进程，孙进程泄漏是已知平台限制（e2e 里该断言 `skipIf(win32)`）。
