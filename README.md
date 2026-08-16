@@ -14,14 +14,22 @@ A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin tha
 ## Quick start
 
 ```sh
-# 1. install into a DeepSeek Harness profile — <name> is web (the Web UI)
-#    or headless (one-shot CLI); each profile installs its own plugins
+# 1. install into each profile you use — <name> is web (the Web UI) or
+#    headless (one-shot CLI); each profile installs its own plugins
 dsh plugin --profile <name> add dsh-bridges
+```
 
-# 2. run DeepSeek Harness in a project already configured for another agent
-dsh --profile web                              # the Web UI — open the project as its workspace
-cd my-claude-project                           # has .claude/ assets
-dsh --profile headless "list the skills available in your catalog"   # a one-shot CLI run in the project
+```sh
+# 2. the Web UI: start it, then open the project in the GUI
+dsh --profile web
+# open my-claude-project (has .claude/ assets) as the workspace — its skills,
+# commands, memory, and hooks are bridged automatically
+```
+
+```sh
+# 3. or a one-shot CLI run (headless): the invoking directory is the workspace
+cd my-claude-project
+dsh --profile headless "list the skills available in your catalog"
 # → .claude skills and commands are registered as /name skills, CLAUDE.md is
 #   injected, and the project's settings.json hooks run unchanged.
 ```
