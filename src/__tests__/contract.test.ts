@@ -20,6 +20,8 @@ import { OpencodeSkillProvider } from '../agents/opencode/skills/provider.js'
 import { OpencodeSettingsLoader } from '../agents/opencode/settings.js'
 import { CodexSkillProvider } from '../agents/codex/skills/provider.js'
 import { CodexSettingsLoader } from '../agents/codex/settings.js'
+import { CursorSkillProvider } from '../agents/cursor/skills/provider.js'
+import { CursorSettingsLoader } from '../agents/cursor/settings.js'
 import { GeminiSkillProvider } from '../agents/gemini-cli/skills/provider.js'
 import { GeminiSettingsLoader } from '../agents/gemini-cli/settings.js'
 import { PiSkillProvider } from '../agents/pi/skills/provider.js'
@@ -28,6 +30,7 @@ import { claudeToolName } from '../agents/claude-code/hooks/names.js'
 import { codebuddyToolName } from '../agents/codebuddy-code/hooks/names.js'
 import { codexToolName } from '../agents/codex/hooks/names.js'
 import { geminiToolName } from '../agents/gemini-cli/hooks/names.js'
+import { cursorToolName } from '../agents/cursor/hooks/names.js'
 
 const silent = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
 
@@ -267,6 +270,34 @@ describe('rank bands (golden table)', () => {
       expect(entry.rank).toBeLessThan(250)
     }
   })
+
+  it('cursor ranks stay in 225–240 with project before user', async () => {
+    const files = new Map<string, string>([
+      [fx('home', 'u', '.cursor', 'skills', 'u-skill', 'SKILL.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('home', 'u', '.cursor', 'agents', 'u-agent.md'), '---\nname: u-agent\ndescription: a\n---\nBody.\n'],
+      [fx('proj', '.cursor', 'skills', 'p-skill', 'SKILL.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('proj', '.cursor', 'agents', 'p-agent.md'), '---\nname: p-agent\ndescription: a\n---\nBody.\n'],
+    ])
+    const loader = new CursorSettingsLoader(silent, new TreeFs(files), { userCursorDir: fx('home', 'u', '.cursor') })
+    const provider = new CursorSkillProvider(
+      silent,
+      new TreeFs(files),
+      { userCursorDir: fx('home', 'u', '.cursor'), watch: false, agents: true },
+      loader,
+      () => {},
+    )
+    const found = await candidates(provider)
+    const ranks = new Map(found.map((entry) => [entry.name, entry.rank]))
+    expect(ranks.get('p-skill')).toBe(225)
+    expect(ranks.get('p-agent')).toBe(226)
+    expect(ranks.get('u-skill')).toBe(230)
+    expect(ranks.get('u-agent')).toBe(231)
+    for (const entry of found) {
+      expect(entry.rank).toBeGreaterThanOrEqual(225)
+      expect(entry.rank).toBeLessThanOrEqual(240)
+      expect(entry.rank).toBeLessThan(250)
+    }
+  })
 })
 
 describe('hook tool-name translations (golden table)', () => {
@@ -333,5 +364,23 @@ describe('hook tool-name translations (golden table)', () => {
     }
     for (const [dsh, upstream] of Object.entries(table)) expect(geminiToolName(dsh)).toBe(upstream)
     expect(geminiToolName('mcp_server_tool')).toBe('mcp_server_tool') // passthrough
+  })
+
+  it('cursor maps every documented DSH tool to its upstream name', () => {
+    const table: Record<string, string> = {
+      bash: 'Shell',
+      pwsh: 'Shell',
+      read: 'Read',
+      write: 'Write',
+      edit: 'Edit',
+      glob: 'Glob',
+      grep: 'Grep',
+      web: 'WebFetch',
+      web_search: 'WebSearch',
+      subagent: 'Task',
+      todo_write: 'TodoWrite',
+    }
+    for (const [dsh, upstream] of Object.entries(table)) expect(cursorToolName(dsh)).toBe(upstream)
+    expect(cursorToolName('mcp__server__tool')).toBe('mcp__server__tool')
   })
 })

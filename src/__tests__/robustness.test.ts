@@ -10,6 +10,8 @@ import type { BridgeDirEntry, FsAdapter } from '../fs-adapter.js'
 import { AgentDefinitionError, parseAgentDefinition } from '../agent-definitions.js'
 import { CodexSettingsLoader } from '../agents/codex/settings.js'
 import { OpencodeSettingsLoader } from '../agents/opencode/settings.js'
+import { CursorSkillProvider } from '../agents/cursor/skills/provider.js'
+import { CursorSettingsLoader } from '../agents/cursor/settings.js'
 import { GeminiSkillProvider } from '../agents/gemini-cli/skills/provider.js'
 import { GeminiSettingsLoader } from '../agents/gemini-cli/settings.js'
 import { PiSkillProvider } from '../agents/pi/skills/provider.js'
@@ -278,5 +280,38 @@ describe('gemini-cli: BOM / CRLF skills and broken config fail soft', () => {
     )
     const result = (await provider.list({ cwd: fx('proj') })) as { candidates: { name: string }[] }
     expect(result.candidates.map((entry) => entry.name)).toEqual(['u-skill'])
+  })
+})
+
+describe('cursor: BOM / CRLF skills and broken JSONC config fail soft', () => {
+  it('parses a BOM-prefixed SKILL.md and ignores malformed siblings', async () => {
+    const files = new Map<string, string>([
+      [fx('proj', '.cursor', 'skills', 'bom', 'SKILL.md'), '\uFEFF---\r\nname: bom-skill\r\ndescription: BOM skill\r\n---\r\nBody.\r\n'],
+      [fx('proj', '.cursor', 'skills', 'broken', 'SKILL.md'), '---\nname: [not yaml\n---\nBody.\n'],
+      [fx('proj', '.cursor', 'skills', 'no-desc', 'SKILL.md'), '---\nname: no-desc\n---\nBody.\n'],
+    ])
+    const loader = new CursorSettingsLoader(silent, new TreeFs(files), { userCursorDir: fx('home', 'u', '.cursor') })
+    const provider = new CursorSkillProvider(
+      silent,
+      new TreeFs(files),
+      { userCursorDir: fx('home', 'u', '.cursor'), watch: false, agents: true },
+      loader,
+      () => {},
+    )
+    const result = (await provider.list({ cwd: fx('proj') })) as { candidates: { name: string }[] }
+    expect(result.candidates.map((entry) => entry.name)).toEqual(['bom-skill'])
+  })
+
+  it('ignores broken cli.json / hooks.json / mcp.json without losing healthy files', async () => {
+    const files = new Map<string, string>([
+      [fx('proj', '.cursor', 'cli.json'), '{ broken'],
+      [fx('proj', '.cursor', 'hooks.json'), '[]'],
+      [fx('proj', '.cursor', 'mcp.json'), '{"mcpServers": "nope"}'],
+      [fx('home', 'u', '.cursor', 'cli-config.json'), JSON.stringify({ permissions: { allow: ['Shell(ls)'] } })],
+    ])
+    const loaded = await new CursorSettingsLoader(silent, new TreeFs(files), { userCursorDir: fx('home', 'u', '.cursor') }).load(fx('proj'))
+    expect(loaded.permissionAllow).toEqual(['Shell(ls)'])
+    expect(loaded.mcpServers.size).toBe(0)
+    expect(loaded.byEvent.size).toBe(0)
   })
 })

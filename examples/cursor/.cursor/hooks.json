@@ -1,0 +1,6 @@
+{
+  "hooks": {
+    "preToolUse": [{ "command": "node .cursor/hooks/block-rm.mjs", "matcher": "Shell" }],
+    "stop": [{ "command": "node .cursor/hooks/followup.mjs", "loop_limit": 2 }]
+  }
+}

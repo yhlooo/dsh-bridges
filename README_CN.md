@@ -9,7 +9,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/dsh-bridges)](https://www.npmjs.com/package/dsh-bridges)
 [![license](https://img.shields.io/github/license/yhlooo/dsh-bridges)](LICENSE)
 
-一个 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 插件：把已经为 Claude Code、CodeBuddy Code、opencode、Codex、pi、Gemini CLI 配置好的项目桥接进 DeepSeek Harness——skills、commands、记忆、hooks 无需任何迁移即可继续生效。
+一个 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 插件：把已经为 Claude Code、CodeBuddy Code、opencode、Codex、pi、Gemini CLI、Cursor 配置好的项目桥接进 DeepSeek Harness——skills、commands、记忆、hooks 无需任何迁移即可继续生效。
 
 ## 快速上手
 
@@ -33,7 +33,7 @@ dsh --profile headless "list the skills available in your catalog"
 从本仓库源码安装（需先编译）：`pnpm install && pnpm build && dsh plugin --profile <profile-name> add .`
 
 每个受支持的 agent 工具在 [`examples/`](examples/) 下各有一个完整示例项目
-（`claude-code`、`codebuddy-code`、`opencode`、`codex`、`pi`、`gemini-cli`）；以示例目录作为会话
+（`claude-code`、`codebuddy-code`、`opencode`、`codex`、`pi`、`gemini-cli`、`cursor`）；以示例目录作为会话
 工作区打开，即可观察其 skills、memory 与 hooks 的桥接效果。
 
 所有桥接默认启用，并可通过 patch 层逐一调整或禁用：
@@ -70,6 +70,7 @@ dsh --profile headless "list the skills available in your catalog"
 | Codex | `.agents/skills`（cwd → 仓库根）、`~/.agents/skills`、`/etc/codex/skills` | `~/.codex/AGENTS.md` + 逐目录 `AGENTS.md` 链 | `hooks.json` / `config.toml` hooks（SessionStart、SubagentStart、UserPromptSubmit、Pre/PostToolUse、Stop、SubagentStop、SessionEnd） | `config.toml` 审批/沙箱策略（`approval_policy`、`sandbox_mode`、内置 `default_permissions` 档案） | `config.toml` 的 `[mcp_servers]` 条目 |
 | pi | `.pi/skills`、`.pi/prompts`（含 `~/.pi/agent`；项目级受信任门禁） | `AGENTS.md` / `CLAUDE.md` 链 + `APPEND_SYSTEM.md` | —（pi 无 hooks 配置；扩展事件总线不在范围内） | —（pi 无权限规则系统） | —（pi 无 MCP 配置） |
 | Gemini CLI | `.gemini/skills`、`.gemini/commands`、`.gemini/agents`（含 `~/.gemini`） | `GEMINI.md` 链（含 `@` 导入） | `settings.json` hooks（SessionStart、BeforeAgent、AfterAgent、Before/AfterTool、SessionEnd） | `~/.gemini/policies/*.toml` 规则（用户层，allow/deny/ask_user） | `settings.json` 的 `mcpServers` |
+| Cursor | `.cursor/skills`、`.cursor/agents`（含 `~/.cursor`） | `.cursor/rules/*.mdc`（alwaysApply）+ 子目录 `AGENTS.md` | `hooks.json` hooks（sessionStart、beforeSubmitPrompt、pre/postToolUse、stop、subagent 事件、beforeShellExecution……） | `cli.json` / `cli-config.json` 的 `Shell()`/`Read()`/`Write()`/`WebFetch()`/`Mcp()` 规则（deny > allow） | `.cursor/mcp.json` + `~/.cursor/mcp.json` |
 
 ## 资源
 

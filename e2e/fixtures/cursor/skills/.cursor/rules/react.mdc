@@ -1,0 +1,5 @@
+---
+description: conditional
+globs: ["**/*.tsx"]
+---
+Use hooks.

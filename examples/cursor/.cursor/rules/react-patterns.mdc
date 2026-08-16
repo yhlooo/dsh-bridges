@@ -1,0 +1,5 @@
+---
+description: React patterns
+globs: ["**/*.tsx"]
+---
+Prefer functional components.

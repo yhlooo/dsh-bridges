@@ -222,10 +222,11 @@
 - [ ] **pi `SYSTEM.md`**：整体替换系统提示 → 核心支持候选（会话级系统提示
   覆盖接缝）；`APPEND_SYSTEM.md` 追加语义已降级映射为记忆注入
   （2026-08-16，pi 桥接遗留，guides 已记限制）。
-- [ ] **环 C 上游探针支持非 npm 安装**：pi 无 npm 包（官方
-  `curl pi.dev/install | bash`，GitHub releases），`scripts/upstream-probe.mjs`
-  目前只支持 `npm i -g <pkg>@<pin>`——需为探针脚本增加下载安装模式后再把
-  pi 加入 `scripts/upstream-tools.json`（2026-08-16，pi 桥接遗留）。
+- [ ] **环 C 上游探针支持非 npm 安装**：pi 与 Cursor CLI 均无 npm 包（官方
+  `curl pi.dev/install | bash` / `curl cursor.com/install`，GitHub releases），
+  `scripts/upstream-probe.mjs` 目前只支持 `npm i -g <pkg>@<pin>`——需为探针
+  脚本增加下载安装模式后再把 pi 与 cursor（二进制名 `agent`）加入
+  `scripts/upstream-tools.json`（2026-08-16，pi/cursor 桥接遗留）。
 - [ ] **gemini-cli 工作区策略层**：上游 `.gemini/policies/` 因 issue #18186
   禁用，桥接同样不读；上游修复后补上（2026-08-16，gemini 桥接遗留，guides
   已记限制）。
@@ -237,6 +238,12 @@
 - [ ] **gemini-cli extensions**：`gemini-extension.json` 打包的
   commands/hooks/skills/agents/MCP/policies/themes（分发机制，同 pi 扩展
   先例，guides 已记限制）（2026-08-16，gemini 桥接遗留）。
+- [ ] **cursor 相关性规则**：`.cursor/rules` 中非 `alwaysApply` 的规则依赖
+  语义检索，无静态映射——待 dsh 有相关性选择接缝后评估（2026-08-16，
+  cursor 桥接遗留，guides 已记限制）。
+- [ ] **cursor 无头 hooks 证据**：官方文档未明确 `agent -p` 无头模式是否
+  执行 hooks（交互 CLI 确认执行）——桥接按执行处理；上游文档明确后在
+  guides 中补注（2026-08-16，cursor 桥接遗留）。
 
 - [x] **claude-code**：Auto memory（`autoMemoryEnabled`/`autoMemoryDirectory`、
   `~/.claude/projects/<project>/memory/`；降级映射 = 注入 MEMORY.md 索引）。
