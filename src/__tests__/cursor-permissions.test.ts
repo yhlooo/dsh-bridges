@@ -72,15 +72,21 @@ describe('cursor permission tokens', () => {
     })
   })
 
-  it('matches Mcp(server:tool) tokens against mcp__server__tool names', () => {
+  it('matches Mcp(server:tool) tokens against mcp__cursor__server__tool runtime names', () => {
     const allow = ['Mcp(datadog:*)']
     const deny = ['Mcp(*:delete_everything)']
-    expect(evaluateCursorPermissions(allow, deny, exec('mcp__datadog__list_metrics', {}))).toEqual({ kind: 'allow' })
-    expect(evaluateCursorPermissions(allow, deny, exec('mcp__datadog__delete_everything', {}))).toEqual({
+    expect(evaluateCursorPermissions(allow, deny, exec('mcp__cursor__datadog__list_metrics', {}))).toEqual({ kind: 'allow' })
+    expect(evaluateCursorPermissions(allow, deny, exec('mcp__cursor__datadog__delete_everything', {}))).toEqual({
       kind: 'deny',
       reason: 'denied by a Cursor permission rule (Mcp(*:delete_everything))',
     })
+    expect(evaluateCursorPermissions(allow, deny, exec('mcp__cursor__other__list_metrics', {}))).toBeUndefined()
+    // MCP tools outside the cursor namespace keep matching on their own name.
     expect(evaluateCursorPermissions(allow, deny, exec('mcp__other__list_metrics', {}))).toBeUndefined()
+    expect(evaluateCursorPermissions([], ['Mcp(other:*)'], exec('mcp__other__list_metrics', {}))).toEqual({
+      kind: 'deny',
+      reason: 'denied by a Cursor permission rule (Mcp(other:*))',
+    })
   })
 })
 

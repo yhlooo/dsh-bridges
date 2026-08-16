@@ -151,6 +151,24 @@ describe('gemini policy engine', () => {
     expect(evaluatePolicy(rules, exec('subagent', { label: 'other' }))).toBeUndefined()
   })
 
+  it('matches mcpName and mcp toolName globs against mcp__gemini__server__tool runtime names', async () => {
+    const policy =
+      '[[rule]]\nmcpName = "untrusted-server"\ndecision = "deny"\ndenyMessage = "no untrusted MCP"\n[[rule]]\ntoolName = "mcp_*_delete_everything"\ndecision = "deny"\n[[rule]]\ntoolName = "mcp_datadog_*"\ndecision = "allow"\n'
+    const loader = makeLoader(new Map([[fx('home', 'u', '.gemini', 'policies', 'a.toml'), policy]]))
+    const rules = await loader.load()
+    expect(evaluatePolicy(rules, exec('mcp__gemini__untrusted-server__list', {}))).toEqual({
+      kind: 'deny',
+      reason: 'no untrusted MCP',
+    })
+    expect(evaluatePolicy(rules, exec('mcp__gemini__datadog__list_metrics', {}))).toEqual({ kind: 'allow' })
+    expect(evaluatePolicy(rules, exec('mcp__gemini__datadog__delete_everything', {}))).toEqual({
+      kind: 'deny',
+      reason: 'denied by a Gemini CLI policy rule',
+    })
+    // MCP tools outside the gemini namespace are not gemini servers.
+    expect(evaluatePolicy(rules, exec('mcp__claude__datadog__list_metrics', {}))).toBeUndefined()
+  })
+
   it('fails soft on broken policy TOML', async () => {
     const loader = makeLoader(
       new Map([

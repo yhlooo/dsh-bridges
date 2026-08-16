@@ -175,7 +175,19 @@ function effectiveToolName(exec: ToolExecution): string {
     const label = (exec.arguments as { label?: unknown }).label
     if (typeof label === 'string' && label !== '') return label
   }
-  return geminiToolName(exec.name)
+  return geminiPolicyToolName(exec.name)
+}
+
+/**
+ * DSH `mcp__gemini__<server>__<tool>` → Gemini FQN `mcp_<server>_<tool>` so
+ * policy `toolName` globs (`mcp_*`, `mcp_server_*`, `mcp_*_toolName`) and
+ * `mcpName` conditions (parsed on the first `_` after `mcp_`) match the
+ * runtime names, mirroring upstream's composite FQN.
+ */
+function geminiPolicyToolName(dshName: string): string {
+  const prefix = 'mcp__gemini__'
+  if (dshName.startsWith(prefix)) return `mcp_${dshName.slice(prefix.length).replaceAll('__', '_')}`
+  return geminiToolName(dshName)
 }
 
 function ruleMatches(rule: PolicyRule, toolName: string, args: unknown, subagentLabel: string | undefined): boolean {
@@ -218,6 +230,7 @@ function mcpServerName(toolName: string): string | undefined {
   if (!toolName.startsWith('mcp_')) return undefined
   const rest = toolName.slice(4)
   const index = rest.indexOf('_')
+  if (index === 0) return undefined // empty server part: not a gemini FQN
   return index < 0 ? rest : rest.slice(0, index)
 }
 

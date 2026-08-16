@@ -142,7 +142,11 @@ function safeHostname(url: string): string | undefined {
 }
 
 function splitMcp(toolName: string): [string, string] {
-  const withoutPrefix = toolName.replace(/^mcp__/, '')
+  // Runtime MCP tool names are `mcp__cursor__<server>__<tool>`; strip both
+  // the `mcp__` prefix and the bridge's `cursor__` namespace so rules written
+  // against Cursor's `mcp__<server>__<tool>` naming hit their target.
+  let withoutPrefix = toolName.replace(/^mcp__/, '')
+  if (withoutPrefix.startsWith('cursor__')) withoutPrefix = withoutPrefix.slice('cursor__'.length)
   const index = withoutPrefix.indexOf('__')
   if (index < 0) return [withoutPrefix, '*']
   return [withoutPrefix.slice(0, index), withoutPrefix.slice(index + 2)]
