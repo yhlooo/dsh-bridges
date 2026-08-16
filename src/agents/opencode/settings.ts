@@ -51,6 +51,22 @@ export interface LoadedOpencodeSettings {
   references: ReadonlyMap<string, OpencodeReference>
   /** `skills.paths` extra skill roots (resolved against their config file). */
   skillPaths: readonly { path: string }[]
+  /** `agent.<id>` custom agents (subagent/all modes), project overriding global. */
+  agents: ReadonlyMap<string, OpencodeAgentEntry>
+}
+
+/** One `agent.<id>` entry usable as a subagent. */
+export interface OpencodeAgentEntry {
+  description: string
+  /** `primary` agents are main assistants and are not bridged. */
+  mode: 'primary' | 'subagent' | 'all'
+  /** Inline prompt text, when `prompt` was a string. */
+  prompt?: string
+  /** Resolved path for `prompt: { file: ... }` entries. */
+  promptFile?: string
+  model?: string
+  /** Layer that defined the entry (project ranks win). */
+  project: boolean
 }
 
 /** One `references.<alias>` entry with a resolved local path or repository. */
@@ -186,6 +202,7 @@ export class OpencodeSettingsLoader {
     const permissions = new Map<string, OpencodePermissionFamily>()
     const mcp = new Map<string, OpencodeMcpEntry>()
     const references = new Map<string, OpencodeReference>()
+    const agents = new Map<string, OpencodeAgentEntry>()
     const skillPaths: { path: string }[] = []
     let defaultAction: OpencodeAction | undefined
     let permissionConfigured = false
@@ -203,6 +220,7 @@ export class OpencodeSettingsLoader {
       const layerMcp = readMcp(value['mcp'], this.logger, source.path)
       for (const [name, entry] of layerMcp) mcp.set(name, entry)
       for (const [alias, entry] of readReferences(value['references'], source.dir, this.logger, source.path)) references.set(alias, entry)
+      for (const [id, entry] of readAgents(value['agent'], source.dir, source.kind === 'project', this.logger, source.path)) agents.set(id, entry)
       for (const path of readSkillPaths(value['skills'], source.dir)) skillPaths.push(path)
     }
     for (const [name, command] of projectCommands) commands.set(name, command)
@@ -220,6 +238,7 @@ export class OpencodeSettingsLoader {
       mcp,
       references,
       skillPaths,
+      agents,
     }
   }
 }
@@ -335,6 +354,35 @@ function readSkillPaths(value: unknown, baseDir: string): { path: string }[] {
   for (const entry of value['paths']) {
     if (typeof entry !== 'string' || entry.trim() === '') continue
     result.push({ path: resolveReferencePath(entry.trim(), baseDir) })
+  }
+  return result
+}
+
+/** Parse `agent.<id>`: custom agents; only subagent/all modes are bridged. */
+function readAgents(value: unknown, baseDir: string, project: boolean, logger: BridgeLogger, path: string): Map<string, OpencodeAgentEntry> {
+  const result = new Map<string, OpencodeAgentEntry>()
+  if (value === undefined) return result
+  if (!isPlainObject(value)) {
+    logger.warn(`opencode: ignoring malformed agent field in ${path}: must be an object`)
+    return result
+  }
+  for (const [id, entry] of Object.entries(value)) {
+    if (!isPlainObject(entry)) continue
+    const description = entry['description']
+    if (typeof description !== 'string' || description.trim() === '') {
+      logger.warn(`opencode: skipping agent ${JSON.stringify(id)} in ${path}: description is required`)
+      continue
+    }
+    const mode = entry['mode'] === 'primary' ? 'primary' : entry['mode'] === 'all' ? 'all' : 'subagent'
+    const agent: OpencodeAgentEntry = { description: description.trim(), mode, project }
+    if (typeof entry['model'] === 'string' && entry['model'].trim() !== '') agent.model = entry['model'].trim()
+    const prompt = entry['prompt']
+    if (typeof prompt === 'string') {
+      agent.prompt = prompt.trim()
+    } else if (isPlainObject(prompt) && typeof prompt['file'] === 'string' && prompt['file'].trim() !== '') {
+      agent.promptFile = resolveReferencePath(prompt['file'].trim(), baseDir)
+    }
+    result.set(id, agent)
   }
   return result
 }

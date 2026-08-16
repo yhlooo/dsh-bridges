@@ -19,14 +19,16 @@
  * (`allow_implicit_invocation`) is not bridged yet.
  * @module dsh-bridges/agents/codex/skills/provider
  */
-import { dirname, join, resolve } from 'node:path'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { watch } from 'chokidar'
+import { parse as parseToml } from 'smol-toml'
 import type { SkillCandidate, SkillDefinition, SkillLookupOptions, SkillProvider, SkillProviderControl } from '@deepseek-ai/dsh-skill'
 import { isSkillName } from '@deepseek-ai/dsh-skill'
 import type { FsAdapter } from '../../../fs-adapter.js'
 import type { BridgeLogger } from '../../../util.js'
-import { capString, expandHome } from '../../../util.js'
-import type { CodexSettingsLoader } from '../settings.js'
+import { capString, expandHome, isPlainObject } from '../../../util.js'
+import type { CodexSettingsLoader, RawCodexAgent } from '../settings.js'
+import { AgentDefinitionError, buildAgentSkillBody, type AgentDefinition } from '../../../agent-definitions.js'
 import { FrontmatterError, parseSkillFile } from './parse.js'
 
 export const PROVIDER_NAME = 'codex'
@@ -39,6 +41,7 @@ export const PROVIDER_NAME = 'codex'
 const RANK_PROJECT_SKILLS = 165
 const RANK_USER_SKILLS = 170
 const RANK_SYSTEM_SKILLS = 175
+const RANK_CONFIG_AGENTS = 168
 
 /** Cap on the routing description (the skills standard caps at 1,024 characters). */
 const MAX_DESCRIPTION_CHARS = 1024
@@ -54,10 +57,12 @@ interface SkillRoot {
 interface CandidateLocator {
   root: string
   rootKind: RootKind
-  /** Directory name (skill bundle). */
+  /** Directory name (skill bundle) or config-agent role name. */
   entry: string
   /** Absolute path of the SKILL.md file. */
   file: string
+  /** `[agents.<name>]` role payload for config-agent entries. */
+  agent?: RawCodexAgent
 }
 
 export interface SkillProviderConfig {
@@ -176,8 +181,39 @@ export class CodexSkillProvider implements SkillProvider {
         }
       }
     }
+    for (const [name, agent] of await this.readAgents(options.cwd, options.signal)) {
+      if (options.signal?.aborted) return { candidates, complete: false }
+      if (!isSkillName(name)) {
+        this.logger.warn(`codex: skipping [agents.${name}] role: name is not kebab-case; DSH skills require kebab-case names`)
+        continue
+      }
+      if (agent.description === undefined) {
+        this.logger.warn(`codex: skipping [agents.${name}] role: description is required`)
+        continue
+      }
+      candidates.push({
+        name,
+        description: capString(agent.description, MAX_DESCRIPTION_CHARS),
+        invocation: { modelInvocable: true, userInvocable: true },
+        source: 'config-codex',
+        provider: PROVIDER_NAME,
+        rank: RANK_CONFIG_AGENTS,
+        locator: { root: '', rootKind: 'project', entry: name, file: '', agent } satisfies CandidateLocator,
+      })
+    }
     if (this.config.watch) await this.ensureWatched(roots, options.cwd)
     return { candidates, complete }
+  }
+
+  private async readAgents(cwd: string | undefined, signal?: AbortSignal): Promise<ReadonlyMap<string, RawCodexAgent>> {
+    if (signal?.aborted) return new Map()
+    try {
+      return (await this.settings.load(cwd)).agents
+    } catch (error) {
+      if (isAbort(error)) return new Map()
+      this.logger.warn(`codex: cannot read settings for [agents] roles: ${errorMessage(error)}`)
+      return new Map()
+    }
   }
 
   private async readDisabledPaths(cwd: string | undefined, signal?: AbortSignal): Promise<ReadonlySet<string>> {
@@ -188,6 +224,42 @@ export class CodexSkillProvider implements SkillProvider {
       if (isAbort(error)) return new Set()
       this.logger.warn(`codex: cannot read settings for skills.config: ${errorMessage(error)}`)
       return new Set()
+    }
+  }
+
+  /** Load a `[agents.<name>]` role as a delegation-spec skill body. */
+  private async loadConfigAgent(locator: CandidateLocator, signal?: AbortSignal): Promise<SkillDefinition | undefined> {
+    const agent = locator.agent
+    if (agent === undefined) return undefined
+    let body = ''
+    let model: string | undefined
+    if (agent.configFile !== undefined) {
+      const file = isAbsolute(agent.configFile) ? agent.configFile : join(agent.baseDir, agent.configFile)
+      try {
+        const text = await this.fs.readText(file, signal)
+        body = text
+        const parsed = parseToml(text)
+        if (isPlainObject(parsed) && typeof parsed['model'] === 'string') model = parsed['model']
+      } catch (error) {
+        if (isAbort(error)) throw error
+        this.logger.warn(`codex: cannot read [agents.${locator.entry}] config file: ${errorMessage(error)}`)
+      }
+    }
+    const definition: AgentDefinition = {
+      name: locator.entry,
+      description: agent.description ?? '',
+      body: body.trim() === '' ? agent.description ?? '' : body,
+      tools: [],
+      disallowedTools: [],
+      model,
+    }
+    return {
+      name: locator.entry,
+      description: capString(agent.description ?? '', MAX_DESCRIPTION_CHARS),
+      invocation: { modelInvocable: true, userInvocable: true },
+      source: 'config-codex',
+      provider: PROVIDER_NAME,
+      content: buildAgentSkillBody(definition, this.logger),
     }
   }
 
@@ -212,6 +284,9 @@ export class CodexSkillProvider implements SkillProvider {
 
   async get(candidate: SkillCandidate, options: SkillLookupOptions): Promise<SkillDefinition | undefined> {
     const locator = candidate.locator as CandidateLocator
+    if (locator.agent !== undefined) {
+      return this.loadConfigAgent(locator, options.signal)
+    }
     let text: string
     try {
       text = await this.fs.readText(locator.file, options.signal)

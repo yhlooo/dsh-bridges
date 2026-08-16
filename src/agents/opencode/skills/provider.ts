@@ -31,6 +31,8 @@ import type { FsAdapter } from '../../../fs-adapter.js'
 import type { BridgeLogger } from '../../../util.js'
 import { capString, expandHome, stripMarkdownExtension } from '../../../util.js'
 import type { OpencodeSettingsLoader } from '../settings.js'
+import { buildAgentSkillBody, type AgentDefinition } from '../../../agent-definitions.js'
+import type { OpencodeAgentEntry } from '../settings.js'
 import { firstParagraph, FrontmatterError, isOpencodeName, parseCommandFile, parseSkillFile } from './parse.js'
 
 export const PROVIDER_NAME = 'opencode'
@@ -42,6 +44,8 @@ export const PROVIDER_NAME = 'opencode'
  */
 const RANK_PROJECT_SKILLS = 145
 const RANK_PROJECT_EXTRA_SKILLS = 146
+const RANK_PROJECT_AGENTS = 149
+const RANK_USER_AGENTS = 159
 const RANK_PROJECT_JSON_COMMANDS = 147
 const RANK_PROJECT_COMMANDS = 150
 const RANK_USER_SKILLS = 155
@@ -64,9 +68,11 @@ interface CandidateLocator {
   rootKind: RootKind
   /** Directory name (skill bundle) or command name. */
   entry: string
-  kind: 'bundle' | 'file-command' | 'json-command'
+  kind: 'bundle' | 'file-command' | 'json-command' | 'config-agent'
   /** Absolute path of the SKILL.md / command file; undefined for JSON commands. */
   file?: string
+  /** `agent.<id>` payload for config-agent entries. */
+  agent?: OpencodeAgentEntry
 }
 
 export interface SkillProviderConfig {
@@ -201,14 +207,39 @@ export class OpencodeSkillProvider implements SkillProvider {
         }
       }
     }
+    for (const [name, agent] of await this.readAgents(options.cwd, options.signal)) {
+      if (options.signal?.aborted) return { candidates, complete: false }
+      if (agent.mode === 'primary') continue // primary agents are main assistants, not subagents
+      if (!isSkillName(name)) {
+        this.logger.warn(`opencode: skipping agent ${JSON.stringify(name)}: name is not kebab-case; DSH skills require kebab-case names`)
+        continue
+      }
+      candidates.push({
+        name,
+        description: capString(agent.description, MAX_DESCRIPTION_CHARS),
+        invocation: { modelInvocable: true, userInvocable: true },
+        source: agent.project ? 'project-opencode' : 'user-opencode',
+        provider: PROVIDER_NAME,
+        rank: agent.project ? RANK_PROJECT_AGENTS : RANK_USER_AGENTS,
+        locator: { root: '', rootKind: 'project-commands', entry: name, kind: 'config-agent', agent } satisfies CandidateLocator,
+      })
+    }
     if (this.config.watch) this.ensureWatched(roots, options.cwd)
     return { candidates, complete }
   }
 
-  private async readJsonCommands(
-    cwd: string | undefined,
-    signal?: AbortSignal,
-  ): Promise<{ all: readonly { name: string; template: string; description?: string }[]; project: ReadonlySet<string> }> {
+  private async readAgents(cwd: string | undefined, signal?: AbortSignal): Promise<ReadonlyMap<string, OpencodeAgentEntry>> {
+    if (signal?.aborted) return new Map()
+    try {
+      return (await this.settings.load(cwd)).agents
+    } catch (error) {
+      if (isAbort(error)) return new Map()
+      this.logger.warn(`opencode: cannot read config for agent definitions: ${errorMessage(error)}`)
+      return new Map()
+    }
+  }
+
+  private async readJsonCommands(cwd: string | undefined, signal?: AbortSignal): Promise<{ all: readonly { name: string; template: string; description?: string }[]; project: ReadonlySet<string> }> {
     if (signal?.aborted) return { all: [], project: new Set() }
     try {
       const settings = await this.settings.load(cwd)
@@ -362,6 +393,36 @@ export class OpencodeSkillProvider implements SkillProvider {
 
   async get(candidate: SkillCandidate, options: SkillLookupOptions): Promise<SkillDefinition | undefined> {
     const locator = candidate.locator as CandidateLocator
+    if (locator.kind === 'config-agent' && locator.agent !== undefined) {
+      const agent = locator.agent
+      let body = agent.prompt ?? ''
+      if (agent.promptFile !== undefined) {
+        try {
+          body = await this.fs.readText(agent.promptFile, options.signal)
+        } catch (error) {
+          if (isAbort(error)) throw error
+          this.logger.warn(`opencode: cannot read agent prompt ${agent.promptFile}: ${errorMessage(error)}`)
+          body = agent.description
+        }
+      }
+      if (body.trim() === '') body = agent.description
+      const definition: AgentDefinition = {
+        name: locator.entry,
+        description: agent.description,
+        body,
+        tools: [],
+        disallowedTools: [],
+        model: agent.model,
+      }
+      return {
+        name: locator.entry,
+        description: capString(agent.description, MAX_DESCRIPTION_CHARS),
+        invocation: { modelInvocable: true, userInvocable: true },
+        source: agent.project ? 'project-opencode' : 'user-opencode',
+        provider: PROVIDER_NAME,
+        content: buildAgentSkillBody(definition, this.logger),
+      }
+    }
     if (locator.kind === 'json-command') {
       // Re-resolve the template through the settings loader so edits to
       // opencode.json are reflected without a restart.

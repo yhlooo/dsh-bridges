@@ -167,8 +167,13 @@
 - [x] **codebuddy-code**：`.codebuddy/agents/*.md` + `~/.codebuddy/agents/*.md`
   （同名 frontmatter 集合）。**已实现**（2026-08-15，同 claude；rank
   project-agents(132) < user-agents(137)，项目覆盖用户）。
-- [ ] **codex** `[agents]` 角色、**opencode** `agent` 自定义代理：均已列限制，
+- [x] **codex** `[agents]` 角色、**opencode** `agent` 自定义代理：均已列限制，
   实施时复用同一映射（接缝决策见"先决调研"）。
+  **已实现**（2026-08-16，方案 B 委派规格技能）：codex `[agents.<name>]`
+  （`description` + `config_file` TOML 正文 + `model` 键 →
+  `agentOptions.model`，rank 168）；opencode `agent.<id>`（`subagent`/`all`
+  模式，`prompt` 内联或 `{file:}`、`model`，project 149 / user 159；
+  `primary` 模式跳过）。逐角色工具过滤/权限闸门/`temperature` 记限制。
 
 ## P1 · 高频体验项
 

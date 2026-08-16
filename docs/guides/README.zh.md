@@ -319,6 +319,7 @@ DeepSeek Harness 核心自行加载 `AGENTS.md` 与根目录 `CLAUDE.md`，但�
 - `.opencode/skills` 会**向上**发现：从工作目录走到 git 根（越靠 cwd 越优先，与 opencode 的向上查找一致）；`opencode.json(c)` 的 `skills.paths` 增加额外技能根（相对配置文件解析；`skills.urls` 需要网络，跳过并记限制）。
 - opencode 的 Claude 兼容（`.claude/skills`、`~/.claude/skills`）与 agent 兼容（`.agents/skills`、`~/.agents/skills`）技能根**不重复读取**：`.claude` 资产已由 claude-code 桥接覆盖、`.agents` 资产已由 DeepSeek Harness 自带 filesystem provider 覆盖，重复注册只会产生重复候选。
 - 优先级：项目资产覆盖用户资产；技能覆盖同名命令；JSON 配置命令覆盖同级同名命令文件。同名冲突时 DeepSeek Harness 原生技能永远胜出。
+- 自定义 `agent.<id>` 定义（`subagent` / `all` 模式）成为委派规格技能：`description` 是技能描述，`prompt`（内联字符串或 `{ file: ... }`）成为系统提示正文，`model` 映射到 `agentOptions.model`。`mode: "primary"` 代理是主助手，不桥接。
 - 已存在的资产根目录与 `opencode.json(c)` 文件会被监听；改动无需重启即可生效。
 
 ### AGENTS.md / CLAUDE.md 规则与 instructions 记忆
@@ -353,7 +354,7 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md` 与 `CLAUDE.md`。�
 
 尚未桥接（按子系统记录）：
 
-- **Skills / Commands**：嵌套命令目录（opencode 未记载）、命令模板的 `$ARGUMENTS`/`$1`/`!`command``/`@file` 替换、`agent`/`model`/`subtask` 选项、自定义 agents、`skills.urls`（网络）、`references` 的 git 仓库（网络）。
+- **Skills / Commands**：嵌套命令目录（opencode 未记载）、命令模板的 `$ARGUMENTS`/`$1`/`!`command``/`@file` 替换、`agent`/`model`/`subtask` 选项、`agent.<id>` 的 `mode: "primary"` 代理与逐 agent `permission`/`temperature` 覆盖（subagent 模式代理已桥接为委派规格技能）、`skills.urls`（网络）、`references` 的 git 仓库（网络）。
 - **Memory**：`OPENCODE_CONFIG` / `OPENCODE_CONFIG_DIR` / `OPENCODE_CONFIG_CONTENT` 覆盖、远程 / 托管配置层、配置文件向上查找（项目 `opencode.json` 仅在 cwd 读取；`.opencode/skills` 的向上发现已桥接）、配置里的 `{env:…}`/`{file:…}` 替换。
 - **插件 / 自定义工具**：opencode 的 JavaScript 插件系统（事件 hook 需要 opencode 运行时）与自定义工具没有文件格式层面的桥接面。
 - **运行时 / 模型配置**：`formatter`、`lsp`、`experimental.*`（含已文档化的 `policies`）、自定义 `provider` 定义、`model`/`small_model` 默认——DeepSeek Harness 拥有模型路由、格式化与诊断，这些不在范围内（无文件格式桥接面）。
@@ -377,6 +378,7 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md` 与 `CLAUDE.md`。�
 - DeepSeek Harness 技能名取目录名（必须 kebab-case）。frontmatter 按 agent skills 标准要求 `name`（与目录一致）与 `description`（1,024 字符截断）；不合法的技能丢弃 + 告警。
 - 优先级：项目技能（越靠 cwd 越优先）覆盖用户技能，用户覆盖系统。同名冲突时 DeepSeek Harness 原生技能永远胜出。
 - `config.toml` 里 `[[skills.config]]`（`path` + `enabled = false`）禁用的技能被跳过；相对路径相对配置文件所在 `.codex/` 目录解析。
+- 自定义 `[agents.<name>]` 角色同样成为委派规格技能：角色的 `description` 是技能描述，角色的 `config_file` TOML 内容成为正文，其中的 `model` 键映射到 `agentOptions.model`。
 - 仓库根用 `project_root_markers`（默认 `['.git']`）判定；找不到标记时只检查当前目录，与 Codex 一致。技能根目录与 settings 文件会被监听。
 
 ### AGENTS.md 指令链记忆
@@ -436,5 +438,5 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md`。本桥接在会话
 - **Skills**：`agents/openai.yaml` 元数据（`allow_implicit_invocation`、工具依赖）、插件分发的技能、符号链接的技能目录（桥接经文件系统读取，但不解析符号链接身份）、curated 插件目录。
 - **Memory**：`model_instructions_file`（替换内置指令——不在范围内）、Codex 的 8,000 字符初始列表预算（DeepSeek Harness 有自己的目录预算）。
 - **Hooks**：`PermissionRequest`（DeepSeek Harness 没有"即将请求审批"的接缝）、`PreCompact`/`PostCompact`（无压缩前接缝；`compact` 会话来源会触发 SessionStart hooks 代替）、Codex 的 hook trust 审核流程（`/hooks`——桥接与其他桥接一致、无 trust 闸门运行）、后台 hook 输出在下个安全点投递、`systemMessage`/`suppressOutput` 仅用户通道、`additionalContextLimit` 溢出落盘（桥接按字符截断替代）、插件捆绑与托管 `requirements.toml` hooks、`transcript_path`（桥接没有真实转录文件）、`updatedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）。
-- **Rules / 配置**：`rules/*.rules`（实验性 Starlark DSL）、`notify`、`[agents]` 子代理角色、`requirements.toml`、profile 文件（`--profile`）、插件捆绑的 MCP 服务器（`plugins.<plugin>.mcp_servers`）、未信任项目门禁——仅支持显式 `projects["<path>"].trust_level = "untrusted"` 条目（现在会跳过项目 `.codex/` 层；桥接没有交互式信任流程，未列出的路径仍无条件读取）。
+- **Rules / 配置**：`rules/*.rules`（实验性 Starlark DSL）、`notify`、`[agents.<name>]` 角色在 `description`/`config_file` 之外的选项（逐角色工具过滤、配置文件之外的 `model`、角色的权限闸门）、`requirements.toml`、profile 文件（`--profile`）、插件捆绑的 MCP 服务器（`plugins.<plugin>.mcp_servers`）、未信任项目门禁——仅支持显式 `projects["<path>"].trust_level = "untrusted"` 条目（现在会跳过项目 `.codex/` 层；桥接没有交互式信任流程，未列出的路径仍无条件读取）。
 - **其余配置**：`web_search`/`tools.web_search` 模式、`[features].*` 运行时开关（仅 `features.hooks` 被读取）、`[shell_environment_policy]`（仅作用于桥接自 spawn 的子进程——与 settings `env` 同一接缝）、`[apps]` 连接器、`[memories]`、`[history]`、`tool_output_token_limit`、`file_opener`、`[otel]`、`[desktop]`/`[tui]`、认证/通知/日志键——DeepSeek Harness 拥有这些层；模型/供应商选择（`model`、`review_model`、`model_provider`、`[model_providers]`、`model_reasoning_*`、`model_auto_compact_token_limit*`）为 host-plane，不在范围内。
