@@ -1,0 +1,293 @@
+> 来源: https://cursor.com/llms.txt
+> 抓取日期: 2026-08-16 (UTC)；内容为 Cursor 官方文档原文下载
+
+# Cursor Documentation
+
+## Get Started
+
+- https://cursor.com/docs.md
+- https://cursor.com/docs/get-started/quickstart.md
+- https://cursor.com/docs/models-and-pricing.md
+  - https://cursor.com/docs/cursor-router.md
+  - https://cursor.com/docs/models/claude-sonnet-5.md
+  - https://cursor.com/docs/models/claude-opus-5.md
+  - https://cursor.com/docs/models/claude-fable-5.md
+  - https://cursor.com/docs/models/gemini-3-1-pro.md
+  - https://cursor.com/docs/models/gemini-3-7-flash.md
+  - https://cursor.com/docs/models/gpt-5-6-sol.md
+  - https://cursor.com/docs/models/gpt-5-6-terra.md
+  - https://cursor.com/docs/models/gpt-5-6-luna.md
+  - https://cursor.com/docs/models/grok-4-6.md
+  - https://cursor.com/docs/models/grok-4-5.md
+  - https://cursor.com/docs/models/cursor-composer-2-5.md
+- https://cursor.comhttps://cursor.com/changelog.md
+
+## Agent
+
+- https://cursor.com/docs/agent/overview.md
+- https://cursor.com/docs/agent/agents-window.md
+- https://cursor.com/docs/agent/agent-review.md
+- https://cursor.com/docs/agent/plan-mode.md
+- https://cursor.com/docs/agent/prompting.md
+- https://cursor.com/docs/agent/debug-mode.md
+- https://cursor.com/docs/agent/design-mode.md
+- https://cursor.com/docs/agent/tools/terminal.md
+  - https://cursor.com/docs/agent/tools/browser.md
+  - https://cursor.com/docs/agent/tools/search.md
+  - https://cursor.com/docs/agent/tools/canvas.md
+  - https://cursor.com/docs/configuration/worktrees.md
+- https://cursor.com/docs/agent/security.md
+  - https://cursor.com/docs/agent/security/run-modes.md
+
+## customizing
+
+- https://cursor.com/docs/customize-cursor.md
+- https://cursor.com/docs/plugins.md
+- https://cursor.com/docs/rules.md
+- https://cursor.com/docs/skills.md
+- https://cursor.com/docs/subagents.md
+- https://cursor.com/docs/hooks.md
+- https://cursor.com/docs/mcp.md
+
+## cloud-agents
+
+- https://cursor.com/docs/cloud-agent.md
+- https://cursor.com/docs/cloud-agent/setup.md
+- https://cursor.com/docs/cloud-agent/builds.md
+- https://cursor.com/docs/cloud-agent/capabilities.md
+  - https://cursor.com/docs/cloud-agent/metadata.md
+- https://cursor.com/docs/cloud-agent/best-practices.md
+- https://cursor.com/docs/cloud-agent/automations.md
+- https://cursor.com/docs/bugbot.md
+- https://cursor.com/docs/security-agents.md
+- https://cursor.com/docs/approval-agents.md
+- https://cursor.com/docs/cloud-agent/mobile.md
+- https://cursor.com/docs/cloud-agent/security.md
+  - https://cursor.com/docs/cloud-agent/security-network.md
+  - https://cursor.com/docs/cloud-agent/private-connectivity.md
+  - https://cursor.com/docs/cloud-agent/identity.md
+- https://cursor.com/docs/cloud-agent/settings.md
+- https://cursor.com/docs/cloud-agent/api/endpoints.md
+
+## Integrations
+
+- https://cursor.com/docs/integrations/slack.md
+- https://cursor.com/docs/integrations/microsoft-teams.md
+- https://cursor.com/docs/integrations/jira.md
+- https://cursor.com/docs/integrations/linear.md
+- https://cursor.com/docs/integrations/notion.md
+- https://cursor.com/docs/integrations/github.md
+- https://cursor.com/docs/integrations/gitlab.md
+- https://cursor.com/docs/integrations/azure-devops.md
+- https://cursor.com/docs/integrations/bitbucket.md
+- https://cursor.com/docs/integrations/jetbrains.md
+- https://cursor.com/docs/integrations/xcode.md
+- https://cursor.com/docs/reference/deeplinks.md
+
+## SDK
+
+- https://cursor.com/docs/sdk/typescript.md
+- https://cursor.com/docs/sdk/python.md
+- https://cursor.com/docs/sdk/bridge.md
+- https://cursor.com/docs/sdk/changelog.md
+
+## cli
+
+- https://cursor.com/docs/cli/overview.md
+- https://cursor.com/docs/cli/installation.md
+- https://cursor.com/docs/cli/using.md
+- https://cursor.com/docs/cli/changelog.md
+- https://cursor.com/docs/cli/shell-mode.md
+- https://cursor.com/docs/cli/acp.md
+- https://cursor.com/docs/cli/headless.md
+- https://cursor.com/docs/cli/reference/slash-commands.md
+  - https://cursor.com/docs/cli/reference/parameters.md
+  - https://cursor.com/docs/cli/reference/authentication.md
+  - https://cursor.com/docs/cli/reference/permissions.md
+  - https://cursor.com/docs/cli/reference/configuration.md
+
+## Account
+
+- https://cursor.com/docs/account/teams/setup.md
+  - https://cursor.com/docs/account/teams/pricing.md
+  - https://cursor.com/docs/account/teams/members.md
+  - https://cursor.com/docs/account/teams/sso.md
+  - https://cursor.com/docs/account/teams/dashboard.md
+  - https://cursor.com/docs/account/teams/analytics.md
+- https://cursor.com/docs/enterprise.md
+  - https://cursor.com/docs/enterprise/admin-setup-guide.md
+  - https://cursor.com/docs/enterprise/organizations.md
+  - https://cursor.com/docs/enterprise/organization-groups.md
+  - https://cursor.com/docs/enterprise/identity-and-access-management.md
+    - https://cursor.com/docs/account/teams/scim.md
+  - https://cursor.com/docs/enterprise/privacy-and-data-governance.md
+  - https://cursor.com/docs/enterprise/network-configuration.md
+  - https://cursor.com/docs/enterprise/endpoint-security.md
+  - https://cursor.com/docs/enterprise/llm-safety-and-controls.md
+  - https://cursor.com/docs/enterprise/model-and-integration-management.md
+  - https://cursor.com/docs/account/enterprise/cyber-safeguards.md
+  - https://cursor.com/docs/enterprise/pooled-usage.md
+  - https://cursor.com/docs/enterprise/compliance-and-monitoring.md
+  - https://cursor.com/docs/enterprise/opentelemetry-export.md
+    - https://cursor.com/docs/enterprise/opentelemetry-export/wire.md
+  - https://cursor.com/docs/enterprise/baa.md
+  - https://cursor.com/docs/enterprise/deployment-patterns.md
+  - https://cursor.com/docs/account/enterprise/service-accounts.md
+  - https://cursor.com/docs/account/enterprise/billing-groups.md
+  - https://cursor.com/docs/enterprise/security-hardening.md
+  - https://cursor.com/docs/integrations/cursor-blame.md
+
+# CLI Documentation
+
+## Get Started
+
+- https://cursor.com/docs/cli/overview.md
+- https://cursor.com/docs/cli/installation.md
+- https://cursor.com/docs/cli/using.md
+- https://cursor.com/docs/cli/changelog.md
+- https://cursor.com/docs/cli/shell-mode.md
+- https://cursor.com/docs/cli/acp.md
+
+## Headless
+
+- https://cursor.com/docs/cli/headless.md
+- https://cursor.com/docs/cli/github-actions.md
+
+## Reference
+
+- https://cursor.com/docs/cli/reference/slash-commands.md
+- https://cursor.com/docs/cli/reference/parameters.md
+- https://cursor.com/docs/cli/reference/authentication.md
+- https://cursor.com/docs/cli/reference/permissions.md
+- https://cursor.com/docs/cli/reference/configuration.md
+- https://cursor.com/docs/cli/reference/output-format.md
+- https://cursor.com/docs/cli/reference/terminal-setup.md
+
+# Help Center
+
+## Getting started
+
+- https://cursor.com/help/getting-started/install.md
+- https://cursor.com/help/getting-started/first-project.md
+- https://cursor.com/help/getting-started/build-ai-coding-agent.md
+- https://cursor.com/help/getting-started/migrate-vscode.md
+- https://cursor.com/help/getting-started/migrate-jetbrains.md
+
+## AI features
+
+- https://cursor.com/help/ai-features/agent.md
+- https://cursor.com/help/ai-features/coding-agents.md
+- https://cursor.com/help/ai-features/agentic-coding.md
+- https://cursor.com/help/ai-features/ai-pair-programming.md
+- https://cursor.com/help/ai-features/multi-agent.md
+- https://cursor.com/help/ai-features/side-chats.md
+- https://cursor.com/help/ai-features/conversation-search.md
+- https://cursor.com/help/ai-features/vibe-coding.md
+- https://cursor.com/help/ai-features/plan-mode.md
+- https://cursor.com/help/ai-features/ask-mode.md
+- https://cursor.com/help/ai-features/debug-mode.md
+- https://cursor.com/help/ai-features/tab.md
+- https://cursor.com/help/ai-features/inline-edit.md
+- https://cursor.com/help/ai-features/max-mode.md
+- https://cursor.com/help/ai-features/terminal.md
+- https://cursor.com/help/ai-features/browser.md
+- https://cursor.com/help/ai-features/cloud-agents.md
+- https://cursor.com/help/ai-features/background-agents.md
+- https://cursor.com/help/ai-features/mobile-app.md
+- https://cursor.com/help/ai-features/automations.md
+- https://cursor.com/help/ai-features/shared-transcripts.md
+- https://cursor.com/help/ai-features/bugbot.md
+
+## Customization
+
+- https://cursor.com/help/customization/rules.md
+- https://cursor.com/help/customization/context.md
+- https://cursor.com/help/customization/mcp.md
+- https://cursor.com/help/customization/skills.md
+- https://cursor.com/help/customization/ignore-files.md
+- https://cursor.com/help/customization/extensions.md
+- https://cursor.com/help/customization/plugins.md
+- https://cursor.com/help/customization/keyboard-shortcuts.md
+- https://cursor.com/help/customization/themes.md
+
+## Models and usage
+
+- https://cursor.com/help/models-and-usage/available-models.md
+- https://cursor.com/help/models-and-usage/cursor-router.md
+- https://cursor.com/help/models-and-usage/grok-4-6.md
+- https://cursor.com/help/models-and-usage/grok-4-5.md
+- https://cursor.com/help/models-and-usage/api-keys.md
+- https://cursor.com/help/models-and-usage/usage-limits.md
+- https://cursor.com/help/models-and-usage/token-rate.md
+
+## Security and privacy
+
+- https://cursor.com/help/security-and-privacy/privacy.md
+- https://cursor.com/help/security-and-privacy/regions.md
+- https://cursor.com/help/security-and-privacy/compliance.md
+- https://cursor.com/help/security-and-privacy/sso.md
+- https://cursor.com/help/security-and-privacy/account-compromised.md
+- https://cursor.com/help/security-and-privacy/marketplace-security.md
+
+## Account and billing
+
+- https://cursor.com/help/account-and-billing/pricing.md
+- https://cursor.com/help/account-and-billing/billing.md
+- https://cursor.com/help/account-and-billing/cursor-start.md
+- https://cursor.com/help/account-and-billing/app-store-subscription.md
+- https://cursor.com/help/account-and-billing/teams-setup.md
+- https://cursor.com/help/account-and-billing/teams-management.md
+- https://cursor.com/help/account-and-billing/invoices.md
+- https://cursor.com/help/account-and-billing/overages.md
+- https://cursor.com/help/account-and-billing/bugbot-usage-based-billing.md
+- https://cursor.com/help/account-and-billing/spend-alerts.md
+- https://cursor.com/help/account-and-billing/spend-limits.md
+- https://cursor.com/help/account-and-billing/enterprise.md
+- https://cursor.com/help/account-and-billing/profiles.md
+- https://cursor.com/help/account-and-billing/change-email.md
+- https://cursor.com/help/account-and-billing/payment-issues.md
+- https://cursor.com/help/account-and-billing/payment-not-applied.md
+- https://cursor.com/help/account-and-billing/cancel.md
+- https://cursor.com/help/account-and-billing/refunds.md
+- https://cursor.com/help/account-and-billing/delete-account.md
+- https://cursor.com/help/account-and-billing/referral-program.md
+- https://cursor.com/help/account-and-billing/student-discount.md
+
+## Integrations
+
+- https://cursor.com/help/integrations/git.md
+- https://cursor.com/help/integrations/github-gitlab.md
+- https://cursor.com/help/integrations/cli.md
+- https://cursor.com/help/integrations/third-party.md
+
+## Grok Bot
+
+- https://cursor.com/help/grok-bot/getting-started.md
+- https://cursor.com/help/grok-bot/sign-in.md
+- https://cursor.com/help/grok-bot/mobile.md
+- https://cursor.com/help/grok-bot/plans.md
+- https://cursor.com/help/grok-bot/supergrok-heavy.md
+- https://cursor.com/help/grok-bot/mobile-purchase.md
+- https://cursor.com/help/grok-bot/connect-plugins.md
+- https://cursor.com/help/grok-bot/secrets.md
+- https://cursor.com/help/grok-bot/get-help.md
+
+## Troubleshooting
+
+- https://cursor.com/help/troubleshooting/agent-issues.md
+- https://cursor.com/help/troubleshooting/tab-issues.md
+- https://cursor.com/help/troubleshooting/install-issues.md
+- https://cursor.com/help/troubleshooting/network.md
+- https://cursor.com/help/troubleshooting/extensions.md
+- https://cursor.com/help/troubleshooting/performance.md
+- https://cursor.com/help/troubleshooting/reporting-bugs.md
+
+## Internationalization
+
+All documentation is available in multiple languages. To access a specific language version, prepend the language code to the path. For example:
+
+- Spanish: `https://cursor.com/es/docs/bugbot.md`
+- Japanese: `https://cursor.com/ja/docs/bugbot.md`
+- Simplified Chinese: `https://cursor.com/cn/docs/bugbot.md`
+
+Available languages: cn, ru, ja, pt-BR, es
