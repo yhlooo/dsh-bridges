@@ -101,7 +101,7 @@ export async function collectMemorySections(
   const global = await readOptional(fs, join(userDir, 'AGENTS.md'))
   const globalText = override && override.trim() !== '' ? override : global && global.trim() !== '' ? global : undefined
   if (globalText !== undefined) {
-    sections.push({ kind: 'user', label: `${userDir}/AGENTS.md`, content: globalText })
+    sections.push({ kind: 'user', label: join(userDir, 'AGENTS.md'), content: globalText })
   }
 
   if (cwd) {

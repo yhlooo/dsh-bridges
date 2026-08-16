@@ -47,7 +47,7 @@ async function injectMemory(agent: Agent, logger: BridgeLogger, fs: FsAdapter, c
     const userFile = join(userClaudeDir, 'CLAUDE.md')
     const userText = await readOptional(fs, userFile)
     if (userText !== undefined) {
-      sections.push({ kind: 'user', label: `${userClaudeDir}/CLAUDE.md`, content: userText })
+      sections.push({ kind: 'user', label: userFile, content: userText })
     }
     if (cwd) {
       const projectFile = join(cwd, '.claude', 'CLAUDE.md')

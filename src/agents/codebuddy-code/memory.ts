@@ -99,7 +99,7 @@ export async function collectMemorySections(
   const userFile = join(userCodebuddyDir, 'CODEBUDDY.md')
   const userText = await readOptional(fs, userFile)
   if (userText !== undefined) {
-    sections.push({ kind: 'user', label: `${userCodebuddyDir}/CODEBUDDY.md`, content: userText })
+    sections.push({ kind: 'user', label: userFile, content: userText })
   }
   const userRules = await collectRules(fs, join(userCodebuddyDir, 'rules'), logger)
   for (const rule of userRules) sections.push({ kind: 'user', ...rule })

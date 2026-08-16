@@ -113,10 +113,12 @@ export async function collectMemorySections(
   // enabled — see the README note about overlapping bridges).
   const globalFile = await readOptional(fs, join(userDir, 'AGENTS.md'))
   if (globalFile !== undefined) {
-    sections.push({ kind: 'user', label: `${userDir}/AGENTS.md`, content: globalFile })
+    sections.push({ kind: 'user', label: join(userDir, 'AGENTS.md'), content: globalFile })
   } else if (config.claudeCompat) {
     const fallback = await readOptional(fs, join(expandHome(config.userClaudeDir), 'CLAUDE.md'))
-    if (fallback !== undefined) sections.push({ kind: 'user', label: `${expandHome(config.userClaudeDir)}/CLAUDE.md`, content: fallback })
+    if (fallback !== undefined) {
+      sections.push({ kind: 'user', label: join(expandHome(config.userClaudeDir), 'CLAUDE.md'), content: fallback })
+    }
   }
 
   if (cwd) {
