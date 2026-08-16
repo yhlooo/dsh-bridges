@@ -54,6 +54,12 @@ export interface HookSettings {
   allowedHttpHookUrls?: string[]
   httpHookAllowedEnvVars?: string[]
   permissions?: RawPermissionSettings
+  /** Auto-approve every `.mcp.json` server. */
+  enableAllProjectMcpServers?: boolean
+  /** Individually approved `.mcp.json` server names. */
+  enabledMcpjsonServers?: string[]
+  /** Rejected `.mcp.json` server names. */
+  disabledMcpjsonServers?: string[]
 }
 
 /** One settings file's `permissions` field, before cross-scope merging. */
@@ -74,6 +80,15 @@ export interface LoadedHookSettings {
   allowedHttpHookUrls?: readonly string[]
   httpHookAllowedEnvVars?: readonly string[]
   permissions: MergedPermissionConfig
+  /** `.mcp.json` server approval policy (merged across scopes). */
+  mcpjsonServers: McpJsonServerPolicy
+}
+
+/** Approval policy for project `.mcp.json` servers. */
+export interface McpJsonServerPolicy {
+  enableAll: boolean
+  enabled: ReadonlySet<string>
+  disabled: ReadonlySet<string>
 }
 
 /** Parsed hook JSON output — the object Claude Code reads from stdout/HTTP body. */

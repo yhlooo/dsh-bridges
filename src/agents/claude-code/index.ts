@@ -13,6 +13,7 @@ import type { FsAdapter } from '../../fs-adapter.js'
 import type { BridgeLogger } from '../../util.js'
 import { createHookBridge } from './hooks/bridge.js'
 import { SettingsLoader } from './hooks/settings.js'
+import { createMcpBridge } from './mcp.js'
 import { registerMemory } from './memory.js'
 import { createPermissionEvaluator, createPermissionsOnlyBridge } from './permissions.js'
 import { ClaudeSkillProvider } from './skills/provider.js'
@@ -24,6 +25,8 @@ export interface ClaudeCodeConfig {
   skills?: boolean
   /** Discover `.claude/agents` / `~/.claude/agents` subagent definitions (as skills with a delegation spec). */
   agents?: boolean
+  /** Bridge `.mcp.json` / `~/.claude.json` MCP servers into DSH tools. */
+  mcp?: boolean
   /** Inject `~/.claude/CLAUDE.md` and `.claude/CLAUDE.md` at session start. */
   memory?: boolean
   /** Run Claude Code hooks from settings.json at DSH lifecycle seams. */
@@ -42,12 +45,15 @@ export interface ClaudeCodeConfig {
   maxHookOutputChars?: number
   /** Cap on the rendered CLAUDE.md memory block, in characters. */
   memoryMaxBytes?: number
+  /** Per-tool-call timeout for bridged MCP servers (ms). */
+  mcpToolCallTimeoutMs?: number
 }
 
 export const CLAUDE_CODE_DEFAULTS: Required<ClaudeCodeConfig> = {
   enabled: true,
   skills: true,
   agents: true,
+  mcp: true,
   memory: true,
   hooks: true,
   permissions: true,
@@ -57,6 +63,7 @@ export const CLAUDE_CODE_DEFAULTS: Required<ClaudeCodeConfig> = {
   userPromptHookTimeoutMs: 30_000,
   maxHookOutputChars: 10_000,
   memoryMaxBytes: 32_768,
+  mcpToolCallTimeoutMs: 120_000,
 }
 
 /** Register every Claude Code bridge piece on the shared plugin context. */
@@ -80,6 +87,11 @@ export function registerClaudeCodeBridge(ctx: Context, logger: BridgeLogger, fs:
 
   if (resolved.memory) {
     registerMemory(ctx, logger, fs, { userClaudeDir: resolved.userClaudeDir, maxBytes: resolved.memoryMaxBytes })
+  }
+
+  if (resolved.mcp) {
+    const mcpLoader = new SettingsLoader(logger, fs, { userClaudeDir: resolved.userClaudeDir })
+    createMcpBridge(ctx, logger, fs, { userClaudeDir: resolved.userClaudeDir, toolCallTimeoutMs: resolved.mcpToolCallTimeoutMs }, mcpLoader)
   }
 
   if (resolved.hooks || resolved.permissions) {
