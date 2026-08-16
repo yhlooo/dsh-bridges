@@ -52,14 +52,20 @@ export class ClaudeMcpManager {
     settingsLoader: SettingsLoader,
   ) {
     const userFile = join(dirname(expandHome(config.userClaudeDir)), '.claude.json')
-    const normalize = (name: string, entry: Record<string, unknown>) => normalizeClaudeStyleEntry(name, entry, 'claude', config.toolCallTimeoutMs)
+    const normalize = (name: string, entry: Record<string, unknown>, baseEnv?: Readonly<Record<string, string>>) =>
+      normalizeClaudeStyleEntry(name, entry, 'claude', config.toolCallTimeoutMs, baseEnv)
     const options: McpBridgeOptions = {
       prefix: 'claude',
       toolCallTimeoutMs: config.toolCallTimeoutMs,
-      readServers: async (cwd) => ({
-        user: await readJsonServerFiles(fs, logger, [userFile], normalize),
-        project: await readJsonServerFiles(fs, logger, [join(cwd, '.mcp.json')], normalize),
-      }),
+      readServers: async (cwd) => {
+        // settings.json `env` applies to every session and subprocess Claude
+        // Code spawns; the bridge merges it under MCP server child env.
+        const env = (await settingsLoader.load(cwd)).env
+        return {
+          user: await readJsonServerFiles(fs, logger, [userFile], (name, entry) => normalize(name, entry, env)),
+          project: await readJsonServerFiles(fs, logger, [join(cwd, '.mcp.json')], (name, entry) => normalize(name, entry, env)),
+        }
+      },
       readPolicy: async (cwd) => (await settingsLoader.load(cwd)).mcpjsonServers,
       watchFiles: (cwd) => [userFile, join(cwd, '.mcp.json')],
     }

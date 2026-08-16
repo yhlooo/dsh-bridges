@@ -215,7 +215,13 @@ export function expandEnvReferences(value: string): string {
  * Claude-Code-shaped entry normalizer: `command`/`args`/`env`/`cwd` for stdio,
  * or `url` (+ optional `type: "http"`/`"sse"`, `headers`) for HTTP transport.
  */
-export function normalizeClaudeStyleEntry(name: string, entry: Record<string, unknown>, prefix: string, toolCallTimeoutMs: number): DesiredServer | undefined {
+export function normalizeClaudeStyleEntry(
+  name: string,
+  entry: Record<string, unknown>,
+  prefix: string,
+  toolCallTimeoutMs: number,
+  baseEnv?: Readonly<Record<string, string>>,
+): DesiredServer | undefined {
   const serverName = sanitizeServerName(name, prefix)
   if (serverName === undefined) return undefined
   const base = { serverName, toolCallTimeoutMs, failOnStartupError: true as const }
@@ -232,7 +238,7 @@ export function normalizeClaudeStyleEntry(name: string, entry: Record<string, un
   }
   if (typeof entry['command'] === 'string' && entry['command'].trim() !== '') {
     const args = Array.isArray(entry['args']) ? entry['args'].filter((arg): arg is string => typeof arg === 'string') : []
-    const env: Record<string, string> = {}
+    const env: Record<string, string> = { ...(baseEnv ?? {}) }
     if (isPlainObject(entry['env'])) {
       for (const [key, value] of Object.entries(entry['env'])) {
         if (typeof value === 'string') env[key] = expandEnvReferences(value)

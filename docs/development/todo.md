@@ -186,13 +186,18 @@
 - [x] **opencode**：`.opencode/skills` 向上走到 git root 的发现（monorepo 子目录
   下影响大）。**已实现**（2026-08-15）：provider 从 cwd 走到 git 根，
   每层 `.opencode/skills` 以同 rank 注册，越靠 cwd 候选越靠前。
-- [ ] **claude-code / codebuddy-code**：settings `env` 会话级注入（codebuddy 当前
+- [x] **claude-code / codebuddy-code**：settings `env` 会话级注入（codebuddy 当前
   只作用于 hook 子进程；claude 完全未读）。依赖"先决调研-会话 shell env 接缝"。
-- [ ] **codex**：`approvals_reviewer`（user/auto_review）、`[auto_review].policy`、
+  **已实现可行部分**（2026-08-15）：settings `env` 已作用于 ①hook 子进程
+  （两工具）②桥接自 spawn 的 MCP 服务器子进程（本次补上）。模型侧 bash
+  工具无法注入（无接缝）——记限制 + 核心支持候选。
+- [x] **codex**：`approvals_reviewer`（user/auto_review）、`[auto_review].policy`、
   `guardian_policy_config`——随 P0.2 审批体系一起设计。
-- [ ] **文档**：插件非 skills 组件补进各工具 Limitations（claude：agents / MCP /
+  **决策**（2026-08-15）：DeepSeek Harness 没有"审查子代理审批流"接缝，
+  无法实施 → 记限制（guides 已写明），无实施计划。
+- [x] **文档**：插件非 skills 组件补进各工具 Limitations（claude：agents / MCP /
   hooks / output-styles；codebuddy：commands / agents / `.mcp.json` / `.lsp.json` /
-  settings / `bin`；codex：插件 MCP）。
+  settings / `bin`；codex：插件 MCP）。**已补**（2026-08-15，guides 中英两版）。
 
 ## P2 · 低优先级
 
