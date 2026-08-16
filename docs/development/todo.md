@@ -176,12 +176,16 @@
 - [x] **codex**：`developer_instructions`（会话注入，与 AGENTS.md 链同接缝）。
   **已实现**（2026-08-15）：settings 解析（最具体层生效），memory 桥在
   AGENTS.md 链之前注入（与上游顺序一致）。
-- [ ] **opencode**：`references` / 旧 `reference` 配置——本地 `path` → 注入或注册
+- [x] **opencode**：`references` / 旧 `reference` 配置——本地 `path` → 注入或注册
   资源根；git `repository` → 网络，沿用"远程 instructions 不抓取"策略记限制。
-- [ ] **opencode**：`skills.paths` / `skills.urls` 配置键（paths → 并入技能发现根；
-  urls → 网络，同上记限制）。
-- [ ] **opencode**：`.opencode/skills` 向上走到 git root 的发现（monorepo 子目录
-  下影响大）。
+  **已实现**（2026-08-15）：`src/agents/opencode/references.ts` 会话开始
+  注入本地引用（`@alias` → 路径 + 描述）；git 仓库引用跳过 + 告警。
+- [x] **opencode**：`skills.paths` / `skills.urls` 配置键（paths → 并入技能发现根；
+  urls → 网络，同上记限制）。**已实现**（2026-08-15）：settings 解析
+  `skills.paths`（相对配置文件解析），provider 以 rank 146 根注册。
+- [x] **opencode**：`.opencode/skills` 向上走到 git root 的发现（monorepo 子目录
+  下影响大）。**已实现**（2026-08-15）：provider 从 cwd 走到 git 根，
+  每层 `.opencode/skills` 以同 rank 注册，越靠 cwd 候选越靠前。
 - [ ] **claude-code / codebuddy-code**：settings `env` 会话级注入（codebuddy 当前
   只作用于 hook 子进程；claude 完全未读）。依赖"先决调研-会话 shell env 接缝"。
 - [ ] **codex**：`approvals_reviewer`（user/auto_review）、`[auto_review].policy`、

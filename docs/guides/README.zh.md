@@ -187,25 +187,7 @@ DeepSeek Harness 没有命名 subagent 注册表——技能指示模型按上�
 - 项目 `.mcp.json` 服务器在上游需要审批（`enableAllProjectMcpServers` / `enabledMcpjsonServers`）；未审批的项目服务器跳过 + 告警（而不是静默连接），`disabledMcpjsonServers` 一律跳过——与 Claude Code 的"审批后才连接"行为一致。
 - 启动失败一律放行（告警 + 跳过该服务器）。服务器名加命名空间（`claude__<name>`，净化到 `[A-Za-z0-9_-]`、上限 32 字符）。
 
-### 限制### MCP 服务器
-
-把 CodeBuddy Code 的 MCP 服务器桥接为 DeepSeek Harness 工具。读取 `~/.codebuddy/.mcp.json`（以及废弃的 `~/.codebuddy/mcp.json`、遗留的 `~/.codebuddy.json`）与 `<cwd>/.mcp.json`（及废弃的 `<cwd>/mcp.json`）——同名时项目覆盖用户。每个服务器动态实例化一个 `@deepseek-ai/dsh-mcp-client` 插件，工具注册为 `mcp__codebuddy__<server>__<tool>`；会话开始与配置文件变更时对齐。stdio 条目（`command`/`args`/`env`/`cwd`）映射 stdio 传输；带 `url` 的 `type: "http"`/`"sse"` 条目映射 streamable-http（`${VAR}` 环境引用展开）。项目服务器遵循审批设置（`enableAllProjectMcpServers` / `enabledMcpjsonServers` / `disabledMcpjsonServers`）——未审批的跳过 + 告警；启动失败一律放行。`strictMcpConfig`（针对 agent frontmatter MCP 的闸门）在此无对应物，记录为限制。
-
-### 限制### MCP 服务器
-
-把 Codex 的 `[mcp_servers.<id>]` 表（来自每个生效配置层；每个 id 以最具体层为准）桥接为 DeepSeek Harness 工具（`mcp__codex__<server>__<tool>`）。`url` 条目映射 streamable-http 传输（`http_headers` + `bearer_token_env_var` 提供的 Bearer 令牌）；`command` 条目映射 stdio（`args`、`env`、从进程环境白名单取值的 `env_vars`、`cwd`）。`enabled = false` 跳过该服务器；启动失败一律放行（告警）。未桥接（记录为限制）：`auth`（oauth/chatgpt 凭据流程）、`scopes`、`enabled_tools`/`disabled_tools` 与逐工具审批模式、`required` 语义（required 服务器启动失败仍仅告警）、Codex 的项目信任门禁（项目 `[mcp_servers]` 无条件连接，由 DeepSeek Harness 工具审批栈把关）。
-
-### 限制### MCP 服务器
-
-把 opencode 的 `mcp` 配置（`opencode.json(c)`，项目按名覆盖全局）桥接为 DeepSeek Harness 工具（`mcp__opencode__<server>__<tool>`）。`type: "local"` 条目把 `command`（数组：可执行文件 + 参数，opencode 格式）与 `environment` 映射到 stdio 传输；`type: "remote"` 条目把 `url`（+ 可选 `headers`）映射到 streamable-http。`enabled: false` 跳过该服务器；启动失败一律放行。远程服务器的 OAuth 凭据流程没有 DeepSeek Harness 接缝，记录为限制。
-
-### 限制### 限制### Subagents（自定义子代理）
-
-读取 `.codebuddy/agents/*.md` 与 `~/.codebuddy/agents/*.md`（项目覆盖用户，与 CodeBuddy 技能一致），把每个自定义 subagent 定义注册为以 frontmatter `name` 命名的技能（`description` 必填、kebab-case 校验）。技能正文 = 上游系统提示原文 + 委派规格：`name` → 技能名与 `label`、正文 → `persona`、`tools` → `toolFilter.allow`、`disallowedTools` → `toolFilter.deny`（工具名翻译；无法翻译的条目丢弃 + 告警）、`model`（`inherit`/`default` 除外）→ `agentOptions.model`、`maxTurns` → `maxDepth`（近似映射）。
-
-未桥接（记录为限制）：`permissionMode`、`skills`、`mcpServers`、`hooks`、`memory`（及 `agent-memory` 目录）、`background`、`effort`、`initialPrompt`；DeepSeek Harness 没有命名 subagent 注册表，技能指示模型内联委派。
-
-### 限制### 限制
+### 限制
 
 尚未桥接（按子系统记录）：
 
@@ -287,6 +269,16 @@ DeepSeek Harness 核心自行加载 `AGENTS.md` 与根目录 `CLAUDE.md`，但�
 
 未桥接（记录为限制）：`permissions.defaultMode`、`disableBypassPermissionsMode`、`disableAutoMode`、`subagentPermissionMode` 读取但不生效——DeepSeek Harness 拥有自己的审批模式；`autoMode` 自然语言分类器无对应物；CodeBuddy Code 内置的受保护路径 / 灾难命令保护不复制（由 DeepSeek Harness 自己的沙箱与审批承担）；项目 allow 规则无 CodeBuddy Code 的信任分层门禁（桥接没有信任状态）。
 
+### MCP 服务器
+
+把 CodeBuddy Code 的 MCP 服务器桥接为 DeepSeek Harness 工具。读取 `~/.codebuddy/.mcp.json`（以及废弃的 `~/.codebuddy/mcp.json`、遗留的 `~/.codebuddy.json`）与 `<cwd>/.mcp.json`（及废弃的 `<cwd>/mcp.json`）——同名时项目覆盖用户。每个服务器动态实例化一个 `@deepseek-ai/dsh-mcp-client` 插件，工具注册为 `mcp__codebuddy__<server>__<tool>`；会话开始与配置文件变更时对齐。stdio 条目（`command`/`args`/`env`/`cwd`）映射 stdio 传输；带 `url` 的 `type: "http"`/`"sse"` 条目映射 streamable-http（`${VAR}` 环境引用展开）。项目服务器遵循审批设置（`enableAllProjectMcpServers` / `enabledMcpjsonServers` / `disabledMcpjsonServers`）——未审批的跳过 + 告警；启动失败一律放行。`strictMcpConfig`（针对 agent frontmatter MCP 的闸门）在此无对应物，记录为限制。
+
+### Subagents（自定义子代理）
+
+读取 `.codebuddy/agents/*.md` 与 `~/.codebuddy/agents/*.md`（项目覆盖用户，与 CodeBuddy 技能一致），把每个自定义 subagent 定义注册为以 frontmatter `name` 命名的技能（`description` 必填、kebab-case 校验）。技能正文 = 上游系统提示原文 + 委派规格：`name` → 技能名与 `label`、正文 → `persona`、`tools` → `toolFilter.allow`、`disallowedTools` → `toolFilter.deny`（工具名翻译；无法翻译的条目丢弃 + 告警）、`model`（`inherit`/`default` 除外）→ `agentOptions.model`、`maxTurns` → `maxDepth`（近似映射）。
+
+未桥接（记录为限制）：`permissionMode`、`skills`、`mcpServers`、`hooks`、`memory`（及 `agent-memory` 目录）、`background`、`effort`、`initialPrompt`；DeepSeek Harness 没有命名 subagent 注册表，技能指示模型内联委派。
+
 ### 限制
 
 尚未桥接（按子系统记录）：
@@ -315,6 +307,7 @@ DeepSeek Harness 核心自行加载 `AGENTS.md` 与根目录 `CLAUDE.md`，但�
 - DeepSeek Harness 技能名取目录名 / 文件名，且必须是合法的 opencode 名（`^[a-z0-9]+(-[a-z0-9]+)*$`，小写字母数字 + 单连字符）；不合法则跳过 + 告警。
 - 技能 frontmatter 按 opencode 校验：`name`（必须与目录名一致）与 `description`（1–1,024 字符，超出截断）为必填；缺失或 name 不匹配即丢弃 + 告警，与 opencode 的排查规则一致。`metadata`（字符串到字符串）透传；`license`/`compatibility` 忽略。
 - 命令正文即提示词模板；frontmatter `description`（缺省回退正文首段）作为技能描述。`agent`、`model`、`subtask` 不桥接（DeepSeek Harness 没有按命令路由 agent 的机制）。
+- `.opencode/skills` 会**向上**发现：从工作目录走到 git 根（越靠 cwd 越优先，与 opencode 的向上查找一致）；`opencode.json(c)` 的 `skills.paths` 增加额外技能根（相对配置文件解析；`skills.urls` 需要网络，跳过并记限制）。
 - opencode 的 Claude 兼容（`.claude/skills`、`~/.claude/skills`）与 agent 兼容（`.agents/skills`、`~/.agents/skills`）技能根**不重复读取**：`.claude` 资产已由 claude-code 桥接覆盖、`.agents` 资产已由 DeepSeek Harness 自带 filesystem provider 覆盖，重复注册只会产生重复候选。
 - 优先级：项目资产覆盖用户资产；技能覆盖同名命令；JSON 配置命令覆盖同级同名命令文件。同名冲突时 DeepSeek Harness 原生技能永远胜出。
 - 已存在的资产根目录与 `opencode.json(c)` 文件会被监听；改动无需重启即可生效。
@@ -326,6 +319,7 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md` 与 `CLAUDE.md`。�
 - `~/.config/opencode/AGENTS.md`（全局规则；缺失时回退 `~/.claude/CLAUDE.md`，与 opencode 一致）
 - 从工作目录向上到 git 根最近的一个 `AGENTS.md`，缺失时回退最近的 `CLAUDE.md`（每类先匹配先胜）；cwd 层的 `AGENTS.md`/`CLAUDE.md` 是 DeepSeek Harness 已加载的文件，跳过
 - `opencode.json(c)` 的 `instructions` 条目：本地文件路径与 `*`/`**` glob（相对配置文件目录解析；远程 URL 跳过，桥接不做网络抓取）
+- `opencode.json(c)` 的本地 `references`：`@alias` → 解析后的绝对路径 + 描述，按 opencode 在 agent 上下文里公示引用的方式注入；git `repository` 引用需要克隆，跳过 + 告警（同样的不抓取策略）
 
 预算 32 KiB：超限先丢弃全部用户级、再截断最具体的项目级。
 
@@ -342,12 +336,16 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md` 与 `CLAUDE.md`。�
 
 未桥接（记录为限制）：`doom_loop`（重复调用检测无接缝）、`webfetch`（无 URL 抓取工具）、`lsp`（无 LSP 工具）、已废弃的 `tools` 布尔配置、按 agent 的权限覆盖（`agent.<name>.permission`——DeepSeek Harness 会话没有 opencode agent 身份）。
 
+### MCP 服务器
+
+把 opencode 的 `mcp` 配置（`opencode.json(c)`，项目按名覆盖全局）桥接为 DeepSeek Harness 工具（`mcp__opencode__<server>__<tool>`）。`type: "local"` 条目把 `command`（数组：可执行文件 + 参数，opencode 格式）与 `environment` 映射到 stdio 传输；`type: "remote"` 条目把 `url`（+ 可选 `headers`）映射到 streamable-http。`enabled: false` 跳过该服务器；启动失败一律放行。远程服务器的 OAuth 凭据流程没有 DeepSeek Harness 接缝，记录为限制。
+
 ### 限制
 
 尚未桥接（按子系统记录）：
 
-- **Skills / Commands**：嵌套命令目录（opencode 未记载）、命令模板的 `$ARGUMENTS`/`$1`/`!`command``/`@file` 替换、`agent`/`model`/`subtask` 选项、自定义 agents。
-- **Memory**：`OPENCODE_CONFIG` / `OPENCODE_CONFIG_DIR` / `OPENCODE_CONFIG_CONTENT` 覆盖、远程 / 托管配置层、配置文件向上查找（项目 `opencode.json` 仅在 cwd 读取）、配置里的 `{env:…}`/`{file:…}` 替换。
+- **Skills / Commands**：嵌套命令目录（opencode 未记载）、命令模板的 `$ARGUMENTS`/`$1`/`!`command``/`@file` 替换、`agent`/`model`/`subtask` 选项、自定义 agents、`skills.urls`（网络）、`references` 的 git 仓库（网络）。
+- **Memory**：`OPENCODE_CONFIG` / `OPENCODE_CONFIG_DIR` / `OPENCODE_CONFIG_CONTENT` 覆盖、远程 / 托管配置层、配置文件向上查找（项目 `opencode.json` 仅在 cwd 读取；`.opencode/skills` 的向上发现已桥接）、配置里的 `{env:…}`/`{file:…}` 替换。
 - **插件 / 自定义工具**：opencode 的 JavaScript 插件系统（事件 hook 需要 opencode 运行时）与自定义工具没有文件格式层面的桥接面。
 - **重叠提示**：若同时开启 `claudeCode.memory`，`~/.claude/CLAUDE.md` 回退可能被注入两次（每个桥接各一次）；关闭其一或接受重复块。
 
@@ -415,6 +413,10 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md`。本桥接在会话
 - **只有显式配置的值才生效**：Codex 自身的默认值（read-only 沙箱、`untrusted` 审批）不会覆盖 DeepSeek Harness 部署的策略。
 
 未桥接（记录为限制）：`[sandbox_workspace_write]` 的 `writable_roots` / `network_access` / `exclude_tmpdir_env_var` / `exclude_slash_tmp`（DeepSeek Harness 会话没有逐会话可写根覆盖）、自定义权限档案的文件系统/网络规则表、`approvals_reviewer` / `[auto_review]` guardian 策略、granular 逐项审批开关。
+
+### MCP 服务器
+
+把 Codex 的 `[mcp_servers.<id>]` 表（来自每个生效配置层；每个 id 以最具体层为准）桥接为 DeepSeek Harness 工具（`mcp__codex__<server>__<tool>`）。`url` 条目映射 streamable-http 传输（`http_headers` + `bearer_token_env_var` 提供的 Bearer 令牌）；`command` 条目映射 stdio（`args`、`env`、从进程环境白名单取值的 `env_vars`、`cwd`）。`enabled = false` 跳过该服务器；启动失败一律放行（告警）。未桥接（记录为限制）：`auth`（oauth/chatgpt 凭据流程）、`scopes`、`enabled_tools`/`disabled_tools` 与逐工具审批模式、`required` 语义（required 服务器启动失败仍仅告警）、Codex 的项目信任门禁（项目 `[mcp_servers]` 无条件连接，由 DeepSeek Harness 工具审批栈把关）。
 
 ### 限制
 
