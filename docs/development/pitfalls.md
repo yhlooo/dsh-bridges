@@ -259,3 +259,50 @@ guides 映射表与 dsh-integration-surface.md 三处。
 **正确写法**：`disable-model-invocation` 非法值 → 告警 + 视为 false；name
 缺省回退目录/文件名（源码确认）；仅缺 description 与 YAML 损坏跳过。BOM 容忍
 在 splitFrontmatter 里做（对抗语料覆盖）。
+
+## 31. 新工具的"宽松/严格"要按各自上游逐条对齐，别沿用上一家的习惯
+
+**现象**：三连发 pi / gemini-cli / cursor 时，习惯性地把 pi 的宽松语义
+（name 可异于目录名、非法布尔仅告警）套到 cursor 上，cursor 技能
+frontmatter 测试按"回退目录名"写——但 Cursor 上游要求 name **必须等于**
+目录名（fail closed）；反向也成立：gemini 的"应与目录名一致"是软约束、
+policy-engine.md 的 tier 示例数字与表格 off-by-one，照抄文档示例会错。
+
+**原因**：三个工具都实现 Agent Skills 标准，但容忍度不同：pi 显式宽松
+（"warning about most violations but remaining lenient"）、gemini 文档
+模糊（"should match"）、cursor 显式严格（"must use the .mdc extension"、
+name 必填且等于目录名）。调研报告的措辞强度（must/should/未说明）就是
+实现语义。
+
+**正确写法**：每个新工具在 `skills/parse.ts` 的头部注释里写明"哪条来自
+上游哪个措辞、宽松还是 fail-closed"；cursor 用 name 必须等于目录名（
+fail closed），pi 用回退（宽松），gemini 用回退 + warn。同名冲突同理：
+pi = 先发现者胜（源码确认）、gemini = 工作区层覆盖用户层（rank 表达）、
+cursor = 项目 > 用户（rank 表达）。
+
+## 32. Cursor 的 `.cursor/rules` 以仓库根为锚，matcher 是包含匹配
+
+**现象**：cursor 记忆测试在 cwd=子目录的 fixture 下读不到规则（实现用
+cwd/.cursor/rules），而 hooks 测试里 `matcher: "curl|wget"` 对命令
+`wget https://x` 不命中（实现用了全串锚定）。
+
+**原因**：Cursor 的项目资产统一锚定工作区根（`.cursor/rules` 在仓库根），
+不是 cwd；hooks 的 beforeShellExecution matcher 文档明说"when the command
+**contains** curl"——是包含语义，与 claude 的工具名全匹配语义不同。
+
+**正确写法**：rules 目录用 `findRepositoryRoot(cwd)` 求仓库根后 join；
+matcher 用非锚定正则（工具名单词自然全匹配、命令文本自然包含）。两处
+都已在 guides 映射表中写明，避免后来者再踩。
+
+## 33. gemini policy 引擎的优先级公式与文档示例冲突时以表格+公式为准
+
+**现象**：policy-engine.md 正文公式写 `final = tier_base + priority/1000`、
+表格写 User tier = 4，但文档示例又出现 `User policy → 3.100`——照示例
+实现会让用户层规则与工作区层同优先级，求值结果不可预期。
+
+**原因**：上游文档自相矛盾（调研报告已标注"实现前须以源码核对"）；本例
+以公式 + 表格为准（Default=1、Extension=2、Workspace=3（上游禁用）、
+User=4、Admin=5），工作区层因此也不读（上游 issue #18186）。
+
+**正确写法**：实现注释引用"公式 + 表格"作为权威，guides 权限小节写明
+"以表格+公式为准"；契约测试直接钉住 `final = 4 + priority/1000` 的行为。
