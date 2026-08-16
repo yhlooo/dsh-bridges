@@ -20,9 +20,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import SkillRegistry from '@deepseek-ai/dsh-skill'
-import type { Agent, SessionStartSource } from '@deepseek-ai/dsh-agent'
+import type { Agent, PreStepDecision, SessionStartSource } from '@deepseek-ai/dsh-agent'
 import type { UserMessage } from '@deepseek-ai/dsh-llm'
-import type { PreToolDecision, ToolExecution } from '@deepseek-ai/dsh-tools'
+import type { PostToolDecision, PreToolDecision, ToolExecution, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 import * as bridges from '../src/index.js'
 import type { BridgesConfig } from '../src/index.js'
 
@@ -63,23 +63,25 @@ export interface BootOptions {
 export async function bootHarness(options: BootOptions): Promise<Harness> {
   const ctx = new Context()
   await ctx.plugin(SkillRegistry)
+  const claudeDefaults = {
+    enabled: true,
+    skills: true,
+    memory: true,
+    hooks: true,
+    userClaudeDir: options.userClaudeDir,
+    watch: false,
+    hookTimeoutMs: 5000,
+    userPromptHookTimeoutMs: 5000,
+    maxHookOutputChars: 10_000,
+    memoryMaxBytes: 32_768,
+  }
   const config: BridgesConfig = {
-    claudeCode: {
-      enabled: true,
-      skills: true,
-      memory: true,
-      hooks: true,
-      userClaudeDir: options.userClaudeDir,
-      watch: false,
-      hookTimeoutMs: 5000,
-      userPromptHookTimeoutMs: 5000,
-      maxHookOutputChars: 10_000,
-      memoryMaxBytes: 32_768,
-    },
-    codebuddyCode: { enabled: false },
-    opencode: { enabled: false },
-    codex: { enabled: false },
-    ...options.config,
+    // Per-tool merge so a scenario can override one field (e.g. hookTimeoutMs)
+    // without losing the isolation defaults.
+    claudeCode: { ...claudeDefaults, ...options.config?.claudeCode },
+    codebuddyCode: { enabled: false, ...options.config?.codebuddyCode },
+    opencode: { enabled: false, ...options.config?.opencode },
+    codex: { enabled: false, ...options.config?.codex },
   }
   await ctx.plugin(bridges, config)
   const agent = new E2eAgent()
@@ -101,6 +103,23 @@ export function sessionStart(harness: Harness, source: SessionStartSource = 'sta
 /** Dispatch `tools/pre-execute` with the host's default allow decision as the innermost `next`. */
 export function preToolUse(harness: Harness, exec: ToolExecution): Promise<PreToolDecision> {
   return harness.ctx.waterfall('tools/pre-execute', exec, async () => ({ kind: 'allow' }))
+}
+
+/** Dispatch `agent/pre-step` with the original messages as the host's default enter decision. */
+export function preStep(harness: Harness, messages: UserMessage[]): Promise<PreStepDecision> {
+  const payload = {
+    agent: harness.agent as unknown as Agent,
+    messages,
+    turn: 1,
+    step: 1,
+    signal: new AbortController().signal,
+  }
+  return harness.ctx.waterfall('agent/pre-step', payload, async () => ({ kind: 'enter', messages }))
+}
+
+/** Dispatch `tools/post-execute` with the host's default accept decision as the innermost `next`. */
+export function postToolUse(harness: Harness, exec: ToolExecution, result: ToolExecutionResult): Promise<PostToolDecision> {
+  return harness.ctx.waterfall('tools/post-execute', exec, result, async () => ({ kind: 'accept' }))
 }
 
 /** Poll until `probe` resolves to a defined value or the timeout elapses. */
@@ -130,5 +149,20 @@ export async function tempUserDir(): Promise<{ dir: string; cleanup(): Promise<v
   return {
     dir,
     cleanup: () => rm(dir, { recursive: true, force: true }),
+  }
+}
+
+/** Minimal `ToolExecution` stand-in for a `bash` call, as the registry would hand it to the waterfall. */
+export function bashExec(harness: Harness, command: string): ToolExecution {
+  const callId = 'call-1' as import('@deepseek-ai/dsh-llm').CallId
+  return {
+    callId,
+    rootCallId: callId,
+    name: 'bash',
+    arguments: { command },
+    agent: harness.agent as never,
+    signal: new AbortController().signal,
+    // Registry-assigned identity; the bridge reads it only as an opaque value.
+    token: Symbol('e2e-token') as import('@deepseek-ai/dsh-tools').ToolExecutionToken,
   }
 }

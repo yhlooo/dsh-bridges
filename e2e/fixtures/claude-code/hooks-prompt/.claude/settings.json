@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "printf 'blocked by prompt policy' >&2; exit 2"
+          }
+        ]
+      }
+    ]
+  }
+}

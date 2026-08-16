@@ -13,21 +13,7 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { bootHarness, fixtureCopy, preToolUse, tempUserDir, waitFor } from './harness.js'
-
-function bashExec(harness: Awaited<ReturnType<typeof bootHarness>>, command: string) {
-  const callId = 'call-1' as import('@deepseek-ai/dsh-llm').CallId
-  return {
-    callId,
-    rootCallId: callId,
-    name: 'bash',
-    arguments: { command },
-    agent: harness.agent as never,
-    signal: new AbortController().signal,
-    // Registry-assigned identity; the bridge reads it only as an opaque value.
-    token: Symbol('e2e-token') as import('@deepseek-ai/dsh-tools').ToolExecutionToken,
-  }
-}
+import { bashExec, bootHarness, fixtureCopy, preToolUse, tempUserDir, waitFor } from './harness.js'
 
 describe('e2e: claude-code PreToolUse hook blocking', () => {
   it('runs the real hook, feeds it the translated payload, and denies on exit 2', async () => {
