@@ -232,10 +232,10 @@
   已记限制）。
 - [x] **gemini-cli 命名空间命令**：`dir:name` 命令（`commands/git/commit.toml`
   → `/git:commit`）——已按 claude-code / codebuddy-code 同款 `:` → `-` 转写为
-  `group-name`（2026-08-16，commit 待补）。
+  `group-name`（2026-08-16，commit 7c01ff2）。
 - [x] **codebuddy-code 嵌套资产**：嵌套 commands 与嵌套 skills
   （`skills/pathto/skill/SKILL.md` → 技能 `pathto:skill`）——已按 claude-code
-  同款 `:` → `-` 转写为 `group-name`（2026-08-16，commit 待补）。
+  同款 `:` → `-` 转写为 `group-name`（2026-08-16，commit 3110789）。
 - [ ] **gemini-cli JIT 上下文加载**：工具访问目录时发现的 GEMINI.md 无法
   静态注入——核心支持候选（fs 观察钩子）（2026-08-16，gemini 桥接遗留）。
 - [ ] **gemini-cli extensions**：`gemini-extension.json` 打包的
