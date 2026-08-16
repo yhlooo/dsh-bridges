@@ -226,6 +226,17 @@
   `curl pi.dev/install | bash`，GitHub releases），`scripts/upstream-probe.mjs`
   目前只支持 `npm i -g <pkg>@<pin>`——需为探针脚本增加下载安装模式后再把
   pi 加入 `scripts/upstream-tools.json`（2026-08-16，pi 桥接遗留）。
+- [ ] **gemini-cli 工作区策略层**：上游 `.gemini/policies/` 因 issue #18186
+  禁用，桥接同样不读；上游修复后补上（2026-08-16，gemini 桥接遗留，guides
+  已记限制）。
+- [ ] **gemini-cli 命名空间命令**：`dir:name` 命令目前跳过（非 kebab-case）；
+  评估 `dir-name` 映射或核心命名放宽（2026-08-16，gemini 桥接遗留，guides
+  已记限制）。
+- [ ] **gemini-cli JIT 上下文加载**：工具访问目录时发现的 GEMINI.md 无法
+  静态注入——核心支持候选（fs 观察钩子）（2026-08-16，gemini 桥接遗留）。
+- [ ] **gemini-cli extensions**：`gemini-extension.json` 打包的
+  commands/hooks/skills/agents/MCP/policies/themes（分发机制，同 pi 扩展
+  先例，guides 已记限制）（2026-08-16，gemini 桥接遗留）。
 
 - [x] **claude-code**：Auto memory（`autoMemoryEnabled`/`autoMemoryDirectory`、
   `~/.claude/projects/<project>/memory/`；降级映射 = 注入 MEMORY.md 索引）。

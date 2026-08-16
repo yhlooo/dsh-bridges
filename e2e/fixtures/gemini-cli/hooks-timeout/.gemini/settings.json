@@ -1,0 +1,1 @@
+{"hooks":{"BeforeTool":[{"matcher":"*","hooks":[{"type":"command","command":"node .gemini/hooks-slow.cjs","timeout":100}]}]}}

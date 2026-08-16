@@ -9,7 +9,7 @@ English | [中文](README_CN.md)
 [![npm downloads](https://img.shields.io/npm/dm/dsh-bridges)](https://www.npmjs.com/package/dsh-bridges)
 [![license](https://img.shields.io/github/license/yhlooo/dsh-bridges)](LICENSE)
 
-A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin that bridges projects already configured for Claude Code, CodeBuddy Code, opencode, Codex, or pi into DeepSeek Harness, so existing skills, commands, memory, and hooks continue to work without any migration.
+A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin that bridges projects already configured for Claude Code, CodeBuddy Code, opencode, Codex, pi, or Gemini CLI into DeepSeek Harness, so existing skills, commands, memory, and hooks continue to work without any migration.
 
 ## Quick start
 
@@ -32,7 +32,7 @@ dsh --profile headless "list the skills available in your catalog"
 
 To install from a checkout of this repository, build it first: `pnpm install && pnpm build && dsh plugin --profile <profile-name> add .`
 
-Complete example projects for each agent tool are available in [`examples/`](examples/) (`claude-code`, `codebuddy-code`, `opencode`, `codex`, `pi`); open one as the session workspace to observe its skills, memory, and hooks being bridged.
+Complete example projects for each agent tool are available in [`examples/`](examples/) (`claude-code`, `codebuddy-code`, `opencode`, `codex`, `pi`, `gemini-cli`); open one as the session workspace to observe its skills, memory, and hooks being bridged.
 
 All bridges are enabled by default and can be configured or disabled individually from any patch layer:
 
@@ -67,6 +67,7 @@ Full per-bridge configuration and behavior: [`docs/guides/`](docs/guides/README.
 | opencode | `.opencode/skills`, `.opencode/commands` (+ `~/.config/opencode`), `command.*` in `opencode.json` | `AGENTS.md` (+ `CLAUDE.md` fallback), `instructions` files | — (opencode has no hooks config; its plugin API is out of scope) | `permission` rules from `opencode.json(c)` (families, last-match-wins patterns, `external_directory`, built-in defaults) | `opencode.json(c)` `mcp` servers |
 | Codex | `.agents/skills` (cwd → repo root), `~/.agents/skills`, `/etc/codex/skills` | `~/.codex/AGENTS.md` + per-directory `AGENTS.md` chain | `hooks.json` / `config.toml` hooks (SessionStart, SubagentStart, UserPromptSubmit, Pre/PostToolUse, Stop, SubagentStop, SessionEnd) | `config.toml` approval/sandbox policy (`approval_policy`, `sandbox_mode`, built-in `default_permissions` profiles) | `config.toml` `[mcp_servers]` entries |
 | pi | `.pi/skills`, `.pi/prompts` (+ `~/.pi/agent`; project assets are trust-gated) | `AGENTS.md` / `CLAUDE.md` chain + `APPEND_SYSTEM.md` | — (pi has no hooks config; its extension event bus is out of scope) | — (pi has no permission-rule system) | — (pi has no MCP config) |
+| Gemini CLI | `.gemini/skills`, `.gemini/commands`, `.gemini/agents` (+ `~/.gemini`) | `GEMINI.md` chain (with `@` imports) | `settings.json` hooks (SessionStart, BeforeAgent, AfterAgent, Before/AfterTool, SessionEnd) | `~/.gemini/policies/*.toml` rules (user tier, allow/deny/ask_user) | `settings.json` `mcpServers` |
 
 ## Resources
 
