@@ -77,6 +77,7 @@ Every tool bridge owns a config section under the `bridges` row; a later patch l
       skills: true                    # discover .agents/skills (cwd → repo root), ~/.agents/skills, /etc/codex/skills
       memory: true                    # inject the AGENTS.md instruction chain
       hooks: true                     # run Codex hooks from hooks.json / config.toml
+      permissions: true               # apply approval_policy / sandbox_mode / default_permissions at session start
       userCodexDir: '~/.codex'        # user-level Codex directory (CODEX_HOME wins when set)
       userSkillsDir: '~/.agents/skills'  # user-level skills directory
       watch: true                     # watch skill roots and settings files
@@ -336,6 +337,17 @@ Compatibility details:
 - Timeouts and handler failures fail open (never block the action), as in Codex.
 - Subagents: `SessionStart`/`SessionEnd`/`UserPromptSubmit`/`Stop` run only for the main conversation, `SubagentStart`/`SubagentStop` only for subagents, and `PreToolUse`/`PostToolUse` for both — matching Codex's event scoping.
 
+### Permissions (approval / sandbox policy)
+
+Reads `approval_policy`, `sandbox_mode`, and `default_permissions` from the merged config layers and applies them to each session at `agent/session-start` (main conversations and subagent sessions alike):
+
+- **`sandbox_mode`**: `read-only` / `workspace-write` / `danger-full-access` map 1:1 onto DeepSeek Harness sandbox modes through the session's `sandbox/mode` override.
+- **`approval_policy`**: `never` → DeepSeek Harness approval policy `never` (auto-approve); `untrusted` / `on-request` / deprecated `on-failure` / `granular` → `ask` (Codex prompts for approvals under all of these; DeepSeek Harness's `ask` delegates to the composed answerers). A `granular` table's per-category switches (`sandbox_approval`, `rules`, `mcp_elicitations`, `request_permissions`, `skill_approval`) are logged but not enforced.
+- **`default_permissions`**: applies only when it names a built-in profile — `:read-only`, `:workspace`, `:danger-full-access` — and then wins over `sandbox_mode`, as the profile is Codex's current mechanism. Custom `[permissions.<name>]` profiles are read but not applied.
+- **Only explicitly configured values apply**: Codex's own defaults (read-only sandbox, `untrusted` approvals) never override the DeepSeek Harness deployment's policy.
+
+Not bridged (recorded as limitations): `[sandbox_workspace_write]` `writable_roots` / `network_access` / `exclude_tmpdir_env_var` / `exclude_slash_tmp` (DeepSeek Harness sessions have no per-session writable-roots override), custom permission profiles' filesystem/network rule tables, `approvals_reviewer` / `[auto_review]` guardian policy, and per-category granular approval switches.
+
 ### Limitations
 
 Not bridged yet (documented per subsystem):
@@ -343,4 +355,4 @@ Not bridged yet (documented per subsystem):
 - **Skills**: `agents/openai.yaml` metadata (`allow_implicit_invocation`, tool dependencies), plugin-bundled skills, symlinked skill folders (the bridge reads them through the filesystem, but does not resolve symlink identity), the curated plugin catalog.
 - **Memory**: `model_instructions_file`, Codex's 8,000-character initial-list budget (DeepSeek Harness applies its own catalog budgets).
 - **Hooks**: `PermissionRequest` (no DeepSeek Harness seam for "about to ask for approval"), `PreCompact`/`PostCompact` (no pre-compaction seam; the `compact` session-start source runs SessionStart hooks instead), Codex's hook trust-review flow (`/hooks` — the bridge runs hooks the way the other bridges do, without a trust gate), background-hook output delivery at the next safe point, `systemMessage`/`suppressOutput` user-only channels, `additionalContextLimit` spilling (the bridge caps context by characters instead), plugin-bundled and managed `requirements.toml` hooks, `transcript_path` (the bridge has no transcript file to point at), `updatedInput` rewriting (DeepSeek Harness freezes tool arguments before policy).
-- **Rules / config**: `rules/*.rules` (experimental Python DSL), `notify`, `[agents]` subagent roles, `requirements.toml`, profile files (`--profile`), and untrusted-project gating (project `.codex/` layers are read unconditionally — the bridge has no trust state).
+- **Rules / config**: `rules/*.rules` (experimental Starlark DSL), `notify`, `[agents]` subagent roles, `requirements.toml`, profile files (`--profile`), and untrusted-project gating (project `.codex/` layers are read unconditionally — the bridge has no trust state).

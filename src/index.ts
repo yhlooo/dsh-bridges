@@ -74,6 +74,7 @@ export const Config = z.object({
     skills: z.boolean().default(true),
     memory: z.boolean().default(true),
     hooks: z.boolean().default(true),
+    permissions: z.boolean().default(true),
     userCodexDir: z.string().default('~/.codex'),
     userSkillsDir: z.string().default('~/.agents/skills'),
     watch: z.boolean().default(true),

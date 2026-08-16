@@ -15,3 +15,9 @@ enabled = false
 # Uncomment to disable every hook from the most specific layer:
 # [features]
 # hooks = false
+
+# Approval / sandbox policy bridged to DSH session knobs (see README):
+# sandbox_mode values map 1:1 onto DeepSeek Harness sandbox modes, and
+# approval_policy "never" maps to auto-approve while the rest map to ask.
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"

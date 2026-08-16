@@ -107,10 +107,18 @@
   `composePreToolDecision` 提炼到 `src/permissions/compose.ts`（claude 桥改为
   复用）；`defaultMode`/bypass/autoMode 开关读取不执行、内置受保护路径不
   复制、项目 allow 无信任分层（均记限制）。示例与中英文档已同步。
-- [ ] **codex**：`approval_policy`（含 `granular` 细分）→ dsh 审批策略；
+- [x] **codex**：`approval_policy`（含 `granular` 细分）→ dsh 审批策略；
   `sandbox_mode` + `[sandbox_workspace_write]`（`writable_roots`/`network_access`/
   `exclude_tmpdir_env_var`/`exclude_slash_tmp`）→ dsh 沙箱模式（两者几乎 1:1）；
   `default_permissions` + `[permissions.<name>]` 档案 → dsh 沙箱/审批预设。
+  **已实现**（2026-08-15）：`src/agents/codex/permissions.ts` 在
+  `agent/session-start` 经 `setSandboxMode`/`setApprovalPolicy` 写入会话覆盖
+  （`sandbox_mode` 1:1；`never` → `never`，其余 → `ask`；内置
+  `default_permissions` 档案优先于 `sandbox_mode`）；`on-failure` 废弃别名 →
+  `on-request`。granular 逐项开关、`[sandbox_workspace_write]` 可写根/网络、
+  自定义权限档案读取不执行（均记限制，dsh 无逐会话可写根接缝）。示例与
+  中英文档已同步；新增依赖 `dsh-sandbox-policy`/`dsh-user-approval`
+  （dependencies）+ `dsh-sandbox`（devDependencies，仅类型）。
 - [ ] **opencode**：`permission` 规则（已有"列为限制"文档，复用同一规则引擎实现）。
 
 ### P0.3 自定义 subagent 定义（团队定义整体丢失）
@@ -217,7 +225,7 @@
   codex 的 `config-sample.md`。
 - [ ] codex reference README 与各文件头部：文档源 URL 更新（
   `developers.openai.com/codex` 为当前主源，`learn.chatgpt.com` 保留）。
-- [ ] codex 限制清单笔误：`rules/*.rules` 语言名 "Python DSL" → **Starlark**。
+- [x] codex 限制清单笔误：`rules/*.rules` 语言名 "Python DSL" → **Starlark**。（2026-08-15 已修：guides 中英两版 + reference README）
 - [ ] claude-code hooks 限制逐事件枚举（17 个），替换含糊的 "remaining async
   events"；codebuddy-code 同。
 - [ ] 根 README 两版的 supported-agents 表随 P0–P2 实现结果同步更新。

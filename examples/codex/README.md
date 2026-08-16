@@ -34,6 +34,7 @@ codex 桥接如何将 Codex 的资产桥接进来。
 | `.codex/config.toml` 的 `[[skills.config]]`（`enabled = false`） | 相应技能跳过发现 |
 | `AGENTS.md` / `AGENTS.override.md` 链（仓库根 → cwd） | 会话开始注入（system-reminder 框架）；**仓库根**的普通 `AGENTS.md` 跳过（核心已加载） |
 | `.codex/hooks.json`、`config.toml` 内联 `[hooks]` | 映射到 DeepSeek Harness 生命周期；`timeout` 以秒计、默认 600；`async: true` 后台运行 |
+| `.codex/config.toml` 的 `sandbox_mode` / `approval_policy` / `default_permissions` | 会话开始写入 DeepSeek Harness 会话的沙箱模式 / 审批策略覆盖（示例：`workspace-write` 沙箱 + `on-request` → 审批 `ask`） |
 
 hook 脚本收到的 JSON 里，工具名是 **Codex 的名字**（`Bash`、
 `apply_patch`、`spawn_agent`……，桥接做了翻译），matcher 按 Codex 语义

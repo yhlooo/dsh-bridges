@@ -53,7 +53,27 @@ export interface LoadedCodexSettings {
   projectDocFallbackFilenames: readonly string[]
   /** `project_root_markers` (defaults to `['.git']`). */
   projectRootMarkers: readonly string[]
+  /** `approval_policy` from the most specific layer that defines it. */
+  approvalPolicy?: CodexApprovalPolicy
+  /** `sandbox_mode` from the most specific layer that defines it. */
+  sandboxMode?: CodexSandboxMode
+  /** `default_permissions` profile name from the most specific layer. */
+  defaultPermissionsProfile?: string
 }
+
+/** Codex `approval_policy` values; `on-failure` is deprecated → `on-request`. */
+export type CodexApprovalPolicyKind = 'untrusted' | 'on-request' | 'never' | 'granular'
+
+export interface CodexApprovalPolicy {
+  kind: CodexApprovalPolicyKind
+  /** `{ granular = { … } }` per-category switches; read but not enforced. */
+  granular?: Record<string, boolean>
+}
+
+/** Codex `sandbox_mode` values — the same vocabulary DSH uses. */
+export type CodexSandboxMode = 'read-only' | 'workspace-write' | 'danger-full-access'
+
+export const CODEX_SANDBOX_MODES: readonly CodexSandboxMode[] = ['read-only', 'workspace-write', 'danger-full-access']
 
 interface SettingsSource {
   path: string
@@ -69,6 +89,9 @@ interface RawLayer {
   projectDocMaxBytes?: number
   projectDocFallbackFilenames?: string[]
   projectRootMarkers?: string[]
+  approvalPolicy?: CodexApprovalPolicy
+  sandboxMode?: CodexSandboxMode
+  defaultPermissionsProfile?: string
 }
 
 /**
@@ -236,6 +259,9 @@ export class CodexSettingsLoader {
     let projectDocMaxBytes: number | undefined
     let projectDocFallbackFilenames: string[] | undefined
     let projectRootMarkers: string[] | undefined
+    let approvalPolicy: CodexApprovalPolicy | undefined
+    let sandboxMode: CodexSandboxMode | undefined
+    let defaultPermissionsProfile: string | undefined
 
     for (const layer of layers) {
       for (const [event, groups] of Object.entries(layer.hooks ?? {})) {
@@ -259,6 +285,9 @@ export class CodexSettingsLoader {
       if (layer.projectDocMaxBytes !== undefined) projectDocMaxBytes = layer.projectDocMaxBytes
       if (layer.projectDocFallbackFilenames !== undefined) projectDocFallbackFilenames = layer.projectDocFallbackFilenames
       if (layer.projectRootMarkers !== undefined) projectRootMarkers = layer.projectRootMarkers
+      if (layer.approvalPolicy !== undefined) approvalPolicy = layer.approvalPolicy
+      if (layer.sandboxMode !== undefined) sandboxMode = layer.sandboxMode
+      if (layer.defaultPermissionsProfile !== undefined) defaultPermissionsProfile = layer.defaultPermissionsProfile
     }
 
     return {
@@ -268,6 +297,9 @@ export class CodexSettingsLoader {
       projectDocMaxBytes: projectDocMaxBytes ?? CODEX_DEFAULTS.projectDocMaxBytes,
       projectDocFallbackFilenames: projectDocFallbackFilenames ?? CODEX_DEFAULTS.projectDocFallbackFilenames,
       projectRootMarkers: projectRootMarkers ?? CODEX_DEFAULTS.projectRootMarkers,
+      approvalPolicy,
+      sandboxMode,
+      defaultPermissionsProfile,
     }
   }
 }
@@ -303,7 +335,39 @@ function normalizeLayer(value: Record<string, unknown>, source: SettingsSource, 
   if (Array.isArray(rootMarkers)) {
     layer.projectRootMarkers = rootMarkers.filter((entry): entry is string => typeof entry === 'string' && entry.trim() !== '')
   }
+  const approvalPolicy = readApprovalPolicy(value['approval_policy'], logger, source.path)
+  if (approvalPolicy !== undefined) layer.approvalPolicy = approvalPolicy
+  const sandboxMode = value['sandbox_mode']
+  if (typeof sandboxMode === 'string' && (CODEX_SANDBOX_MODES as readonly string[]).includes(sandboxMode)) {
+    layer.sandboxMode = sandboxMode as CodexSandboxMode
+  } else if (sandboxMode !== undefined) {
+    logger.warn(`codex: ignoring unsupported sandbox_mode in ${source.path}: ${JSON.stringify(sandboxMode)}`)
+  }
+  const defaultPermissions = value['default_permissions']
+  if (typeof defaultPermissions === 'string' && defaultPermissions.trim() !== '') {
+    layer.defaultPermissionsProfile = defaultPermissions
+  }
   return layer
+}
+
+/** Parse `approval_policy`: a known string, or a `{ granular = { … } }` table. */
+function readApprovalPolicy(value: unknown, logger: BridgeLogger, path: string): CodexApprovalPolicy | undefined {
+  if (value === undefined) return undefined
+  if (typeof value === 'string') {
+    if (value === 'on-failure') return { kind: 'on-request' } // deprecated alias
+    if (value === 'untrusted' || value === 'on-request' || value === 'never') return { kind: value }
+    logger.warn(`codex: ignoring unsupported approval_policy in ${path}: ${JSON.stringify(value)}`)
+    return undefined
+  }
+  if (isPlainObject(value) && isPlainObject(value['granular'])) {
+    const granular: Record<string, boolean> = {}
+    for (const [key, entry] of Object.entries(value['granular'])) {
+      if (typeof entry === 'boolean') granular[key] = entry
+    }
+    return { kind: 'granular', granular }
+  }
+  logger.warn(`codex: ignoring malformed approval_policy in ${path}: must be a string or a granular table`)
+  return undefined
 }
 
 /** Normalize the `hooks` table from either representation into matcher groups. */
