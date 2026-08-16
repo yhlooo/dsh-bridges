@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat > .e2e-hook-input.json; printf 'denied by e2e fixture policy' >&2; exit 2"
+          }
+        ]
+      }
+    ]
+  }
+}

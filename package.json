@@ -48,7 +48,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+    "typecheck:e2e": "tsc -p e2e/tsconfig.json",
+    "test": "vitest run --project unit",
+    "test:e2e": "vitest run --project e2e",
+    "test:all": "vitest run",
     "prepack": "pnpm build",
     "prepublishOnly": "pnpm test"
   },

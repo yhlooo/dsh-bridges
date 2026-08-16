@@ -26,7 +26,7 @@
 | L1 纯函数单元 | parse/matcher/decision 逻辑 | 已有 | 补错误路径与边界：空 frontmatter、非法 regex、重复 name |
 | L2 文件系统级 | 技能发现、settings 加载、记忆合并 | 已有雏形 | 用真实磁盘 fixture（见 §3）替代手写 Map |
 | L3 真实进程 | hook 命令执行契约 | 已有雏形 | 补：信号/进程组回收断言、stdin JSON 载荷断言、环境变量、输出上限、Windows 分支 |
-| L4 真实 dsh 集成 | composition + bridges bundle + 假模型 | 待建 | 见 [e2e-testing.md](e2e-testing.md) 环 A |
+| L4 真实 dsh 集成 | composition + bridges bundle + 假模型 | 骨架已建 | 见 [e2e-testing.md](e2e-testing.md) 环 A（首批：技能发现、记忆注入、hook 阻断、teardown 杀进程） |
 | L5 真实上游 CLI 兼容性 | 与真实 claude/codebuddy/opencode/codex 输出对齐 | 待建 | 见 [e2e-testing.md](e2e-testing.md) 环 C |
 | L6 打包冒烟 | `npm pack` 产物安装进干净项目并真实加载 | 待建 | 见 [e2e-testing.md](e2e-testing.md) 环 B |
 | L7 手动 E2E | 发布前逐项过一遍 docs/guides 功能表 | 已有习惯 | 固化为发布清单 |
@@ -49,7 +49,7 @@ L1–L3 是"对不对"的主力防线；L4–L6 守住单元测试覆盖不到�
 
 ## 5. CI 门禁与指标
 
-- 保留现有四连；新增：lint、覆盖率门槛（行覆盖 ≥80%，hook/run、skills/provider 关键路径 ≥90%）、**Windows job**、L4 集成 job、L5 上游兼容性 job。
+- 保留现有四连；新增：lint、覆盖率门槛（行覆盖 ≥80%，hook/run、skills/provider 关键路径 ≥90%）、**Windows job**、L4 集成 job（`typecheck:e2e` + `test:e2e`，已接入）、L5 上游兼容性 job。
 - L5 依赖外部 CLI，做成**固定版本 + weekly scheduled 漂移检测**：上游工具升级或输出格式变化时，CI 在发布前报警，而不是用户先踩到。
 - 指标红线：单元测试 <30s（当前约 2s）、集成 <10min、测试不得残留子进程/句柄（open-handle 检测）。
 
