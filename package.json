@@ -1,7 +1,7 @@
 {
   "name": "dsh-bridges",
-  "version": "0.1.0",
-  "description": "A DeepSeek Harness plugin that bridges projects configured for other coding agents (Claude Code, Codex, opencode, CodeBuddy, …) into DeepSeek Harness",
+  "version": "0.2.0",
+  "description": "A DeepSeek Harness plugin that bridges projects configured for other coding agents (Claude Code, Codex, opencode, CodeBuddy Code, pi, Gemini CLI, Cursor) into DeepSeek Harness",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -18,7 +18,10 @@
     "claude-code",
     "codex",
     "opencode",
-    "codebuddy-code"
+    "codebuddy-code",
+    "pi",
+    "gemini-cli",
+    "cursor"
   ],
   "author": "yhlooo",
   "type": "module",
