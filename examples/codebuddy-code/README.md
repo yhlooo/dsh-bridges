@@ -34,6 +34,7 @@ codebuddy-code 桥接如何将 CodeBuddy Code 的资产桥接进来。
 | `.codebuddy/settings.json` 的 `hooks` | 映射到 DeepSeek Harness 生命周期；`${CODEBUDDY_PROJECT_DIR}` 替换、`once`、60 秒默认超时 |
 | `.codebuddy/settings.json` 的 `permissions` | allow/ask/deny 规则在 `tools/pre-execute` 执行（示例：`Bash(rm -rf *)` 直接拒绝、`Bash(git push:*)` 触发审批、`Read(./README.md)` 免审批放行） |
 | `.codebuddy/agents/<name>.md` | 自定义 subagent 定义注册为技能：正文携带系统提示与委派规格（label / persona / toolFilter / agentOptions.model / maxDepth） |
+| `.mcp.json` 的 `mcpServers` | 每个服务器动态实例化 dsh MCP 客户端，工具注册为 `mcp__codebuddy__<server>__<tool>` |
 
 hook 脚本收到的 JSON 里，工具名是 **CodeBuddy Code 的名字**（`Bash`、
 `Edit`……），matcher 按 CodeBuddy Code 语义（`*`/空匹配全部，其余为正则）

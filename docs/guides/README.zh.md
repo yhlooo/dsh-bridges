@@ -55,6 +55,7 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
       enabled: true                     # CodeBuddy Code 桥接的总开关
       skills: true                      # 发现 .codebuddy / ~/.codebuddy 的 skills 与 commands
       agents: true                       # 发现 .codebuddy / ~/.codebuddy 的 subagent 定义
+      mcp: true                          # 桥接 .mcp.json / ~/.codebuddy/.mcp.json 的 MCP 服务器
       memory: true                      # 注入 CODEBUDDY.md 记忆与始终应用规则
       hooks: true                       # 运行 settings.json 里的 CodeBuddy Code hooks
       permissions: true                 # 执行 settings.json 里的 permissions.allow/ask/deny 规则
@@ -63,28 +64,33 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
       hookTimeoutMs: 60000              # 对齐 CodeBuddy Code 的 60 秒 hook 上限
       maxHookOutputChars: 10000
       memoryMaxBytes: 32768
+      mcpToolCallTimeoutMs: 120000
     opencode:
       enabled: true                     # opencode 桥接的总开关
       skills: true                      # 发现 .opencode / ~/.config/opencode 的 skills 与 commands（含 JSON 命令）
       memory: true                      # 注入 AGENTS.md 规则（含 CLAUDE.md 回退）与 instructions 文件
       permissions: true                 # 执行 opencode.json(c) 里的 permission 规则
+      mcp: true                          # 桥接 opencode.json(c) 的 mcp 服务器
       userOpencodeDir: '~/.config/opencode'  # 用户级 opencode 目录
       userClaudeDir: '~/.claude'        # CLAUDE.md 回退所用的用户级 Claude Code 目录
       claudeCompat: true                # 是否启用 opencode 的 Claude Code 兼容回退
       watch: true                       # 监听资产根目录与配置文件
       memoryMaxBytes: 32768
+      mcpToolCallTimeoutMs: 120000
     codex:
       enabled: true                     # Codex 桥接的总开关
       skills: true                      # 发现 .agents/skills（cwd → 仓库根）、~/.agents/skills、/etc/codex/skills
       memory: true                      # 注入 AGENTS.md 指令链
       hooks: true                       # 运行 hooks.json / config.toml 里的 Codex hooks
       permissions: true                 # 会话开始时应用 approval_policy / sandbox_mode / default_permissions
+      mcp: true                          # 桥接 config.toml 的 [mcp_servers] 条目
       userCodexDir: '~/.codex'          # 用户级 Codex 目录（设置 CODEX_HOME 时以它为准）
       userSkillsDir: '~/.agents/skills' # 用户级 skills 目录
       watch: true                       # 监听技能根目录与 settings 文件
       hookTimeoutMs: 600000             # 对齐 Codex 的 600 秒 hook 默认值
       maxHookOutputChars: 10000
       memoryMaxBytes: 32768
+      mcpToolCallTimeoutMs: 120000
 ```
 
 ## Claude Code 桥接
@@ -172,6 +178,18 @@ DeepSeek Harness 没有命名 subagent 注册表——技能指示模型按上�
 - stdio 条目（`command` / `args` / `env` / `cwd`）映射 stdio 传输；带 `url` 的 `type: "http"` / `"sse"` 条目映射 streamable-http 传输（SSE 降级 + 告警）。`env` 里的 `${VAR}` 从进程环境展开。
 - 项目 `.mcp.json` 服务器在上游需要审批（`enableAllProjectMcpServers` / `enabledMcpjsonServers`）；未审批的项目服务器跳过 + 告警（而不是静默连接），`disabledMcpjsonServers` 一律跳过——与 Claude Code 的"审批后才连接"行为一致。
 - 启动失败一律放行（告警 + 跳过该服务器）。服务器名加命名空间（`claude__<name>`，净化到 `[A-Za-z0-9_-]`、上限 32 字符）。
+
+### 限制### MCP 服务器
+
+把 CodeBuddy Code 的 MCP 服务器桥接为 DeepSeek Harness 工具。读取 `~/.codebuddy/.mcp.json`（以及废弃的 `~/.codebuddy/mcp.json`、遗留的 `~/.codebuddy.json`）与 `<cwd>/.mcp.json`（及废弃的 `<cwd>/mcp.json`）——同名时项目覆盖用户。每个服务器动态实例化一个 `@deepseek-ai/dsh-mcp-client` 插件，工具注册为 `mcp__codebuddy__<server>__<tool>`；会话开始与配置文件变更时对齐。stdio 条目（`command`/`args`/`env`/`cwd`）映射 stdio 传输；带 `url` 的 `type: "http"`/`"sse"` 条目映射 streamable-http（`${VAR}` 环境引用展开）。项目服务器遵循审批设置（`enableAllProjectMcpServers` / `enabledMcpjsonServers` / `disabledMcpjsonServers`）——未审批的跳过 + 告警；启动失败一律放行。`strictMcpConfig`（针对 agent frontmatter MCP 的闸门）在此无对应物，记录为限制。
+
+### 限制### MCP 服务器
+
+把 Codex 的 `[mcp_servers.<id>]` 表（来自每个生效配置层；每个 id 以最具体层为准）桥接为 DeepSeek Harness 工具（`mcp__codex__<server>__<tool>`）。`url` 条目映射 streamable-http 传输（`http_headers` + `bearer_token_env_var` 提供的 Bearer 令牌）；`command` 条目映射 stdio（`args`、`env`、从进程环境白名单取值的 `env_vars`、`cwd`）。`enabled = false` 跳过该服务器；启动失败一律放行（告警）。未桥接（记录为限制）：`auth`（oauth/chatgpt 凭据流程）、`scopes`、`enabled_tools`/`disabled_tools` 与逐工具审批模式、`required` 语义（required 服务器启动失败仍仅告警）、Codex 的项目信任门禁（项目 `[mcp_servers]` 无条件连接，由 DeepSeek Harness 工具审批栈把关）。
+
+### 限制### MCP 服务器
+
+把 opencode 的 `mcp` 配置（`opencode.json(c)`，项目按名覆盖全局）桥接为 DeepSeek Harness 工具（`mcp__opencode__<server>__<tool>`）。`type: "local"` 条目把 `command`（数组：可执行文件 + 参数，opencode 格式）与 `environment` 映射到 stdio 传输；`type: "remote"` 条目把 `url`（+ 可选 `headers`）映射到 streamable-http。`enabled: false` 跳过该服务器；启动失败一律放行。远程服务器的 OAuth 凭据流程没有 DeepSeek Harness 接缝，记录为限制。
 
 ### 限制### 限制### Subagents（自定义子代理）
 
@@ -322,7 +340,7 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md` 与 `CLAUDE.md`。�
 
 - **Skills / Commands**：嵌套命令目录（opencode 未记载）、命令模板的 `$ARGUMENTS`/`$1`/`!`command``/`@file` 替换、`agent`/`model`/`subtask` 选项、自定义 agents。
 - **Memory**：`OPENCODE_CONFIG` / `OPENCODE_CONFIG_DIR` / `OPENCODE_CONFIG_CONTENT` 覆盖、远程 / 托管配置层、配置文件向上查找（项目 `opencode.json` 仅在 cwd 读取）、配置里的 `{env:…}`/`{file:…}` 替换。
-- **插件 / MCP / 自定义工具**：opencode 的 JavaScript 插件系统（事件 hook 需要 opencode 运行时）、MCP 配置、自定义工具——这些没有文件格式层面的桥接面。
+- **插件 / 自定义工具**：opencode 的 JavaScript 插件系统（事件 hook 需要 opencode 运行时）与自定义工具没有文件格式层面的桥接面。
 - **重叠提示**：若同时开启 `claudeCode.memory`，`~/.claude/CLAUDE.md` 回退可能被注入两次（每个桥接各一次）；关闭其一或接受重复块。
 
 ## Codex 桥接

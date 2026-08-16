@@ -59,6 +59,7 @@ Every tool bridge owns a config section under the `bridges` row; a later patch l
       enabled: true                   # master switch for the CodeBuddy Code bridge
       skills: true                    # discover .codebuddy / ~/.codebuddy skills and commands
       agents: true                     # discover .codebuddy / ~/.codebuddy subagent definitions
+      mcp: true                        # bridge .mcp.json / ~/.codebuddy/.mcp.json MCP servers
       memory: true                    # inject CODEBUDDY.md memory and always-apply rules
       hooks: true                     # run CodeBuddy Code hooks from settings.json
       permissions: true               # enforce permissions.allow/ask/deny rules from settings.json
@@ -67,28 +68,33 @@ Every tool bridge owns a config section under the `bridges` row; a later patch l
       hookTimeoutMs: 60000            # CodeBuddy Code's 60-second hook limit
       maxHookOutputChars: 10000
       memoryMaxBytes: 32768
+      mcpToolCallTimeoutMs: 120000
     opencode:
       enabled: true                   # master switch for the opencode bridge
       skills: true                    # discover .opencode / ~/.config/opencode skills and commands (+ JSON commands)
       memory: true                    # inject AGENTS.md rules (with CLAUDE.md fallback) and instructions files
       permissions: true               # enforce permission rules from opencode.json(c)
+      mcp: true                       # bridge opencode.json(c) mcp servers
       userOpencodeDir: '~/.config/opencode'  # user-level opencode directory
       userClaudeDir: '~/.claude'      # user-level Claude Code directory for the CLAUDE.md fallback
       claudeCompat: true              # honor opencode's Claude Code compatibility fallbacks
       watch: true                     # watch asset roots and config files
       memoryMaxBytes: 32768
+      mcpToolCallTimeoutMs: 120000
     codex:
       enabled: true                   # master switch for the Codex bridge
       skills: true                    # discover .agents/skills (cwd → repo root), ~/.agents/skills, /etc/codex/skills
       memory: true                    # inject the AGENTS.md instruction chain
       hooks: true                     # run Codex hooks from hooks.json / config.toml
       permissions: true               # apply approval_policy / sandbox_mode / default_permissions at session start
+      mcp: true                       # bridge config.toml [mcp_servers] entries
       userCodexDir: '~/.codex'        # user-level Codex directory (CODEX_HOME wins when set)
       userSkillsDir: '~/.agents/skills'  # user-level skills directory
       watch: true                     # watch skill roots and settings files
       hookTimeoutMs: 600000           # Codex's 600-second hook default
       maxHookOutputChars: 10000
       memoryMaxBytes: 32768
+      mcpToolCallTimeoutMs: 120000
 ```
 
 ## The Claude Code bridge
@@ -176,6 +182,18 @@ Bridges Claude Code's MCP servers into DeepSeek Harness tools. Reads `~/.claude.
 - stdio entries (`command` / `args` / `env` / `cwd`) map onto the stdio transport; `type: "http"` / `"sse"` entries with a `url` map onto the streamable-http transport (SSE degrades, a warning is logged). `${VAR}` references in `env` expand from the process environment.
 - Project `.mcp.json` servers need approval upstream (`enableAllProjectMcpServers` / `enabledMcpjsonServers`); unapproved project servers are skipped with a warning instead of being silently connected, and `disabledMcpjsonServers` always skips — matching Claude Code's connect-on-approval behavior.
 - Startup failures fail open (warn + skip the server). Server names are namespaced (`claude__<name>`, sanitized to `[A-Za-z0-9_-]`, capped at 32 characters).
+
+### Limitations### MCP servers
+
+Bridges CodeBuddy Code's MCP servers into DeepSeek Harness tools. Reads `~/.codebuddy/.mcp.json` (plus the deprecated `~/.codebuddy/mcp.json` and the legacy `~/.codebuddy.json`) and `<cwd>/.mcp.json` (plus deprecated `<cwd>/mcp.json`) — a project server overrides a same-name user server. Each server becomes one dynamically instantiated `@deepseek-ai/dsh-mcp-client` plugin whose tools register as `mcp__codebuddy__<server>__<tool>`; instances reconcile at session start and when the config files change. stdio entries (`command`/`args`/`env`/`cwd`) map onto the stdio transport; `type: "http"`/`"sse"` entries with a `url` map onto streamable-http (`${VAR}` env references expand). Project servers follow the approval settings (`enableAllProjectMcpServers` / `enabledMcpjsonServers` / `disabledMcpjsonServers`) — unapproved ones are skipped with a warning; startup failures fail open. `strictMcpConfig` (which gates agent-frontmatter MCP) has no equivalent here and is recorded as a limitation.
+
+### Limitations### MCP servers
+
+Bridges Codex's `[mcp_servers.<id>]` tables (from every active config layer; the most specific layer defines each id) into DeepSeek Harness tools as `mcp__codex__<server>__<tool>`. `url` entries map onto the streamable-http transport (with `http_headers` plus a bearer token from `bearer_token_env_var`); `command` entries map onto stdio (`args`, `env`, `env_vars` whitelisted from the process environment, `cwd`). `enabled = false` skips a server; startup failures fail open with a warning. Not bridged (recorded as limitations): `auth` (oauth/chatgpt credential flows), `scopes`, `enabled_tools`/`disabled_tools` and per-tool approval modes, `required` semantics (a required server that fails to start still only warns), and Codex's project-trust gating (project `[mcp_servers]` connect unconditionally; the DeepSeek Harness tool approval stack gates their tools).
+
+### Limitations### MCP servers
+
+Bridges opencode's `mcp` config (`opencode.json(c)`, project overrides global per name) into DeepSeek Harness tools as `mcp__opencode__<server>__<tool>`. `type: "local"` entries map `command` (an array: executable + args, per opencode's format) and `environment` onto the stdio transport; `type: "remote"` entries map `url` (+ optional `headers`) onto streamable-http. `enabled: false` skips a server; startup failures fail open. OAuth credential flows for remote servers have no DeepSeek Harness seam and are recorded as a limitation.
 
 ### Limitations### Limitations### Subagents
 
@@ -326,7 +344,7 @@ Not bridged yet (documented per subsystem):
 
 - **Skills / commands**: nested command directories (not documented by opencode), `$ARGUMENTS`/`$1`/`!`command``/`@file` substitution in command templates, `agent`/`model`/`subtask` command options, custom agents.
 - **Memory**: `OPENCODE_CONFIG` / `OPENCODE_CONFIG_DIR` / `OPENCODE_CONFIG_CONTENT` overrides, remote/managed config layers, upward config-file discovery (project `opencode.json` is read at the cwd only), `{env:…}`/`{file:…}` substitution in config.
-- **Plugins / MCP / tools**: opencode's JavaScript plugin system (its event hooks need the opencode runtime), MCP server config, custom tools — none of these have a file-format bridge here.
+- **Plugins / tools**: opencode's JavaScript plugin system (its event hooks need the opencode runtime) and custom tools have no file-format bridge here.
 - **Overlap note**: when `claudeCode.memory` is also enabled, the `~/.claude/CLAUDE.md` fallback can be injected twice (once per bridge); keep one of the two memory switches off, or accept the duplicate block.
 
 ## The Codex bridge

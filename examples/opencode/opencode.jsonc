@@ -32,5 +32,14 @@
       "*": "ask",
       "docs/**": "allow"
     }
+  },
+
+  // MCP servers bridged as mcp__opencode__<server>__<tool> tools.
+  "mcp": {
+    "filesystem": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "."],
+      "enabled": true
+    }
   }
 }

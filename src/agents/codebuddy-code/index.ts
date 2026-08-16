@@ -13,6 +13,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { FsAdapter } from '../../fs-adapter.js'
 import type { BridgeLogger } from '../../util.js'
 import { createHookBridge } from './hooks/bridge.js'
+import { createMcpBridge } from './mcp.js'
 import { registerMemory } from './memory.js'
 import { createPermissionEvaluator, createPermissionsOnlyBridge } from './permissions.js'
 import { CodebuddySettingsLoader } from './settings.js'
@@ -25,6 +26,8 @@ export interface CodebuddyCodeConfig {
   skills?: boolean
   /** Discover `.codebuddy/agents` / `~/.codebuddy/agents` subagent definitions (as skills with a delegation spec). */
   agents?: boolean
+  /** Bridge `.mcp.json` / `~/.codebuddy/.mcp.json` MCP servers into DSH tools. */
+  mcp?: boolean
   /** Inject CODEBUDDY.md memory and always-apply rules at session start. */
   memory?: boolean
   /** Run CodeBuddy Code hooks from settings.json at DSH lifecycle seams. */
@@ -41,12 +44,15 @@ export interface CodebuddyCodeConfig {
   maxHookOutputChars?: number
   /** Cap on the rendered CODEBUDDY.md memory block, in characters. */
   memoryMaxBytes?: number
+  /** Per-tool-call timeout for bridged MCP servers (ms). */
+  mcpToolCallTimeoutMs?: number
 }
 
 export const CODEBUDDY_CODE_DEFAULTS: Required<CodebuddyCodeConfig> = {
   enabled: true,
   skills: true,
   agents: true,
+  mcp: true,
   memory: true,
   hooks: true,
   permissions: true,
@@ -55,6 +61,7 @@ export const CODEBUDDY_CODE_DEFAULTS: Required<CodebuddyCodeConfig> = {
   hookTimeoutMs: 60_000,
   maxHookOutputChars: 10_000,
   memoryMaxBytes: 32_768,
+  mcpToolCallTimeoutMs: 120_000,
 }
 
 /** Register every CodeBuddy Code bridge piece on the shared plugin context. */
@@ -88,6 +95,11 @@ export function registerCodebuddyCodeBridge(ctx: Context, logger: BridgeLogger, 
 
   if (resolved.memory) {
     registerMemory(ctx, logger, fs, { userCodebuddyDir: resolved.userCodebuddyDir, maxBytes: resolved.memoryMaxBytes })
+  }
+
+  if (resolved.mcp) {
+    const mcpLoader = new CodebuddySettingsLoader(logger, fs, { userCodebuddyDir: resolved.userCodebuddyDir })
+    createMcpBridge(ctx, logger, fs, { userCodebuddyDir: resolved.userCodebuddyDir, toolCallTimeoutMs: resolved.mcpToolCallTimeoutMs }, mcpLoader)
   }
 
   if (resolved.hooks || resolved.permissions) {

@@ -59,6 +59,22 @@ export interface LoadedCodexSettings {
   sandboxMode?: CodexSandboxMode
   /** `default_permissions` profile name from the most specific layer. */
   defaultPermissionsProfile?: string
+  /** `[mcp_servers.<id>]` tables, most-specific layer per id. */
+  mcpServers: ReadonlyMap<string, RawCodexMcpServer>
+}
+
+/** One `[mcp_servers.<id>]` table (raw, unvalidated fields). */
+export interface RawCodexMcpServer {
+  command?: string
+  args?: string[]
+  env?: Record<string, string>
+  env_vars?: string[]
+  cwd?: string
+  url?: string
+  http_headers?: Record<string, string>
+  bearer_token_env_var?: string
+  enabled?: boolean
+  required?: boolean
 }
 
 /** Codex `approval_policy` values; `on-failure` is deprecated → `on-request`. */
@@ -92,6 +108,7 @@ interface RawLayer {
   approvalPolicy?: CodexApprovalPolicy
   sandboxMode?: CodexSandboxMode
   defaultPermissionsProfile?: string
+  mcpServers?: Map<string, RawCodexMcpServer>
 }
 
 /**
@@ -262,6 +279,7 @@ export class CodexSettingsLoader {
     let approvalPolicy: CodexApprovalPolicy | undefined
     let sandboxMode: CodexSandboxMode | undefined
     let defaultPermissionsProfile: string | undefined
+    const mcpServers = new Map<string, RawCodexMcpServer>()
 
     for (const layer of layers) {
       for (const [event, groups] of Object.entries(layer.hooks ?? {})) {
@@ -288,6 +306,9 @@ export class CodexSettingsLoader {
       if (layer.approvalPolicy !== undefined) approvalPolicy = layer.approvalPolicy
       if (layer.sandboxMode !== undefined) sandboxMode = layer.sandboxMode
       if (layer.defaultPermissionsProfile !== undefined) defaultPermissionsProfile = layer.defaultPermissionsProfile
+      if (layer.mcpServers !== undefined) {
+        for (const [id, entry] of layer.mcpServers) mcpServers.set(id, entry)
+      }
     }
 
     return {
@@ -300,6 +321,7 @@ export class CodexSettingsLoader {
       approvalPolicy,
       sandboxMode,
       defaultPermissionsProfile,
+      mcpServers,
     }
   }
 }
@@ -346,6 +368,38 @@ function normalizeLayer(value: Record<string, unknown>, source: SettingsSource, 
   const defaultPermissions = value['default_permissions']
   if (typeof defaultPermissions === 'string' && defaultPermissions.trim() !== '') {
     layer.defaultPermissionsProfile = defaultPermissions
+  }
+  const mcpServers = value['mcp_servers']
+  if (isPlainObject(mcpServers)) {
+    const parsed = new Map<string, RawCodexMcpServer>()
+    for (const [id, entry] of Object.entries(mcpServers)) {
+      if (!isPlainObject(entry)) continue
+      const server: RawCodexMcpServer = {}
+      if (typeof entry['command'] === 'string' && entry['command'].trim() !== '') server.command = entry['command']
+      if (Array.isArray(entry['args'])) server.args = entry['args'].filter((arg): arg is string => typeof arg === 'string')
+      if (isPlainObject(entry['env'])) {
+        const env: Record<string, string> = {}
+        for (const [key, value] of Object.entries(entry['env'])) {
+          if (typeof value === 'string') env[key] = value
+        }
+        server.env = env
+      }
+      if (Array.isArray(entry['env_vars'])) server.env_vars = entry['env_vars'].filter((name): name is string => typeof name === 'string')
+      if (typeof entry['cwd'] === 'string' && entry['cwd'].trim() !== '') server.cwd = entry['cwd']
+      if (typeof entry['url'] === 'string' && entry['url'].trim() !== '') server.url = entry['url']
+      if (isPlainObject(entry['http_headers'])) {
+        const headers: Record<string, string> = {}
+        for (const [key, value] of Object.entries(entry['http_headers'])) {
+          if (typeof value === 'string') headers[key] = value
+        }
+        server.http_headers = headers
+      }
+      if (typeof entry['bearer_token_env_var'] === 'string' && entry['bearer_token_env_var'].trim() !== '') server.bearer_token_env_var = entry['bearer_token_env_var']
+      if (typeof entry['enabled'] === 'boolean') server.enabled = entry['enabled']
+      if (typeof entry['required'] === 'boolean') server.required = entry['required']
+      parsed.set(id, server)
+    }
+    if (parsed.size > 0) layer.mcpServers = parsed
   }
   return layer
 }

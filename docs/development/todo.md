@@ -79,15 +79,28 @@
   对齐 + chokidar 监听重对齐；项目服务器审批语义（未审批跳过 + 告警，
   `disabledMcpjsonServers` 跳过）。`managed-mcp.json`/`local` 作用域/插件
   MCP/`sdk` 条目记限制。示例与中英文档已同步。
-- [ ] **codebuddy-code**：项目 `.mcp.json`（旧 `mcp.json`）、用户
+- [x] **codebuddy-code**：项目 `.mcp.json`（旧 `mcp.json`）、用户
   `~/.codebuddy/.mcp.json`（旧 `~/.codebuddy/mcp.json`、`~/.codebuddy.json`）；
   settings 键 `enableAllProjectMcpServers` / `enabledMcpjsonServers` /
   `disabledMcpjsonServers` / `strictMcpConfig`。
-- [ ] **codex**：`[mcp_servers.<id>]` 全套键——`command`/`args`/`env`/`env_vars`/
+  **已实现**（2026-08-15）：共享 `src/mcp-bridge.ts` 提炼（McpManager +
+  readJsonServerFiles + normalizeClaudeStyleEntry），codebuddy 包装
+  （`codebuddy__` 前缀、审批语义同 claude）；`strictMcpConfig` 仅针对
+  agent frontmatter MCP，记限制。
+- [x] **codex**：`[mcp_servers.<id>]` 全套键——`command`/`args`/`env`/`env_vars`/
   `cwd`/`url`/`auth`/`bearer_token_env_var`/`http_headers`/`enabled`/`required`/
   `startup_timeout_sec`/`tool_timeout_sec`/`enabled_tools`/`disabled_tools`/
   `default_tools_approval_mode`/`tools.<tool>.approval_mode`/`scopes`。
-- [ ] **opencode**：`opencode.json` 的 `mcp` 段（local / remote / OAuth）。
+  **已实现**（2026-08-15）：settings 解析 `[mcp_servers.<id>]` 各层表
+  （最具体层定义 id）；`src/agents/codex/mcp.ts` 归一（url→streamable-http
+  + http_headers + bearer_token_env_var；command→stdio + env + env_vars
+  白名单；`enabled=false` 跳过）。`auth`/`scopes`/`enabled_tools` 等与
+  `required` 语义记限制（无逐工具过滤与凭据流程接缝）。
+- [x] **opencode**：`opencode.json` 的 `mcp` 段（local / remote / OAuth）。
+  **已实现**（2026-08-15）：settings 解析 `mcp` 对象（项目按名覆盖全局）；
+  `src/agents/opencode/mcp.ts` 归一（`type:local` 的 command 数组 +
+  environment → stdio；`type:remote` 的 url + headers → streamable-http；
+  `enabled=false` 跳过）。远程 OAuth 凭据流程记限制。
 - [ ] **插件贡献的 MCP**（claude 插件、codebuddy 插件、codex
   `plugins.<plugin>.mcp_servers.*`）：依赖插件桥接，先按 P1-插件项补文档，实施排后。
 

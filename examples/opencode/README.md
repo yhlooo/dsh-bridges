@@ -36,6 +36,7 @@ opencode 桥接如何将 opencode 的资产桥接进来。
 | `opencode.json(c)` 的 `command.<name>` | JSON 命令；**覆盖**同级同名命令文件 |
 | `opencode.json(c)` 的 `instructions` | 本地文件与 `*`/`**` glob（相对配置文件目录解析），会话开始注入 |
 | `opencode.json(c)` 的 `permission` | allow/ask/deny 规则在 `tools/pre-execute` 执行（示例：`rm *` 拒绝、`git *` 放行、其余 bash 弹审批；`docs/**` 编辑放行） |
+| `opencode.json(c)` 的 `mcp` | 动态实例化 dsh MCP 客户端，工具注册为 `mcp__opencode__<server>__<tool>`（示例：filesystem 本地服务器） |
 | `AGENTS.md`（向上到 git 根最近的） | 注入；cwd 层的 `AGENTS.md` 是 DeepSeek Harness 已加载文件，跳过 |
 
 opencode 没有 hooks 文件格式，因此本示例不含 hooks——它属于 opencode
