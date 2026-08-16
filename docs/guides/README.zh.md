@@ -119,7 +119,15 @@ dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 
 ### CLAUDE.md 记忆
 
-根目录 `CLAUDE.md` 由 DeepSeek Harness 核心自行加载。本桥接在会话开始时额外注入 `~/.claude/CLAUDE.md`（用户级）与 `.claude/CLAUDE.md`（项目级），采用 DeepSeek Harness 工作区指令相同的 system-reminder 框架，预算 32 KiB（超限先丢弃更宽的用户级文件，仍超限则截断项目级文件）。与根目录 `CLAUDE.md` 内容一致的 `.claude/CLAUDE.md` 会被跳过（该内容核心已加载）。
+根目录 `CLAUDE.md` 由 DeepSeek Harness 核心自行加载。本桥接在会话开始时以相同的 system-reminder 框架额外注入，按宽到具体的顺序：
+
+- `~/.claude/CLAUDE.md`（用户级）
+- 工作目录以上每个祖先目录的 `CLAUDE.md` 与 `CLAUDE.local.md`（文件系统根在前，同目录内 `CLAUDE.local.md` 排在 `CLAUDE.md` 之后——Claude Code 的层级顺序）
+- `permissions.additionalDirectories` 下的 `CLAUDE.md` / `CLAUDE.local.md`
+- `.claude/CLAUDE.md`（项目级）
+- cwd 层的 `CLAUDE.local.md`（个人私有、gitignore）
+
+预算 32 KiB：超限先丢弃更宽的用户级文件，再截断最具体的部分。与核心已加载的根 `CLAUDE.md` 内容一致的文件跳过，避免重复块。
 
 ### Hooks
 
@@ -202,7 +210,7 @@ DeepSeek Harness 没有命名 subagent 注册表——技能指示模型按上�
 尚未桥接（按子系统记录）：
 
 - **Skills**：工作区以下的嵌套 `.claude/skills/`（其限定名非 kebab-case）、企业 / managed 技能、插件技能、claude.ai 同步技能；`allowed-tools`/`disallowed-tools`、`model`、`effort`、`context: fork`/`agent`/`background`、`paths`、`shell` 以及正文中的 `$ARGUMENTS` 替换；skill/agent frontmatter 里的 `hooks`。
-- **Memory**：`.claude/rules/*.md`、CLAUDE.md 的 `@import`、嵌套 CLAUDE.md。
+- **Memory**：`.claude/rules/*.md`、CLAUDE.md 的 `@import`、子目录级 `CLAUDE.md` 的懒加载（工作目录以上的层级与 `CLAUDE.local.md` 已桥接）、auto memory。
 - **Hooks**：`mcp_tool`、`prompt`、`agent` 三种 handler 类型；`PreCompact`/`PostCompact`、`Notification`、`SubagentStart`/`SubagentStop`、`PermissionRequest`/`PermissionDenied` 及其余异步事件；`CLAUDE_ENV_FILE`；`asyncRewake`；`updatedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）；`permissionDecision: "defer"`（映射为拒绝）。
 - **MCP**：`managed-mcp.json` 与服务端托管的企业服务器、`~/.claude.json` 内的逐项目 `local` 作用域服务器、插件捆绑的 MCP 服务器、进程内 `type: "sdk"` 条目；SSE 服务器以 streamable-http 传输连接。
 
