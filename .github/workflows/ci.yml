@@ -28,4 +28,5 @@ jobs:
       - run: pnpm build
       - run: pnpm test
       - run: pnpm test:e2e
+      - run: pnpm test:coverage
       - run: npm pack --dry-run
