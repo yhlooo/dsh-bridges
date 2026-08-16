@@ -198,7 +198,7 @@ export function splitCompoundCommand(command: string): string[] {
  */
 function resolveRulePath(specifier: string, context: RuleMatchContext): { absolute: string; projectRelative: boolean } {
   const home = context.home ?? homedir()
-  if (specifier.startsWith('//')) return { absolute: specifier.slice(1), projectRelative: false }
+  if (specifier.startsWith('//')) return { absolute: resolve(specifier.slice(1)), projectRelative: false } // platform-rooted absolute
   if (specifier.startsWith('~/') || specifier === '~') {
     const rest = specifier === '~' ? '' : specifier.slice(2)
     return { absolute: join(home, rest), projectRelative: false }
