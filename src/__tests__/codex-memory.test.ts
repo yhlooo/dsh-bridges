@@ -59,8 +59,8 @@ function collect(files: Map<string, string>, cwd = fx('proj', 'sub')) {
 describe('codex memory', () => {
   it('injects developer_instructions before the AGENTS.md chain', async () => {
     const files = new Map<string, string>([
-      ['/home/u/.codex/AGENTS.md', 'Global guidance.\n'],
-      ['/home/u/.codex/config.toml', 'developer_instructions = "Dev rules first."'],
+      [fx('home', 'u', '.codex', 'AGENTS.md'), 'Global guidance.\n'],
+      [fx('home', 'u', '.codex', 'config.toml'), 'developer_instructions = "Dev rules first."'],
     ])
     const sections = await collect(files)
     expect(sections.map((section) => [section.kind, section.content])).toEqual([

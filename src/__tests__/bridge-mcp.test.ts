@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { fx } from './fixture-paths.js'
+import { sep } from 'node:path'
 import type { BridgeDirEntry, FsAdapter } from '../fs-adapter.js'
 import { CodebuddyMcpManager } from '../agents/codebuddy-code/mcp.js'
 import { CodebuddySettingsLoader } from '../agents/codebuddy-code/settings.js'
@@ -13,18 +15,18 @@ class TreeFs implements FsAdapter {
   constructor(public files: Map<string, string>) {}
 
   private children(path: string): BridgeDirEntry[] {
-    const prefix = path.endsWith('/') ? path : `${path}/`
+    const prefix = path.endsWith(sep) ? path : `${path}${sep}`
     const names = new Set<string>()
     for (const key of this.files.keys()) {
       if (!key.startsWith(prefix)) continue
       const rest = key.slice(prefix.length)
       if (rest === '') continue
-      names.add(rest.split('/')[0]!)
+      names.add(rest.split(sep)[0]!)
     }
     return [...names].map((name) => ({
       name,
-      isDir: [...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}/`)),
-      isFile: ![...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}/`)),
+      isDir: [...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}${sep}`)),
+      isFile: ![...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}${sep}`)),
     }))
   }
 
@@ -66,19 +68,19 @@ describe('codebuddy MCP', () => {
   it('reads user and project mcp files with the approval policy', async () => {
     const pluginCalls: unknown[] = []
     const files = new Map<string, string>([
-      ['/home/u/.codebuddy/.mcp.json', JSON.stringify({ mcpServers: { userdb: { command: 'a' }, shared: { command: 'b' } } })],
-      ['/proj/.mcp.json', JSON.stringify({ mcpServers: { teamdb: { command: 'c' }, shared: { command: 'd' } } })],
-      ['/proj/.codebuddy/settings.json', JSON.stringify({ enabledMcpjsonServers: ['teamdb', 'shared'] })],
+      [fx('home', 'u', '.codebuddy', '.mcp.json'), JSON.stringify({ mcpServers: { userdb: { command: 'a' }, shared: { command: 'b' } } })],
+      [fx('proj', '.mcp.json'), JSON.stringify({ mcpServers: { teamdb: { command: 'c' }, shared: { command: 'd' } } })],
+      [fx('proj', '.codebuddy', 'settings.json'), JSON.stringify({ enabledMcpjsonServers: ['teamdb', 'shared'] })],
     ])
-    const loader = new CodebuddySettingsLoader(silent, new TreeFs(files), { userCodebuddyDir: '/home/u/.codebuddy' })
+    const loader = new CodebuddySettingsLoader(silent, new TreeFs(files), { userCodebuddyDir: fx('home', 'u', '.codebuddy') })
     const manager = new CodebuddyMcpManager(
       fakeCtx(pluginCalls),
       silent,
       new TreeFs(files),
-      { userCodebuddyDir: '/home/u/.codebuddy', toolCallTimeoutMs: 120_000 },
+      { userCodebuddyDir: fx('home', 'u', '.codebuddy'), toolCallTimeoutMs: 120_000 },
       loader,
     )
-    await manager.reconcile('/proj')
+    await manager.reconcile(fx('proj'))
     const names = (pluginCalls as { serverName: string }[]).map((config) => config.serverName).sort()
     expect(names).toEqual(['codebuddy__shared', 'codebuddy__teamdb', 'codebuddy__userdb'])
     const shared = (pluginCalls as { serverName: string; transport: string; command?: string }[]).find(
@@ -92,12 +94,12 @@ describe('codex MCP', () => {
   it('parses [mcp_servers] tables from config.toml layers', async () => {
     const files = new Map<string, string>([
       [
-        '/home/u/.codex/config.toml',
+        fx('home', 'u', '.codex', 'config.toml'),
         '[mcp_servers.github]\ncommand = "gh-mcp"\nargs = ["serve"]\nenv = { TOKEN = "${GH_TOKEN}" }\nenv_vars = ["EXTRA"]\n\n[mcp_servers.remote]\nurl = "https://mcp.example.com"\nhttp_headers = { "X-Key" = "abc" }\nbearer_token_env_var = "MCP_TOKEN"\n\n[mcp_servers.off]\ncommand = "x"\nenabled = false\n',
       ],
     ])
-    const loader = new CodexSettingsLoader(silent, new TreeFs(files), { userCodexDir: '/home/u/.codex' })
-    const settings = await loader.load('/proj')
+    const loader = new CodexSettingsLoader(silent, new TreeFs(files), { userCodexDir: fx('home', 'u', '.codex') })
+    const settings = await loader.load(fx('proj'))
     expect(settings.mcpServers.size).toBe(3)
     expect(settings.mcpServers.get('github')?.command).toBe('gh-mcp')
   })
@@ -119,7 +121,7 @@ describe('opencode MCP', () => {
   it('parses the mcp object with project override', async () => {
     const files = new Map<string, string>([
       [
-        '/home/u/.config/opencode/opencode.json',
+        fx('home', 'u', '.config', 'opencode', 'opencode.json'),
         JSON.stringify({
           mcp: {
             local: { type: 'local', command: ['npx', 'server'] },
@@ -128,10 +130,10 @@ describe('opencode MCP', () => {
           },
         }),
       ],
-      ['/proj/opencode.json', JSON.stringify({ mcp: { local: { type: 'local', command: ['bun', 'server'] } } })],
+      [fx('proj', 'opencode.json'), JSON.stringify({ mcp: { local: { type: 'local', command: ['bun', 'server'] } } })],
     ])
-    const loader = new OpencodeSettingsLoader(silent, new TreeFs(files), { userOpencodeDir: '/home/u/.config/opencode' })
-    const settings = await loader.load('/proj')
+    const loader = new OpencodeSettingsLoader(silent, new TreeFs(files), { userOpencodeDir: fx('home', 'u', '.config', 'opencode') })
+    const settings = await loader.load(fx('proj'))
     expect(settings.mcp.size).toBe(3)
     expect(settings.mcp.get('local')?.command).toEqual(['bun', 'server']) // project override
   })
@@ -149,11 +151,11 @@ describe('opencode MCP manager', () => {
   it('reconciles configured servers', async () => {
     const pluginCalls: unknown[] = []
     const files = new Map<string, string>([
-      ['/proj/opencode.json', JSON.stringify({ mcp: { mydb: { type: 'local', command: ['mdb-server'], enabled: true } } })],
+      [fx('proj', 'opencode.json'), JSON.stringify({ mcp: { mydb: { type: 'local', command: ['mdb-server'], enabled: true } } })],
     ])
-    const loader = new OpencodeSettingsLoader(silent, new TreeFs(files), { userOpencodeDir: '/home/u/.config/opencode' })
+    const loader = new OpencodeSettingsLoader(silent, new TreeFs(files), { userOpencodeDir: fx('home', 'u', '.config', 'opencode') })
     const manager = new OpencodeMcpManager(fakeCtx(pluginCalls), silent, new TreeFs(files), { toolCallTimeoutMs: 120_000 }, loader)
-    await manager.reconcile('/proj')
+    await manager.reconcile(fx('proj'))
     expect((pluginCalls as { serverName: string }[]).map((config) => config.serverName)).toEqual(['opencode__mydb'])
   })
 })

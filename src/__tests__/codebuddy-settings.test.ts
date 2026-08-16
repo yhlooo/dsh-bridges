@@ -137,7 +137,7 @@ describe('CodebuddySettingsLoader', () => {
         JSON.stringify({ permissions: { deny: ['Bash(rm *)', 'Edit(/src/**/*.ts)'] } }),
         JSON.stringify({ permissions: { allow: ['Read(./README.md)'] } }),
       )
-      const { permissions } = await loader.load('/proj')
+      const { permissions } = await loader.load(fx('proj'))
       expect(permissions.deny.map((rule) => rule.raw)).toEqual(['Bash(rm *)', 'Read(./.env)', 'Edit(/src/**/*.ts)'])
       expect(permissions.allow.map((rule) => rule.raw)).toEqual(['Read(./README.md)'])
       expect(permissions.ask).toEqual([])
@@ -148,7 +148,7 @@ describe('CodebuddySettingsLoader', () => {
         JSON.stringify({ permissions: { defaultMode: 'acceptEdits' } }),
         JSON.stringify({ permissions: { defaultMode: 'plan' } }),
       )
-      const { permissions } = await loader.load('/proj')
+      const { permissions } = await loader.load(fx('proj'))
       expect(permissions.defaultMode).toBe('plan')
     })
 
@@ -157,13 +157,13 @@ describe('CodebuddySettingsLoader', () => {
         JSON.stringify({ permissions: { additionalDirectories: ['../docs/'] } }),
         JSON.stringify({ permissions: { additionalDirectories: ['../shared', '../docs/'] } }),
       )
-      const { permissions } = await loader.load('/proj')
+      const { permissions } = await loader.load(fx('proj'))
       expect(permissions.additionalDirectories).toEqual(['../docs/', '../shared'])
     })
 
     it('ignores a malformed permissions field', async () => {
       const loader = makeLoader(JSON.stringify({ permissions: 'nope' }))
-      const { permissions } = await loader.load('/proj')
+      const { permissions } = await loader.load(fx('proj'))
       expect(permissions.deny).toEqual([])
       expect(permissions.allow).toEqual([])
       expect(permissions.ask).toEqual([])

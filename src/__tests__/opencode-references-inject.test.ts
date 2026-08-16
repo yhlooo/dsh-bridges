@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { fx } from './fixture-paths.js'
 import type { BridgeDirEntry, FsAdapter } from '../fs-adapter.js'
 import { registerReferences } from '../agents/opencode/references.js'
 import { OpencodeSettingsLoader } from '../agents/opencode/settings.js'
@@ -35,7 +36,7 @@ describe('registerReferences', () => {
   it('injects local references with alias, path, and description', async () => {
     const files = new Map<string, string>([
       [
-        '/proj/opencode.json',
+        fx('proj', 'opencode.json'),
         JSON.stringify({
           references: {
             docs: { path: '../docs', description: 'Product docs' },
@@ -45,7 +46,7 @@ describe('registerReferences', () => {
         }),
       ],
     ])
-    const loader = new OpencodeSettingsLoader(silent, new TreeFs(files), { userOpencodeDir: '/home/u/.config/opencode' })
+    const loader = new OpencodeSettingsLoader(silent, new TreeFs(files), { userOpencodeDir: fx('home', 'u', '.config', 'opencode') })
     const injected: UserMessage[] = []
     // The module subscribes via ctx.on; capture the listener and drive it.
     let registered: ((payload: never) => void) | undefined
@@ -59,7 +60,7 @@ describe('registerReferences', () => {
       loader,
     )
     const agent = {
-      session: { header: { cwd: '/proj' } },
+      session: { header: { cwd: fx('proj') } },
       inject: (message: UserMessage) => injected.push(message),
     }
     registered?.({ agent, source: 'startup' } as never)
@@ -68,7 +69,7 @@ describe('registerReferences', () => {
     expect(injected).toHaveLength(1)
     const text = textOf(injected[0]!)
     expect(text).toContain('@docs')
-    expect(text).toContain('/docs')
+    expect(text).toContain(fx('docs'))
     expect(text).toContain('Product docs')
     expect(text).not.toContain('@hidden')
     expect(text).not.toContain('@sdk')
@@ -76,8 +77,8 @@ describe('registerReferences', () => {
   })
 
   it('injects nothing when no references are configured', async () => {
-    const files = new Map<string, string>([['/proj/opencode.json', '{}']])
-    const loader = new OpencodeSettingsLoader(silent, new TreeFs(files), { userOpencodeDir: '/home/u/.config/opencode' })
+    const files = new Map<string, string>([[fx('proj', 'opencode.json'), '{}']])
+    const loader = new OpencodeSettingsLoader(silent, new TreeFs(files), { userOpencodeDir: fx('home', 'u', '.config', 'opencode') })
     const injected: UserMessage[] = []
     let registered: ((payload: never) => void) | undefined
     registerReferences(
@@ -89,7 +90,7 @@ describe('registerReferences', () => {
       silent,
       loader,
     )
-    const agent = { session: { header: { cwd: '/proj' } }, inject: (message: UserMessage) => injected.push(message) }
+    const agent = { session: { header: { cwd: fx('proj') } }, inject: (message: UserMessage) => injected.push(message) }
     registered?.({ agent, source: 'startup' } as never)
     await new Promise((resolve) => setTimeout(resolve, 10))
     expect(injected).toHaveLength(0)

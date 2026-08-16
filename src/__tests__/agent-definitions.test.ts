@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { fx } from './fixture-paths.js'
+import { sep } from 'node:path'
 import type { SkillLookupOptions } from '@deepseek-ai/dsh-skill'
 import type { BridgeDirEntry, FsAdapter } from '../fs-adapter.js'
 import { AgentDefinitionError, buildAgentSkillBody, parseAgentDefinition } from '../agent-definitions.js'
@@ -12,18 +14,18 @@ class TreeFs implements FsAdapter {
   constructor(public files: Map<string, string>) {}
 
   private children(path: string): BridgeDirEntry[] {
-    const prefix = path.endsWith('/') ? path : `${path}/`
+    const prefix = path.endsWith(sep) ? path : `${path}${sep}`
     const names = new Set<string>()
     for (const key of this.files.keys()) {
       if (!key.startsWith(prefix)) continue
       const rest = key.slice(prefix.length)
       if (rest === '') continue
-      names.add(rest.split('/')[0]!)
+      names.add(rest.split(sep)[0]!)
     }
     return [...names].map((name) => ({
       name,
-      isDir: [...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}/`)),
-      isFile: ![...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}/`)),
+      isDir: [...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}${sep}`)),
+      isFile: ![...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}${sep}`)),
     }))
   }
 
@@ -49,7 +51,7 @@ class TreeFs implements FsAdapter {
   }
 }
 
-const options: SkillLookupOptions = { cwd: '/proj' }
+const options: SkillLookupOptions = { cwd: fx('proj') }
 
 const AGENT_FILE = `---
 name: code-reviewer
@@ -110,13 +112,16 @@ describe('buildAgentSkillBody', () => {
 describe('ClaudeSkillProvider agent discovery', () => {
   it('lists agent files as skills named by frontmatter name', async () => {
     const files = new Map<string, string>([
-      ['/proj/.claude/agents/reviewer.md', AGENT_FILE],
-      ['/home/u/.claude/agents/personal-agent.md', '---\nname: personal-agent\ndescription: Personal helper\n---\nBe helpful.\n'],
+      [fx('proj', '.claude', 'agents', 'reviewer.md'), AGENT_FILE],
+      [
+        fx('home', 'u', '.claude', 'agents', 'personal-agent.md'),
+        '---\nname: personal-agent\ndescription: Personal helper\n---\nBe helpful.\n',
+      ],
     ])
     const provider = new ClaudeSkillProvider(
       silent,
       new TreeFs(files),
-      { userClaudeDir: '/home/u/.claude', watch: false, agents: true },
+      { userClaudeDir: fx('home', 'u', '.claude'), watch: false, agents: true },
       () => {},
     )
     const result = await provider.list(options)
@@ -131,11 +136,11 @@ describe('ClaudeSkillProvider agent discovery', () => {
   })
 
   it('loads the delegation spec for an agent candidate', async () => {
-    const files = new Map<string, string>([['/proj/.claude/agents/reviewer.md', AGENT_FILE]])
+    const files = new Map<string, string>([[fx('proj', '.claude', 'agents', 'reviewer.md'), AGENT_FILE]])
     const provider = new ClaudeSkillProvider(
       silent,
       new TreeFs(files),
-      { userClaudeDir: '/home/u/.claude', watch: false, agents: true },
+      { userClaudeDir: fx('home', 'u', '.claude'), watch: false, agents: true },
       () => {},
     )
     const result = await provider.list(options)
@@ -149,11 +154,11 @@ describe('ClaudeSkillProvider agent discovery', () => {
 
 describe('CodebuddySkillProvider agent discovery', () => {
   function makeCodebuddyProvider(files: Map<string, string>): CodebuddySkillProvider {
-    const loader = new CodebuddySettingsLoader(silent, new TreeFs(files), { userCodebuddyDir: '/home/u/.codebuddy' })
+    const loader = new CodebuddySettingsLoader(silent, new TreeFs(files), { userCodebuddyDir: fx('home', 'u', '.codebuddy') })
     return new CodebuddySkillProvider(
       silent,
       new TreeFs(files),
-      { userCodebuddyDir: '/home/u/.codebuddy', watch: false, agents: true },
+      { userCodebuddyDir: fx('home', 'u', '.codebuddy'), watch: false, agents: true },
       loader,
       () => {},
     )
@@ -161,8 +166,11 @@ describe('CodebuddySkillProvider agent discovery', () => {
 
   it('lists agent files with project over user precedence', async () => {
     const files = new Map<string, string>([
-      ['/proj/.codebuddy/agents/reviewer.md', AGENT_FILE],
-      ['/home/u/.codebuddy/agents/translator.md', '---\nname: translator\ndescription: Translate UI strings\n---\nTranslate carefully.\n'],
+      [fx('proj', '.codebuddy', 'agents', 'reviewer.md'), AGENT_FILE],
+      [
+        fx('home', 'u', '.codebuddy', 'agents', 'translator.md'),
+        '---\nname: translator\ndescription: Translate UI strings\n---\nTranslate carefully.\n',
+      ],
     ])
     const provider = makeCodebuddyProvider(files)
     const result = await provider.list(options)

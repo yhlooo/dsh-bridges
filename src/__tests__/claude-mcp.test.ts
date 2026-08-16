@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { fx } from './fixture-paths.js'
 import type { BridgeDirEntry, FsAdapter } from '../fs-adapter.js'
 import { ClaudeMcpManager, expandEnvReferences, normalizeServer, sanitizeServerName } from '../agents/claude-code/mcp.js'
 import { SettingsLoader } from '../agents/claude-code/hooks/settings.js'
@@ -78,12 +79,12 @@ describe('ClaudeMcpManager.reconcile', () => {
       },
       on: () => {},
     } as never
-    const settingsLoader = new SettingsLoader(silent, new TreeFs(files), { userClaudeDir: '/home/u/.claude' })
+    const settingsLoader = new SettingsLoader(silent, new TreeFs(files), { userClaudeDir: fx('home', 'u', '.claude') })
     return new ClaudeMcpManager(
       ctx,
       silent,
       new TreeFs(files),
-      { userClaudeDir: '/home/u/.claude', toolCallTimeoutMs: 120_000 },
+      { userClaudeDir: fx('home', 'u', '.claude'), toolCallTimeoutMs: 120_000 },
       settingsLoader,
     )
   }
@@ -91,12 +92,12 @@ describe('ClaudeMcpManager.reconcile', () => {
   it('registers user servers and lets approved project servers override same-name user ones', async () => {
     const pluginCalls: unknown[] = []
     const files = new Map<string, string>([
-      ['/home/u/.claude.json', JSON.stringify({ mcpServers: { shared: { command: 'a' }, useronly: { command: 'b' } } })],
-      ['/proj/.mcp.json', JSON.stringify({ mcpServers: { shared: { command: 'c' } } })],
-      ['/proj/.claude/settings.json', JSON.stringify({ enabledMcpjsonServers: ['shared'] })],
+      [fx('home', 'u', '.claude.json'), JSON.stringify({ mcpServers: { shared: { command: 'a' }, useronly: { command: 'b' } } })],
+      [fx('proj', '.mcp.json'), JSON.stringify({ mcpServers: { shared: { command: 'c' } } })],
+      [fx('proj', '.claude', 'settings.json'), JSON.stringify({ enabledMcpjsonServers: ['shared'] })],
     ])
     const manager = makeManager(files, pluginCalls)
-    await manager.reconcile('/proj')
+    await manager.reconcile(fx('proj'))
     expect(pluginCalls).toHaveLength(2)
     const configs = pluginCalls as { serverName: string }[]
     expect(configs.map((config) => config.serverName).sort()).toEqual(['claude__shared', 'claude__useronly'])
@@ -107,11 +108,11 @@ describe('ClaudeMcpManager.reconcile', () => {
   it('skips unapproved project servers unless enabled', async () => {
     const pluginCalls: unknown[] = []
     const files = new Map<string, string>([
-      ['/proj/.mcp.json', JSON.stringify({ mcpServers: { unapproved: { command: 'a' }, approved: { command: 'b' } } })],
-      ['/proj/.claude/settings.json', JSON.stringify({ enabledMcpjsonServers: ['approved'] })],
+      [fx('proj', '.mcp.json'), JSON.stringify({ mcpServers: { unapproved: { command: 'a' }, approved: { command: 'b' } } })],
+      [fx('proj', '.claude', 'settings.json'), JSON.stringify({ enabledMcpjsonServers: ['approved'] })],
     ])
     const manager = makeManager(files, pluginCalls)
-    await manager.reconcile('/proj')
+    await manager.reconcile(fx('proj'))
     const configs = pluginCalls as { serverName: string }[]
     expect(configs.map((config) => config.serverName)).toEqual(['claude__approved'])
   })
@@ -119,11 +120,11 @@ describe('ClaudeMcpManager.reconcile', () => {
   it('registers all project servers when enableAllProjectMcpServers is set', async () => {
     const pluginCalls: unknown[] = []
     const files = new Map<string, string>([
-      ['/proj/.mcp.json', JSON.stringify({ mcpServers: { any: { command: 'a' } } })],
-      ['/proj/.claude/settings.json', JSON.stringify({ enableAllProjectMcpServers: true })],
+      [fx('proj', '.mcp.json'), JSON.stringify({ mcpServers: { any: { command: 'a' } } })],
+      [fx('proj', '.claude', 'settings.json'), JSON.stringify({ enableAllProjectMcpServers: true })],
     ])
     const manager = makeManager(files, pluginCalls)
-    await manager.reconcile('/proj')
+    await manager.reconcile(fx('proj'))
     expect((pluginCalls as { serverName: string }[]).map((config) => config.serverName)).toEqual(['claude__any'])
   })
 
@@ -131,8 +132,8 @@ describe('ClaudeMcpManager.reconcile', () => {
     const pluginCalls: unknown[] = []
     const disposals: number[] = []
     const files = new Map<string, string>([
-      ['/proj/.mcp.json', JSON.stringify({ mcpServers: { one: { command: 'a' } } })],
-      ['/proj/.claude/settings.json', JSON.stringify({ enableAllProjectMcpServers: true })],
+      [fx('proj', '.mcp.json'), JSON.stringify({ mcpServers: { one: { command: 'a' } } })],
+      [fx('proj', '.claude', 'settings.json'), JSON.stringify({ enableAllProjectMcpServers: true })],
     ])
     const ctx = {
       plugin: (_plugin: unknown, _config: unknown) => {
@@ -151,17 +152,17 @@ describe('ClaudeMcpManager.reconcile', () => {
       },
       on: () => {},
     } as never
-    const settingsLoader = new SettingsLoader(silent, new TreeFs(files), { userClaudeDir: '/home/u/.claude' })
+    const settingsLoader = new SettingsLoader(silent, new TreeFs(files), { userClaudeDir: fx('home', 'u', '.claude') })
     const manager = new ClaudeMcpManager(
       ctx,
       silent,
       new TreeFs(files),
-      { userClaudeDir: '/home/u/.claude', toolCallTimeoutMs: 120_000 },
+      { userClaudeDir: fx('home', 'u', '.claude'), toolCallTimeoutMs: 120_000 },
       settingsLoader,
     )
-    await manager.reconcile('/proj')
-    files.delete('/proj/.mcp.json')
-    await manager.reconcile('/proj')
+    await manager.reconcile(fx('proj'))
+    files.delete(fx('proj', '.mcp.json'))
+    await manager.reconcile(fx('proj'))
     expect(disposals.length).toBe(1)
   })
 })

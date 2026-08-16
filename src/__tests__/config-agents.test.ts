@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { fx } from './fixture-paths.js'
+import { sep } from 'node:path'
 import type { SkillLookupOptions } from '@deepseek-ai/dsh-skill'
 import type { BridgeDirEntry, FsAdapter } from '../fs-adapter.js'
 import { CodexSkillProvider } from '../agents/codex/skills/provider.js'
@@ -12,18 +14,18 @@ class TreeFs implements FsAdapter {
   constructor(public files: Map<string, string>) {}
 
   private children(path: string): BridgeDirEntry[] {
-    const prefix = path.endsWith('/') ? path : `${path}/`
+    const prefix = path.endsWith(sep) ? path : `${path}${sep}`
     const names = new Set<string>()
     for (const key of this.files.keys()) {
       if (!key.startsWith(prefix)) continue
       const rest = key.slice(prefix.length)
       if (rest === '') continue
-      names.add(rest.split('/')[0]!)
+      names.add(rest.split(sep)[0]!)
     }
     return [...names].map((name) => ({
       name,
-      isDir: [...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}/`)),
-      isFile: ![...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}/`)),
+      isDir: [...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}${sep}`)),
+      isFile: ![...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}${sep}`)),
     }))
   }
 
@@ -49,22 +51,22 @@ class TreeFs implements FsAdapter {
   }
 }
 
-const options: SkillLookupOptions = { cwd: '/proj' }
+const options: SkillLookupOptions = { cwd: fx('proj') }
 
 describe('codex [agents] roles', () => {
   it('registers config roles as delegation-spec skills', async () => {
     const files = new Map<string, string>([
       [
-        '/home/u/.codex/config.toml',
+        fx('home', 'u', '.codex', 'config.toml'),
         '[agents.security-review]\ndescription = "Security review role"\nconfig_file = "security-review.toml"\n',
       ],
-      ['/home/u/.codex/security-review.toml', 'model = "gpt-5"\ndeveloper_instructions = "Look for vulnerabilities."'],
+      [fx('home', 'u', '.codex', 'security-review.toml'), 'model = "gpt-5"\ndeveloper_instructions = "Look for vulnerabilities."'],
     ])
-    const loader = new CodexSettingsLoader(silent, new TreeFs(files), { userCodexDir: '/home/u/.codex' })
+    const loader = new CodexSettingsLoader(silent, new TreeFs(files), { userCodexDir: fx('home', 'u', '.codex') })
     const provider = new CodexSkillProvider(
       silent,
       new TreeFs(files),
-      { userCodexDir: '/home/u/.codex', userSkillsDir: '/home/u/.agents/skills', watch: false },
+      { userCodexDir: fx('home', 'u', '.codex'), userSkillsDir: fx('home', 'u', '.agents', 'skills'), watch: false },
       loader,
       () => {},
     )
@@ -84,7 +86,7 @@ describe('opencode agent.<id> definitions', () => {
   it('registers subagent-mode agents as delegation-spec skills and skips primary ones', async () => {
     const files = new Map<string, string>([
       [
-        '/proj/opencode.json',
+        fx('proj', 'opencode.json'),
         JSON.stringify({
           agent: {
             reviewer: { mode: 'subagent', description: 'Reviews code', prompt: 'You review code carefully.', model: 'gpt-5' },
@@ -93,11 +95,11 @@ describe('opencode agent.<id> definitions', () => {
         }),
       ],
     ])
-    const loader = new OpencodeSettingsLoader(silent, new TreeFs(files), { userOpencodeDir: '/home/u/.config/opencode' })
+    const loader = new OpencodeSettingsLoader(silent, new TreeFs(files), { userOpencodeDir: fx('home', 'u', '.config', 'opencode') })
     const provider = new OpencodeSkillProvider(
       silent,
       new TreeFs(files),
-      { userOpencodeDir: '/home/u/.config/opencode', watch: false },
+      { userOpencodeDir: fx('home', 'u', '.config', 'opencode'), watch: false },
       loader,
       () => {},
     )

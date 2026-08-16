@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { fx } from './fixture-paths.js'
 import { evaluateRules } from '../permissions/engine.js'
 import { parseToolSpecifierRule, parseToolSpecifierRules } from '../permissions/parse.js'
 import type { RuleSet } from '../permissions/types.js'
 
-const ctx = { cwd: '/proj', home: '/home/u' }
+const ctx = { cwd: fx('proj'), home: fx('home', 'u') }
 
 function rules(entries: Partial<Record<'allow' | 'ask' | 'deny', string[]>>): RuleSet {
   return {
@@ -55,7 +56,7 @@ describe('evaluateRules', () => {
   })
 
   it('allows when only an allow rule matches', () => {
-    const verdict = evaluateRules(rules({ allow: ['Read'] }), 'Read', { file_path: '/proj/a.txt' }, ctx)
+    const verdict = evaluateRules(rules({ allow: ['Read'] }), 'Read', { file_path: fx('proj', 'a.txt') }, ctx)
     expect(verdict).toEqual({ kind: 'allow' })
   })
 
@@ -78,25 +79,25 @@ describe('evaluateRules', () => {
 
   it('matches Read rules against project-relative paths', () => {
     const set = rules({ deny: ['Read(./.env)', 'Read(./secrets/**)'] })
-    expect(evaluateRules(set, 'Read', { file_path: '/proj/.env' }, ctx)?.kind).toBe('deny')
-    expect(evaluateRules(set, 'Read', { file_path: '/proj/secrets/db/pass.txt' }, ctx)?.kind).toBe('deny')
-    expect(evaluateRules(set, 'Read', { file_path: '/proj/src/a.ts' }, ctx)).toBeUndefined()
+    expect(evaluateRules(set, 'Read', { file_path: fx('proj', '.env') }, ctx)?.kind).toBe('deny')
+    expect(evaluateRules(set, 'Read', { file_path: fx('proj', 'secrets', 'db', 'pass.txt') }, ctx)?.kind).toBe('deny')
+    expect(evaluateRules(set, 'Read', { file_path: fx('proj', 'src', 'a.ts') }, ctx)).toBeUndefined()
   })
 
   it('resolves ~, // and / rule-path forms', () => {
     const home = rules({ deny: ['Read(~/.aws/credentials)'] })
-    expect(evaluateRules(home, 'Read', { file_path: '/home/u/.aws/credentials' }, ctx)?.kind).toBe('deny')
+    expect(evaluateRules(home, 'Read', { file_path: fx('home', 'u', '.aws', 'credentials') }, ctx)?.kind).toBe('deny')
 
     const absolute = rules({ deny: ['Read(//etc/passwd)'] })
-    expect(evaluateRules(absolute, 'Read', { file_path: '/etc/passwd' }, ctx)?.kind).toBe('deny')
+    expect(evaluateRules(absolute, 'Read', { file_path: fx('etc', 'passwd') }, ctx)?.kind).toBe('deny')
 
     const projectRelative = rules({ deny: ['Read(/docs/plan.md)'] })
-    expect(evaluateRules(projectRelative, 'Read', { file_path: '/proj/docs/plan.md' }, ctx)?.kind).toBe('deny')
+    expect(evaluateRules(projectRelative, 'Read', { file_path: fx('proj', 'docs', 'plan.md') }, ctx)?.kind).toBe('deny')
   })
 
   it('also resolves ./ rules against additionalDirectories', () => {
     const set = rules({ deny: ['Read(./notes.txt)'] })
-    const verdict = evaluateRules(set, 'Read', { file_path: '/other/notes.txt' }, { ...ctx, additionalDirectories: ['/other'] })
+    const verdict = evaluateRules(set, 'Read', { file_path: fx('other', 'notes.txt') }, { ...ctx, additionalDirectories: [fx('other')] })
     expect(verdict?.kind).toBe('deny')
   })
 

@@ -9,6 +9,8 @@
  * `todo_write` → `update_plan` (codex) — `todo` matches nothing.
  */
 import { describe, expect, it } from 'vitest'
+import { fx } from './fixture-paths.js'
+import { sep } from 'node:path'
 import type { SkillLookupOptions } from '@deepseek-ai/dsh-skill'
 import type { BridgeDirEntry, FsAdapter } from '../fs-adapter.js'
 import { ClaudeSkillProvider } from '../agents/claude-code/skills/provider.js'
@@ -28,18 +30,18 @@ class TreeFs implements FsAdapter {
   constructor(public files: Map<string, string>) {}
 
   private children(path: string): BridgeDirEntry[] {
-    const prefix = path.endsWith('/') ? path : `${path}/`
+    const prefix = path.endsWith(sep) ? path : `${path}${sep}`
     const names = new Set<string>()
     for (const key of this.files.keys()) {
       if (!key.startsWith(prefix)) continue
       const rest = key.slice(prefix.length)
       if (rest === '') continue
-      names.add(rest.split('/')[0]!)
+      names.add(rest.split(sep)[0]!)
     }
     return [...names].map((name) => ({
       name,
-      isDir: [...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}/`)),
-      isFile: ![...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}/`)),
+      isDir: [...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}${sep}`)),
+      isFile: ![...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}${sep}`)),
     }))
   }
 
@@ -65,7 +67,7 @@ class TreeFs implements FsAdapter {
   }
 }
 
-const options: SkillLookupOptions = { cwd: '/proj' }
+const options: SkillLookupOptions = { cwd: fx('proj') }
 
 async function candidates(provider: { list(options: SkillLookupOptions): Promise<unknown> }): Promise<{ name: string; rank: number }[]> {
   const result = (await provider.list(options)) as { candidates?: { name: string; rank: number }[] } | { name: string; rank: number }[]
@@ -75,17 +77,17 @@ async function candidates(provider: { list(options: SkillLookupOptions): Promise
 describe('rank bands (golden table)', () => {
   it('claude-code ranks stay in 105–120, below the runtime-skill rank', async () => {
     const files = new Map<string, string>([
-      ['/home/u/.claude/skills/u-skill/SKILL.md', '---\ndescription: a\n---\nBody.\n'],
-      ['/home/u/.claude/commands/u-cmd.md', '---\ndescription: a\n---\nBody.\n'],
-      ['/home/u/.claude/agents/u-agent.md', '---\nname: u-agent\ndescription: a\n---\nBody.\n'],
-      ['/proj/.claude/skills/p-skill/SKILL.md', '---\ndescription: a\n---\nBody.\n'],
-      ['/proj/.claude/commands/p-cmd.md', '---\ndescription: a\n---\nBody.\n'],
-      ['/proj/.claude/agents/p-agent.md', '---\nname: p-agent\ndescription: a\n---\nBody.\n'],
+      [fx('home', 'u', '.claude', 'skills', 'u-skill', 'SKILL.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('home', 'u', '.claude', 'commands', 'u-cmd.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('home', 'u', '.claude', 'agents', 'u-agent.md'), '---\nname: u-agent\ndescription: a\n---\nBody.\n'],
+      [fx('proj', '.claude', 'skills', 'p-skill', 'SKILL.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('proj', '.claude', 'commands', 'p-cmd.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('proj', '.claude', 'agents', 'p-agent.md'), '---\nname: p-agent\ndescription: a\n---\nBody.\n'],
     ])
     const provider = new ClaudeSkillProvider(
       silent,
       new TreeFs(files),
-      { userClaudeDir: '/home/u/.claude', watch: false, agents: true },
+      { userClaudeDir: fx('home', 'u', '.claude'), watch: false, agents: true },
       () => {},
     )
     const found = await candidates(provider)
@@ -105,18 +107,18 @@ describe('rank bands (golden table)', () => {
 
   it('codebuddy-code ranks stay in 125–140 with project before user', async () => {
     const files = new Map<string, string>([
-      ['/home/u/.codebuddy/skills/u-skill/SKILL.md', '---\ndescription: a\n---\nBody.\n'],
-      ['/home/u/.codebuddy/commands/u-cmd.md', '---\ndescription: a\n---\nBody.\n'],
-      ['/home/u/.codebuddy/agents/u-agent.md', '---\nname: u-agent\ndescription: a\n---\nBody.\n'],
-      ['/proj/.codebuddy/skills/p-skill/SKILL.md', '---\ndescription: a\n---\nBody.\n'],
-      ['/proj/.codebuddy/commands/p-cmd.md', '---\ndescription: a\n---\nBody.\n'],
-      ['/proj/.codebuddy/agents/p-agent.md', '---\nname: p-agent\ndescription: a\n---\nBody.\n'],
+      [fx('home', 'u', '.codebuddy', 'skills', 'u-skill', 'SKILL.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('home', 'u', '.codebuddy', 'commands', 'u-cmd.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('home', 'u', '.codebuddy', 'agents', 'u-agent.md'), '---\nname: u-agent\ndescription: a\n---\nBody.\n'],
+      [fx('proj', '.codebuddy', 'skills', 'p-skill', 'SKILL.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('proj', '.codebuddy', 'commands', 'p-cmd.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('proj', '.codebuddy', 'agents', 'p-agent.md'), '---\nname: p-agent\ndescription: a\n---\nBody.\n'],
     ])
-    const loader = new CodebuddySettingsLoader(silent, new TreeFs(files), { userCodebuddyDir: '/home/u/.codebuddy' })
+    const loader = new CodebuddySettingsLoader(silent, new TreeFs(files), { userCodebuddyDir: fx('home', 'u', '.codebuddy') })
     const provider = new CodebuddySkillProvider(
       silent,
       new TreeFs(files),
-      { userCodebuddyDir: '/home/u/.codebuddy', watch: false, agents: true },
+      { userCodebuddyDir: fx('home', 'u', '.codebuddy'), watch: false, agents: true },
       loader,
       () => {},
     )
@@ -137,20 +139,20 @@ describe('rank bands (golden table)', () => {
 
   it('opencode ranks stay in 145–160 with project before user', async () => {
     const files = new Map<string, string>([
-      ['/home/u/.config/opencode/skills/u-skill/SKILL.md', '---\nname: u-skill\ndescription: a\n---\nBody.\n'],
-      ['/home/u/.config/opencode/commands/u-cmd.md', '---\ndescription: a\n---\nBody.\n'],
-      ['/proj/.opencode/skills/p-skill/SKILL.md', '---\nname: p-skill\ndescription: a\n---\nBody.\n'],
-      ['/proj/.opencode/commands/p-cmd.md', '---\ndescription: a\n---\nBody.\n'],
+      [fx('home', 'u', '.config', 'opencode', 'skills', 'u-skill', 'SKILL.md'), '---\nname: u-skill\ndescription: a\n---\nBody.\n'],
+      [fx('home', 'u', '.config', 'opencode', 'commands', 'u-cmd.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('proj', '.opencode', 'skills', 'p-skill', 'SKILL.md'), '---\nname: p-skill\ndescription: a\n---\nBody.\n'],
+      [fx('proj', '.opencode', 'commands', 'p-cmd.md'), '---\ndescription: a\n---\nBody.\n'],
       [
-        '/proj/opencode.json',
+        fx('proj', 'opencode.json'),
         JSON.stringify({ command: { jcmd: { template: 'x' } }, agent: { ag: { mode: 'subagent', description: 'a' } } }),
       ],
     ])
-    const loader = new OpencodeSettingsLoader(silent, new TreeFs(files), { userOpencodeDir: '/home/u/.config/opencode' })
+    const loader = new OpencodeSettingsLoader(silent, new TreeFs(files), { userOpencodeDir: fx('home', 'u', '.config', 'opencode') })
     const provider = new OpencodeSkillProvider(
       silent,
       new TreeFs(files),
-      { userOpencodeDir: '/home/u/.config/opencode', watch: false },
+      { userOpencodeDir: fx('home', 'u', '.config', 'opencode'), watch: false },
       loader,
       () => {},
     )
@@ -171,15 +173,15 @@ describe('rank bands (golden table)', () => {
 
   it('codex ranks stay in 165–175 with project < config agents < user < system', async () => {
     const files = new Map<string, string>([
-      ['/home/u/.agents/skills/u-skill/SKILL.md', '---\nname: u-skill\ndescription: a\n---\nBody.\n'],
-      ['/home/u/.codex/config.toml', '[agents.role]\ndescription = "a"\n'],
-      ['/proj/.agents/skills/p-skill/SKILL.md', '---\nname: p-skill\ndescription: a\n---\nBody.\n'],
+      [fx('home', 'u', '.agents', 'skills', 'u-skill', 'SKILL.md'), '---\nname: u-skill\ndescription: a\n---\nBody.\n'],
+      [fx('home', 'u', '.codex', 'config.toml'), '[agents.role]\ndescription = "a"\n'],
+      [fx('proj', '.agents', 'skills', 'p-skill', 'SKILL.md'), '---\nname: p-skill\ndescription: a\n---\nBody.\n'],
     ])
-    const loader = new CodexSettingsLoader(silent, new TreeFs(files), { userCodexDir: '/home/u/.codex' })
+    const loader = new CodexSettingsLoader(silent, new TreeFs(files), { userCodexDir: fx('home', 'u', '.codex') })
     const provider = new CodexSkillProvider(
       silent,
       new TreeFs(files),
-      { userCodexDir: '/home/u/.codex', userSkillsDir: '/home/u/.agents/skills', watch: false },
+      { userCodexDir: fx('home', 'u', '.codex'), userSkillsDir: fx('home', 'u', '.agents', 'skills'), watch: false },
       loader,
       () => {},
     )

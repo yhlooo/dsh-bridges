@@ -57,24 +57,25 @@ const toolHook = { type: 'command', command: 'policy.py', timeout: 30 }
 describe('CodexSettingsLoader', () => {
   it('skips project layers when the working directory is explicitly untrusted', async () => {
     const files = new Map<string, string>([
-      ['/home/u/.codex/config.toml', '[features]\nhooks = false'],
+      [fx('home', 'u', '.codex', 'config.toml'), '[features]\nhooks = false'],
       [
-        '/proj/.codex/config.toml',
+        fx('proj', '.codex', 'config.toml'),
         '[hooks]\nSessionStart = [{ matcher = "startup", hooks = [{ type = "command", command = "x" }] }]\n[mcp_servers.local]\ncommand = "m"',
       ],
     ])
-    const trusted = await makeLoader(files).load('/proj')
+    const trusted = await makeLoader(files).load(fx('proj'))
     expect(trusted.byEvent.has('SessionStart')).toBe(true)
     expect(trusted.mcpServers.has('local')).toBe(true)
 
+    const proj = fx('proj').replaceAll('\\', '\\\\').replaceAll("'", "\\'")
     const untrustedFiles = new Map<string, string>([
-      ['/home/u/.codex/config.toml', ''],
+      [fx('home', 'u', '.codex', 'config.toml'), ''],
       [
-        '/proj/.codex/config.toml',
-        '[hooks]\nSessionStart = [{ matcher = "startup", hooks = [{ type = "command", command = "x" }] }]\n[mcp_servers.local]\ncommand = "m"\n\n[projects."/proj"]\ntrust_level = "untrusted"',
+        fx('proj', '.codex', 'config.toml'),
+        `[hooks]\nSessionStart = [{ matcher = "startup", hooks = [{ type = "command", command = "x" }] }]\n[mcp_servers.local]\ncommand = "m"\n\n[projects.'${proj}']\ntrust_level = "untrusted"`,
       ],
     ])
-    const gated = await makeLoader(untrustedFiles).load('/proj')
+    const gated = await makeLoader(untrustedFiles).load(fx('proj'))
     expect(gated.byEvent.has('SessionStart')).toBe(false)
     expect(gated.mcpServers.has('local')).toBe(false)
   })
