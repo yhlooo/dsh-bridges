@@ -4,11 +4,14 @@
  * valid files — every parser must fail soft and never take the bridge down.
  */
 import { describe, expect, it } from 'vitest'
+import { sep } from 'node:path'
 import { fx } from './fixture-paths.js'
 import type { BridgeDirEntry, FsAdapter } from '../fs-adapter.js'
 import { AgentDefinitionError, parseAgentDefinition } from '../agent-definitions.js'
 import { CodexSettingsLoader } from '../agents/codex/settings.js'
 import { OpencodeSettingsLoader } from '../agents/opencode/settings.js'
+import { PiSkillProvider } from '../agents/pi/skills/provider.js'
+import { PiSettingsLoader } from '../agents/pi/settings.js'
 import { readJsonServerFiles } from '../mcp-bridge.js'
 import { normalizeClaudeStyleEntry } from '../mcp-bridge.js'
 
@@ -16,8 +19,28 @@ const silent = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {
 
 class TreeFs implements FsAdapter {
   constructor(public files: Map<string, string>) {}
-  async listDir(): Promise<BridgeDirEntry[]> {
-    return []
+
+  private children(path: string): BridgeDirEntry[] {
+    const prefix = path.endsWith(sep) ? path : `${path}${sep}`
+    const names = new Set<string>()
+    for (const key of this.files.keys()) {
+      if (!key.startsWith(prefix)) continue
+      const rest = key.slice(prefix.length)
+      if (rest === '') continue
+      names.add(rest.split(sep)[0]!)
+    }
+    return [...names].map((name) => ({
+      name,
+      isDir: [...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}${sep}`)),
+      isFile: ![...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}${sep}`)),
+    }))
+  }
+
+  async listDir(path: string): Promise<BridgeDirEntry[]> {
+    if (![...this.files.keys()].some((key) => key.startsWith(path))) {
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+    }
+    return this.children(path)
   }
   async readText(path: string): Promise<string> {
     const value = this.files.get(path)
@@ -139,5 +162,64 @@ describe('mcp-bridge: broken JSON files and entries fail soft', () => {
     const servers = await readJsonServerFiles(new TreeFs(files), silent, [fx('proj', '.mcp.json')], normalize)
     expect(servers.has('broken')).toBe(false)
     expect(servers.get('noisy')?.config.transport).toBe('stdio')
+  })
+})
+
+describe('pi: BOM / CRLF skills and broken settings fail soft', () => {
+  it('parses a BOM-prefixed SKILL.md with CRLF line endings', async () => {
+    const files = new Map<string, string>([
+      [
+        fx('home', 'u', '.pi', 'agent', 'skills', 'bom', 'SKILL.md'),
+        '\uFEFF---\r\nname: bom-skill\r\ndescription: BOM skill\r\n---\r\nBody.\r\n',
+      ],
+    ])
+    const loader = new PiSettingsLoader(silent, new TreeFs(files), { userPiDir: fx('home', 'u', '.pi', 'agent') })
+    const provider = new PiSkillProvider(
+      silent,
+      new TreeFs(files),
+      { userPiDir: fx('home', 'u', '.pi', 'agent'), watch: false },
+      loader,
+      () => {},
+    )
+    const result = (await provider.list({ cwd: fx('proj') })) as { candidates: { name: string }[] }
+    expect(result.candidates.map((entry) => entry.name)).toEqual(['bom-skill'])
+  })
+
+  it('skips malformed skill files without taking the bridge down', async () => {
+    const files = new Map<string, string>([
+      [fx('home', 'u', '.pi', 'agent', 'skills', 'broken', 'SKILL.md'), '---\nname: [not yaml\n---\nBody.\n'],
+      [fx('home', 'u', '.pi', 'agent', 'skills', 'good', 'SKILL.md'), '---\ndescription: good\n---\nBody.\n'],
+    ])
+    const loader = new PiSettingsLoader(silent, new TreeFs(files), { userPiDir: fx('home', 'u', '.pi', 'agent') })
+    const provider = new PiSkillProvider(
+      silent,
+      new TreeFs(files),
+      { userPiDir: fx('home', 'u', '.pi', 'agent'), watch: false },
+      loader,
+      () => {},
+    )
+    const result = (await provider.list({ cwd: fx('proj') })) as { candidates: { name: string }[] }
+    expect(result.candidates.map((entry) => entry.name)).toEqual(['good'])
+  })
+
+  it('ignores broken settings.json and trust.json without losing user assets', async () => {
+    const files = new Map<string, string>([
+      [fx('home', 'u', '.pi', 'agent', 'settings.json'), '{ broken'],
+      [fx('home', 'u', '.pi', 'agent', 'trust.json'), '[1,2,3]'], // non-mapping trust file
+      [fx('home', 'u', '.pi', 'agent', 'skills', 'u-skill', 'SKILL.md'), '---\ndescription: d\n---\nBody.\n'],
+      [fx('proj', '.pi', 'skills', 'p-skill', 'SKILL.md'), '---\ndescription: d\n---\nBody.\n'],
+    ])
+    const loader = new PiSettingsLoader(silent, new TreeFs(files), { userPiDir: fx('home', 'u', '.pi', 'agent') })
+    const provider = new PiSkillProvider(
+      silent,
+      new TreeFs(files),
+      { userPiDir: fx('home', 'u', '.pi', 'agent'), watch: false },
+      loader,
+      () => {},
+    )
+    const result = (await provider.list({ cwd: fx('proj') })) as { candidates: { name: string }[] }
+    // Broken global settings fall back to defaults (ask → untrusted), so the
+    // project skill stays gated; the user skill still loads.
+    expect(result.candidates.map((entry) => entry.name)).toEqual(['u-skill'])
   })
 })

@@ -20,6 +20,8 @@ import { OpencodeSkillProvider } from '../agents/opencode/skills/provider.js'
 import { OpencodeSettingsLoader } from '../agents/opencode/settings.js'
 import { CodexSkillProvider } from '../agents/codex/skills/provider.js'
 import { CodexSettingsLoader } from '../agents/codex/settings.js'
+import { PiSkillProvider } from '../agents/pi/skills/provider.js'
+import { PiSettingsLoader } from '../agents/pi/settings.js'
 import { claudeToolName } from '../agents/claude-code/hooks/names.js'
 import { codebuddyToolName } from '../agents/codebuddy-code/hooks/names.js'
 import { codexToolName } from '../agents/codex/hooks/names.js'
@@ -193,6 +195,40 @@ describe('rank bands (golden table)', () => {
     for (const entry of found) {
       expect(entry.rank).toBeGreaterThanOrEqual(165)
       expect(entry.rank).toBeLessThanOrEqual(175)
+      expect(entry.rank).toBeLessThan(250)
+    }
+  })
+
+  it('pi ranks stay in 180–195 with personal before project (first-found wins)', async () => {
+    const files = new Map<string, string>([
+      [
+        fx('home', 'u', '.pi', 'agent', 'settings.json'),
+        JSON.stringify({ defaultProjectTrust: 'always', skills: ['extra'], prompts: ['extra-p'] }),
+      ],
+      [fx('home', 'u', '.pi', 'agent', 'skills', 'u-skill', 'SKILL.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('home', 'u', '.pi', 'agent', 'prompts', 'u-prompt.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('home', 'u', '.pi', 'agent', 'extra', 'SKILL.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('home', 'u', '.pi', 'agent', 'extra-p', 'p.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('proj', '.pi', 'skills', 'p-skill', 'SKILL.md'), '---\ndescription: a\n---\nBody.\n'],
+    ])
+    const loader = new PiSettingsLoader(silent, new TreeFs(files), { userPiDir: fx('home', 'u', '.pi', 'agent') })
+    const provider = new PiSkillProvider(
+      silent,
+      new TreeFs(files),
+      { userPiDir: fx('home', 'u', '.pi', 'agent'), watch: false },
+      loader,
+      () => {},
+    )
+    const found = await candidates(provider)
+    const ranks = new Map(found.map((entry) => [entry.name, entry.rank]))
+    expect(ranks.get('u-skill')).toBe(180)
+    expect(ranks.get('extra')).toBe(181)
+    expect(ranks.get('u-prompt')).toBe(182)
+    expect(ranks.get('p')).toBe(183)
+    expect(ranks.get('p-skill')).toBe(190)
+    for (const entry of found) {
+      expect(entry.rank).toBeGreaterThanOrEqual(180)
+      expect(entry.rank).toBeLessThanOrEqual(195)
       expect(entry.rank).toBeLessThan(250)
     }
   })

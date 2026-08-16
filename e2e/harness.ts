@@ -55,6 +55,12 @@ export interface BootOptions {
   readonly cwd: string
   /** The `claudeCode.userClaudeDir` value; must exist and stay isolated from the real `~/.claude`. */
   readonly userClaudeDir: string
+  /**
+   * When set, enables the pi bridge with this directory as its `userPiDir`
+   * (isolated from the real `~/.pi/agent`); when absent the pi bridge stays
+   * disabled, keeping scenarios that do not involve pi deterministic.
+   */
+  readonly userPiDir?: string
   /** Extra top-level plugin config, merged over the skeleton defaults. */
   readonly config?: Partial<BridgesConfig>
 }
@@ -82,6 +88,10 @@ export async function bootHarness(options: BootOptions): Promise<Harness> {
     codebuddyCode: { enabled: false, ...options.config?.codebuddyCode },
     opencode: { enabled: false, ...options.config?.opencode },
     codex: { enabled: false, ...options.config?.codex },
+    pi:
+      options.userPiDir !== undefined
+        ? { enabled: true, skills: true, memory: true, userPiDir: options.userPiDir, watch: false, ...options.config?.pi }
+        : { enabled: false, ...options.config?.pi },
   }
   await ctx.plugin(bridges, config)
   const agent = new E2eAgent()

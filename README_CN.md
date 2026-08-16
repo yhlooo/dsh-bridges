@@ -9,7 +9,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/dsh-bridges)](https://www.npmjs.com/package/dsh-bridges)
 [![license](https://img.shields.io/github/license/yhlooo/dsh-bridges)](LICENSE)
 
-一个 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 插件：把已经为 Claude Code、CodeBuddy Code、opencode、Codex 配置好的项目桥接进 DeepSeek Harness——skills、commands、记忆、hooks 无需任何迁移即可继续生效。
+一个 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 插件：把已经为 Claude Code、CodeBuddy Code、opencode、Codex、pi 配置好的项目桥接进 DeepSeek Harness——skills、commands、记忆、hooks 无需任何迁移即可继续生效。
 
 ## 快速上手
 
@@ -27,7 +27,7 @@ dsh --profile <name> "list the skills available in your catalog"
 从本仓库源码安装（需先编译）：`pnpm install && pnpm build && dsh plugin --profile <name> add .`
 
 每个受支持的 agent 工具在 [`examples/`](examples/) 下各有一个完整示例项目
-（`claude-code`、`codebuddy-code`、`opencode`、`codex`）；以示例目录作为会话
+（`claude-code`、`codebuddy-code`、`opencode`、`codex`、`pi`）；以示例目录作为会话
 工作区打开，即可观察其 skills、memory 与 hooks 的桥接效果。
 
 所有桥接默认启用，并可通过 patch 层逐一调整或禁用：
@@ -57,11 +57,12 @@ dsh --profile <name> "list the skills available in your catalog"
 ## 支持的 agent 工具
 
 | 工具 | Skills / commands | Memory | Hooks | Permissions | MCP |
-| :--- | :--- | :--- | :--- | :--- |
+| :--- | :--- | :--- | :--- | :--- | :--- |
 | Claude Code | `.claude/skills`、`.claude/commands`、`.claude/agents`（含 `~/.claude`） | `.claude/CLAUDE.md`、`~/.claude/CLAUDE.md` | `settings.json` hooks（SessionStart、UserPromptSubmit、Pre/PostToolUse(+Failure)、Stop、SessionEnd） | `settings.json` permissions 规则（allow/ask/deny，含 Bash 前缀、路径、域名匹配） | `.mcp.json` + `~/.claude.json` MCP 服务器 |
 | CodeBuddy Code | `.codebuddy/skills`、`.codebuddy/commands`、`.codebuddy/agents`（含 `~/.codebuddy`） | `CODEBUDDY.md`、`~/.codebuddy/CODEBUDDY.md`、`.codebuddy/rules/` | `settings.json` hooks（SessionStart、UserPromptSubmit、Pre/PostToolUse(+Failure)、Stop、SessionEnd） | `settings.json` permissions 规则（allow/ask/deny：精确/前缀/glob Bash、大小写不敏感路径、MCP、Skill） | `.mcp.json` + `~/.codebuddy/.mcp.json` MCP 服务器 |
 | opencode | `.opencode/skills`、`.opencode/commands`（含 `~/.config/opencode`）、`opencode.json` 的 `command.*` | `AGENTS.md`（含 `CLAUDE.md` 回退）、`instructions` 文件 | —（opencode 无 hooks 配置；其插件 API 不在范围内） | `opencode.json(c)` 的 `permission` 规则（家族分组、末条命中、`external_directory`、内置默认） | `opencode.json(c)` 的 `mcp` 服务器 |
 | Codex | `.agents/skills`（cwd → 仓库根）、`~/.agents/skills`、`/etc/codex/skills` | `~/.codex/AGENTS.md` + 逐目录 `AGENTS.md` 链 | `hooks.json` / `config.toml` hooks（SessionStart、SubagentStart、UserPromptSubmit、Pre/PostToolUse、Stop、SubagentStop、SessionEnd） | `config.toml` 审批/沙箱策略（`approval_policy`、`sandbox_mode`、内置 `default_permissions` 档案） | `config.toml` 的 `[mcp_servers]` 条目 |
+| pi | `.pi/skills`、`.pi/prompts`（含 `~/.pi/agent`；项目级受信任门禁） | `AGENTS.md` / `CLAUDE.md` 链 + `APPEND_SYSTEM.md` | —（pi 无 hooks 配置；扩展事件总线不在范围内） | —（pi 无权限规则系统） | —（pi 无 MCP 配置） |
 
 ## 资源
 

@@ -220,3 +220,42 @@ opencode / codex 的规则文件去重：DSH 核心已加载的只有**工作区
 **原因**：`` `${userDir}/CODEBUDDY.md` `` 模板串在 win32 上拼出 `/` 与 `\` 混用；这些 label 会进注入正文、用户可见。四个桥的 user 层 label（claude/codebuddy/opencode/codex 各一处）都有此模式。
 
 **正确写法**：绝对路径 label 一律 `join(dir, 'NAME.md')`（或直接复用已 join 好的变量）。相对展示名（如 `.codebuddy/CODEBUDDY.md`）是有意为之，保持原样。
+
+## 28. 新桥接的 rank 段要避开 filesystem provider 的整百点（100/200/300/400/500）
+
+**现象**：给 gemini-cli 初选 rank 段 200–215，与 dsh 自带 filesystem provider
+的「项目 agents」rank 200 同层撞点；同层内冲突按 rank → 注册顺序裁决，撞点
+后桥接资产与 dsh 原生 `.agents/skills` 的优先级变得不可预期。
+
+**原因**：dsh 自带 filesystem provider 用 100/200/300/400/500（项目 dsh /
+项目 agents / custom / 用户 dsh / 用户 agents）这些**精确点**；已有四段
+（105–120、125–140、145–160、165–175）都恰好落在整百点之间，新段必须照做。
+
+**正确写法**：新段避开 200/300：pi 180–195、gemini-cli 205–220、cursor
+225–240，全部小于运行时技能 250。段分配与理由同步进 contract golden 表、
+guides 映射表与 dsh-integration-surface.md 三处。
+
+## 29. pi 记忆链的「根 AGENTS.md 去重」依赖 git 根探测，无 git 根时 cwd 即根
+
+**现象**：pi 记忆测试里无 `.git` 标记的 fixture 中，cwd 的 `AGENTS.md` 被当作
+「dsh 已加载的根文件」跳过，测试期望「cwd 文件应注入」而红。
+
+**原因**：桥接沿用 codex 的去重先例——dsh 核心加载的是「仓库根」的
+`AGENTS.md`，桥接跳过与之内容一致的那份。仓库根探测回退为 cwd（codex 语义），
+于是无 git 根时 cwd 的 `AGENTS.md` 就是「核心已加载的那份」，注入它反而重复。
+
+**正确写法**：测试/文档明确这一语义（无 git 根时 cwd 的 AGENTS.md 视为核心已
+加载、跳过）；要断言链路注入，fixture 必须带 `.git` 标记并把 cwd 放在子目录。
+
+## 30. pi 的宽松 frontmatter 与 DSH 的 fail-closed 惯例要逐字段对齐
+
+**现象**：pi 对技能校验「多数违规仅告警、仍加载」（name 可异于目录名、非法
+布尔仅告警），只有「缺 description」不加载；照抄 claude 的 fail-closed 布尔
+解析会丢弃 pi 本会加载的技能。
+
+**原因**：上游语义决定 fail-open/fail-closed——pi 是宽松实现，claude 是严格
+实现（AGENTS.md 教训：失败策略按协议走，不要自行"更安全"）。
+
+**正确写法**：`disable-model-invocation` 非法值 → 告警 + 视为 false；name
+缺省回退目录/文件名（源码确认）；仅缺 description 与 YAML 损坏跳过。BOM 容忍
+在 splitFrontmatter 里做（对抗语料覆盖）。
