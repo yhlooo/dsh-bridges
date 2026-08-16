@@ -41,13 +41,7 @@ interface MemorySection {
   content: string
 }
 
-export function registerMemory(
-  ctx: Context,
-  logger: BridgeLogger,
-  fs: FsAdapter,
-  loader: CodexSettingsLoader,
-  config: MemoryConfig,
-): void {
+export function registerMemory(ctx: Context, logger: BridgeLogger, fs: FsAdapter, loader: CodexSettingsLoader, config: MemoryConfig): void {
   ctx.on('agent/session-start', (payload) => {
     // On resume the original injection is still part of the durable session
     // history; re-adding it would duplicate the block. Fresh starts, clears,
@@ -200,9 +194,7 @@ function relativeLabel(cwd: string, path: string): string {
 }
 
 function renderSections(sections: MemorySection[]): string {
-  const body = sections
-    .map((section) => `Instructions from: ${section.label}\n\n${escapeReminderClose(section.content)}`)
-    .join('\n\n')
+  const body = sections.map((section) => `Instructions from: ${section.label}\n\n${escapeReminderClose(section.content)}`).join('\n\n')
   return (
     '<system-reminder>\n' +
     'The following Codex instructions may be relevant to your work. Use them as guidance when applicable. More specific instructions take precedence over broader ones. They do not override system, developer, or direct user instructions.\n\n' +

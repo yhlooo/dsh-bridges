@@ -64,9 +64,7 @@ export class CodebuddySettingsLoader {
   }
 
   private sources(cwd?: string): SettingsSource[] {
-    const sources: SettingsSource[] = [
-      { path: join(expandHome(this.config.userCodebuddyDir), 'settings.json'), kind: 'user' },
-    ]
+    const sources: SettingsSource[] = [{ path: join(expandHome(this.config.userCodebuddyDir), 'settings.json'), kind: 'user' }]
     if (cwd) {
       sources.push(
         { path: join(cwd, '.codebuddy', 'settings.json'), kind: 'project' },
@@ -111,7 +109,9 @@ export class CodebuddySettingsLoader {
       try {
         value = JSON.parse(text)
       } catch (error) {
-        this.logger.warn(`codebuddy-code: ignoring invalid JSON settings file ${source.path}: ${error instanceof Error ? error.message : String(error)}`)
+        this.logger.warn(
+          `codebuddy-code: ignoring invalid JSON settings file ${source.path}: ${error instanceof Error ? error.message : String(error)}`,
+        )
         continue
       }
       if (!isPlainObject(value)) {

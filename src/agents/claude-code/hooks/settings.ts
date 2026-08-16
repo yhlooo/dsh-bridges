@@ -20,8 +20,6 @@ export interface SettingsLoaderConfig {
   userClaudeDir: string
 }
 
-const SETTINGS_FILES = ['settings.json', 'settings.local.json'] as const
-
 interface SettingsSource {
   path: string
   kind: 'user' | 'project' | 'local'
@@ -37,9 +35,7 @@ export class SettingsLoader {
   ) {}
 
   private sources(cwd?: string): SettingsSource[] {
-    const sources: SettingsSource[] = [
-      { path: join(expandHome(this.config.userClaudeDir), 'settings.json'), kind: 'user' },
-    ]
+    const sources: SettingsSource[] = [{ path: join(expandHome(this.config.userClaudeDir), 'settings.json'), kind: 'user' }]
     if (cwd) {
       sources.push(
         { path: join(cwd, '.claude', 'settings.json'), kind: 'project' },
@@ -84,7 +80,9 @@ export class SettingsLoader {
       try {
         value = JSON.parse(text)
       } catch (error) {
-        this.logger.warn(`claude-code: ignoring invalid JSON settings file ${source.path}: ${error instanceof Error ? error.message : String(error)}`)
+        this.logger.warn(
+          `claude-code: ignoring invalid JSON settings file ${source.path}: ${error instanceof Error ? error.message : String(error)}`,
+        )
         continue
       }
       if (!isPlainObject(value)) {

@@ -52,7 +52,9 @@ describe('hookBlockMessage', () => {
   }
 
   it('prefers JSON reason over stopReason, plain stdout, and stderr', () => {
-    expect(hookBlockMessage({ ...base, output: { reason: 'json reason', stopReason: 'stop' }, plainText: 'plain', stderr: 'err' })).toBe('json reason')
+    expect(hookBlockMessage({ ...base, output: { reason: 'json reason', stopReason: 'stop' }, plainText: 'plain', stderr: 'err' })).toBe(
+      'json reason',
+    )
     expect(hookBlockMessage({ ...base, output: { stopReason: 'stop' }, plainText: 'plain', stderr: 'err' })).toBe('stop')
   })
 
@@ -91,7 +93,17 @@ describe('runEventHooks (command hooks)', () => {
 
   it('runs exec form without a shell', async () => {
     const [outcome] = await run({
-      groups: [{ hooks: [{ type: 'command', command: 'node', args: ['-e', 'process.stdout.write(JSON.stringify({continue:false,stopReason:"halted"}))'] }] }],
+      groups: [
+        {
+          hooks: [
+            {
+              type: 'command',
+              command: 'node',
+              args: ['-e', 'process.stdout.write(JSON.stringify({continue:false,stopReason:"halted"}))'],
+            },
+          ],
+        },
+      ],
     })
     expect(outcome!.output?.continue).toBe(false)
     expect(outcome!.output?.stopReason).toBe('halted')
@@ -154,7 +166,10 @@ describe('runEventHooks (command hooks)', () => {
             {
               type: 'command',
               command: 'node',
-              args: ['-e', 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const j=JSON.parse(d);console.log(j.hook_event_name+"|"+j.tool_name+"|"+process.env.CODEBUDDY_PROJECT_DIR)})'],
+              args: [
+                '-e',
+                'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const j=JSON.parse(d);console.log(j.hook_event_name+"|"+j.tool_name+"|"+process.env.CODEBUDDY_PROJECT_DIR)})',
+              ],
             },
           ],
         },
@@ -199,7 +214,10 @@ describe('decision resolvers', () => {
     const deny = resolvePreToolUse(
       [
         { ...base, output: { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } } },
-        { ...base, output: { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: 'danger' } } },
+        {
+          ...base,
+          output: { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: 'danger' } },
+        },
       ],
       1000,
     )
@@ -215,14 +233,25 @@ describe('decision resolvers', () => {
 
   it('maps ask', () => {
     const decision = resolvePreToolUse(
-      [{ ...base, output: { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask', permissionDecisionReason: 'confirm' } } }],
+      [
+        {
+          ...base,
+          output: { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask', permissionDecisionReason: 'confirm' } },
+        },
+      ],
       1000,
     )
     expect(decision).toEqual({ kind: 'ask', reason: 'confirm' })
   })
 
   it('fails open on timeouts and startup failures', () => {
-    const decision = resolvePreToolUse([{ ...base, timedOut: true }, { ...base, failedToStart: 'ENOENT' }], 1000)
+    const decision = resolvePreToolUse(
+      [
+        { ...base, timedOut: true },
+        { ...base, failedToStart: 'ENOENT' },
+      ],
+      1000,
+    )
     expect(decision).toEqual({ kind: 'allow' })
   })
 })

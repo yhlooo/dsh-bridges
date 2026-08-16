@@ -181,7 +181,16 @@ async function runCommandHook(handler: CommandHook, run: HookRun, logger: Bridge
 
   try {
     const outcome = await collectOutput(child, run.input)
-    return { ...base, ran: true, exitCode: outcome.exitCode, stdout: outcome.stdout, stderr: outcome.stderr, timedOut, cancelled: cancelled || undefined, ...parseHookStdout(outcome.stdout) }
+    return {
+      ...base,
+      ran: true,
+      exitCode: outcome.exitCode,
+      stdout: outcome.stdout,
+      stderr: outcome.stderr,
+      timedOut,
+      cancelled: cancelled || undefined,
+      ...parseHookStdout(outcome.stdout),
+    }
   } catch (error) {
     return { ...base, ran: true, cancelled: cancelled || undefined, failedToStart: error instanceof Error ? error.message : String(error) }
   } finally {
@@ -190,7 +199,10 @@ async function runCommandHook(handler: CommandHook, run: HookRun, logger: Bridge
   }
 }
 
-function collectOutput(child: ChildProcess, input: Record<string, unknown>): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
+function collectOutput(
+  child: ChildProcess,
+  input: Record<string, unknown>,
+): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
   return new Promise((resolve, reject) => {
     let stdout = ''
     let stderr = ''
@@ -220,7 +232,7 @@ async function runHttpHook(handler: HttpHook, run: HookRun, logger: BridgeLogger
   const effectiveAllowed =
     handler.allowedEnvVars !== undefined && run.httpHookAllowedEnvVars !== undefined
       ? handler.allowedEnvVars.filter((name) => run.httpHookAllowedEnvVars!.includes(name))
-      : handler.allowedEnvVars ?? run.httpHookAllowedEnvVars
+      : (handler.allowedEnvVars ?? run.httpHookAllowedEnvVars)
   const headers: Record<string, string> = {}
   for (const [name, value] of Object.entries(handler.headers ?? {})) {
     headers[name] = interpolateHeader(value, effectiveAllowed)

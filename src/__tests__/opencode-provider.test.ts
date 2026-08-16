@@ -123,8 +123,14 @@ describe('OpencodeSkillProvider.list', () => {
 
   it('registers JSON-configured commands from opencode.json, project overriding user', async () => {
     const files = new Map<string, string>([
-      ['/home/u/.config/opencode/opencode.json', JSON.stringify({ command: { useronly: { template: 'user cmd', description: 'user only' }, shared: { template: 'user shared' } } })],
-      ['/proj/opencode.jsonc', JSON.stringify({ command: { projonly: { template: 'proj cmd', description: 'proj only' }, shared: { template: 'proj shared' } } })],
+      [
+        '/home/u/.config/opencode/opencode.json',
+        JSON.stringify({ command: { useronly: { template: 'user cmd', description: 'user only' }, shared: { template: 'user shared' } } }),
+      ],
+      [
+        '/proj/opencode.jsonc',
+        JSON.stringify({ command: { projonly: { template: 'proj cmd', description: 'proj only' }, shared: { template: 'proj shared' } } }),
+      ],
     ])
     const result = await makeProvider(files).list(options)
     const byName = new Map(result.candidates.map((candidate) => [candidate.name, candidate]))
@@ -135,22 +141,33 @@ describe('OpencodeSkillProvider.list', () => {
 
   it('skips JSON-configured commands whose name is not kebab-case', async () => {
     const warnings: string[] = []
-    const logger = { debug: () => {}, info: () => {}, error: () => {}, warn: (message: string) => { warnings.push(message) } }
+    const logger = {
+      debug: () => {},
+      info: () => {},
+      error: () => {},
+      warn: (message: string) => {
+        warnings.push(message)
+      },
+    }
     const files = new Map<string, string>([
       ['/proj/opencode.json', JSON.stringify({ command: { 'Not-Kebab': { template: 'bad' }, good: { template: 'ok' } } })],
     ])
     const fs = new TreeFs(files)
     const settings = new OpencodeSettingsLoader(logger, fs, { userOpencodeDir: '/home/u/.config/opencode' })
-    const provider = new OpencodeSkillProvider(logger, fs, { userOpencodeDir: '/home/u/.config/opencode', watch: false }, settings, () => {})
+    const provider = new OpencodeSkillProvider(
+      logger,
+      fs,
+      { userOpencodeDir: '/home/u/.config/opencode', watch: false },
+      settings,
+      () => {},
+    )
     const result = await provider.list(options)
     expect(result.candidates.map((candidate) => candidate.name)).toEqual(['good'])
     expect(warnings.some((message) => message.includes('Not-Kebab'))).toBe(true)
   })
 
   it('derives the description from the first paragraph when a command omits it', async () => {
-    const files = new Map<string, string>([
-      ['/proj/.opencode/commands/plain.md', '# Title\n\nDerived description.\n'],
-    ])
+    const files = new Map<string, string>([['/proj/.opencode/commands/plain.md', '# Title\n\nDerived description.\n']])
     const result = await makeProvider(files).list(options)
     expect(result.candidates[0]!.description).toBe('Derived description.')
   })
@@ -179,9 +196,7 @@ describe('OpencodeSkillProvider.get', () => {
   })
 
   it('returns undefined when a JSON command is removed from config', async () => {
-    const files = new Map<string, string>([
-      ['/proj/opencode.json', JSON.stringify({ command: { test: { template: 'Run tests' } } })],
-    ])
+    const files = new Map<string, string>([['/proj/opencode.json', JSON.stringify({ command: { test: { template: 'Run tests' } } })]])
     const provider = makeProvider(files)
     const result = await provider.list(options)
     files.set('/proj/opencode.json', JSON.stringify({ command: {} }))

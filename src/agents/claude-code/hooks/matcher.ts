@@ -24,7 +24,10 @@ const EXACT_SET_RE = /^[A-Za-z0-9_\-, |]*$/
 export function matchMatcher(matcher: string | undefined, value: string): boolean {
   if (matcher === undefined || matcher === '' || matcher === '*') return true
   if (EXACT_SET_RE.test(matcher)) {
-    const names = matcher.split(/[,|]/).map((name) => name.trim()).filter((name) => name !== '')
+    const names = matcher
+      .split(/[,|]/)
+      .map((name) => name.trim())
+      .filter((name) => name !== '')
     return names.includes(value)
   }
   try {

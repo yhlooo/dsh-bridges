@@ -207,12 +207,15 @@ export class CodebuddySkillProvider implements SkillProvider {
       if (!entry.isFile || !entry.name.toLowerCase().endsWith('.md')) continue
       // Subdirectory commands are named `group:name` (a colon is not
       // kebab-case, so they are skipped with a warning per DSH's name policy).
-      const qualified = prefix === '' ? stripMarkdownExtension(entry.name) : `${prefix.replace(/[/\\]+/g, ':')}:${stripMarkdownExtension(entry.name)}`
+      const qualified =
+        prefix === '' ? stripMarkdownExtension(entry.name) : `${prefix.replace(/[/\\]+/g, ':')}:${stripMarkdownExtension(entry.name)}`
       const file = join(root.path, prefix, entry.name)
       try {
         const text = await this.fs.readText(file, options.signal)
         if (!isSkillName(qualified)) {
-          this.logger.warn(`codebuddy-code: skipping command ${JSON.stringify(qualified)}: nested command names are not kebab-case; DSH skills require kebab-case names`)
+          this.logger.warn(
+            `codebuddy-code: skipping command ${JSON.stringify(qualified)}: nested command names are not kebab-case; DSH skills require kebab-case names`,
+          )
           continue
         }
         candidates.push(this.summary(root, qualified, 'command', file, text, 'on'))
@@ -249,16 +252,11 @@ export class CodebuddySkillProvider implements SkillProvider {
     override: SkillOverrideState,
   ): SkillCandidate {
     if (!isSkillName(entry)) {
-      throw new FrontmatterError(
-        `skill name ${JSON.stringify(entry)} is not kebab-case; DSH skills require kebab-case names`,
-      )
+      throw new FrontmatterError(`skill name ${JSON.stringify(entry)} is not kebab-case; DSH skills require kebab-case names`)
     }
     const parsed = parseSkillFile(text)
     const { frontmatter, body } = parsed
-    const invocation = applyOverride(
-      { modelInvocable: frontmatter.modelInvocable, userInvocable: frontmatter.userInvocable },
-      override,
-    )
+    const invocation = applyOverride({ modelInvocable: frontmatter.modelInvocable, userInvocable: frontmatter.userInvocable }, override)
     const description = this.composeDescription(frontmatter.description, frontmatter.whenToUse, body, override)
     const locator: CandidateLocator = { root: root.path, rootKind: root.kind, entry, kind, file, override }
     return {
@@ -311,10 +309,7 @@ export class CodebuddySkillProvider implements SkillProvider {
     }
     const { frontmatter, body } = parsed
     const override = await this.readOverrides(options.cwd, options.signal).then((overrides) => overrides.get(locator.entry) ?? 'on')
-    const invocation = applyOverride(
-      { modelInvocable: frontmatter.modelInvocable, userInvocable: frontmatter.userInvocable },
-      override,
-    )
+    const invocation = applyOverride({ modelInvocable: frontmatter.modelInvocable, userInvocable: frontmatter.userInvocable }, override)
     return {
       name: locator.entry,
       description: this.composeDescription(frontmatter.description, frontmatter.whenToUse, body, override),
@@ -323,9 +318,7 @@ export class CodebuddySkillProvider implements SkillProvider {
       source: locator.rootKind.startsWith('project') ? 'project-codebuddy' : 'user-codebuddy',
       provider: PROVIDER_NAME,
       resourceBase:
-        locator.kind === 'bundle'
-          ? { kind: 'directory', path: dirname(locator.file) }
-          : { kind: 'directory', path: locator.root },
+        locator.kind === 'bundle' ? { kind: 'directory', path: dirname(locator.file) } : { kind: 'directory', path: locator.root },
       content: body,
       path: locator.file,
       metadata: frontmatter.metadata,
@@ -351,7 +344,10 @@ export class CodebuddySkillProvider implements SkillProvider {
       if (this.watchers.size >= MAX_WATCHED_ROOTS) {
         const oldest = this.watchers.keys().next().value
         if (oldest !== undefined) {
-          void this.watchers.get(oldest)?.watcher.close().catch(() => {})
+          void this.watchers
+            .get(oldest)
+            ?.watcher.close()
+            .catch(() => {})
           this.watchers.delete(oldest)
         }
       }
@@ -379,7 +375,10 @@ export class CodebuddySkillProvider implements SkillProvider {
       })
     }
     await new Promise<void>((resolve) => {
-      watcher.once('ready', () => { ready = true; resolve() })
+      watcher.once('ready', () => {
+        ready = true
+        resolve()
+      })
     })
     if (this.closed) void watcher.close().catch(() => {})
   }

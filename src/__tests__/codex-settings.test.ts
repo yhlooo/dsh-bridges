@@ -60,7 +60,12 @@ describe('CodexSettingsLoader', () => {
         '/home/u/.codex/config.toml',
         `[[hooks.PreToolUse]]\nmatcher = "^Bash$"\n[[hooks.PreToolUse.hooks]]\ntype = "command"\ncommand = "policy.py"\ntimeout = 30\n`,
       ],
-      ['/proj/.codex/hooks.json', JSON.stringify({ hooks: { SessionStart: [{ matcher: 'startup', hooks: [sessionHook] }, { hooks: [{ type: 'command', command: 'extra.py' }] }] } })],
+      [
+        '/proj/.codex/hooks.json',
+        JSON.stringify({
+          hooks: { SessionStart: [{ matcher: 'startup', hooks: [sessionHook] }, { hooks: [{ type: 'command', command: 'extra.py' }] }] },
+        }),
+      ],
     ])
     const loaded = await makeLoader(files).load('/proj')
     const session = loaded.byEvent.get('SessionStart')!
@@ -84,11 +89,11 @@ describe('CodexSettingsLoader', () => {
 
   it('collects disabled skill paths from [[skills.config]] entries, resolving relative paths', async () => {
     const files = new Map<string, string>([
+      ['/home/u/.codex/config.toml', '[[skills.config]]\npath = "/home/u/.agents/skills/off-skill"\nenabled = false\n'],
       [
-        '/home/u/.codex/config.toml',
-        '[[skills.config]]\npath = "/home/u/.agents/skills/off-skill"\nenabled = false\n',
+        '/proj/.codex/config.toml',
+        '[[skills.config]]\npath = ".agents/skills/proj-off"\nenabled = false\n[[skills.config]]\npath = ".agents/skills/on-skill"\nenabled = true\n',
       ],
-      ['/proj/.codex/config.toml', '[[skills.config]]\npath = ".agents/skills/proj-off"\nenabled = false\n[[skills.config]]\npath = ".agents/skills/on-skill"\nenabled = true\n'],
     ])
     const loaded = await makeLoader(files).load('/proj')
     expect(loaded.skillDisabledPaths).toContain('/home/u/.agents/skills/off-skill')

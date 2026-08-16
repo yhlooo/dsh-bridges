@@ -142,7 +142,12 @@ export class OpencodeSettingsLoader {
   }
 }
 
-function readJsonCommands(value: unknown, commands: Map<string, OpencodeJsonCommand>, logger: BridgeLogger, path: string): Map<string, OpencodeJsonCommand> {
+function readJsonCommands(
+  value: unknown,
+  commands: Map<string, OpencodeJsonCommand>,
+  logger: BridgeLogger,
+  path: string,
+): Map<string, OpencodeJsonCommand> {
   if (value === undefined) return commands
   if (!isPlainObject(value)) {
     logger.warn(`opencode: ignoring malformed command field in ${path}: must be an object`)

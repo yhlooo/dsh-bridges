@@ -71,9 +71,12 @@ export function registerCodebuddyCodeBridge(ctx: Context, logger: BridgeLogger, 
       )
       return provider
     })
-    ctx.effect(() => () => {
-      void provider?.dispose()
-    }, 'codebuddy-code skill watchers')
+    ctx.effect(
+      () => () => {
+        void provider?.dispose()
+      },
+      'codebuddy-code skill watchers',
+    )
   }
 
   if (resolved.memory) {

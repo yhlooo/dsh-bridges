@@ -112,7 +112,12 @@ describe('resolvePreToolUse', () => {
   })
 
   it('denies on permissionDecision deny, decision block, and exit code 2', () => {
-    expect(resolvePreToolUse([outcome({ output: { hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: 'no way' } } })], 100).kind).toBe('deny')
+    expect(
+      resolvePreToolUse(
+        [outcome({ output: { hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: 'no way' } } })],
+        100,
+      ).kind,
+    ).toBe('deny')
     expect(resolvePreToolUse([outcome({ output: { decision: 'block', reason: 'blocked' } })], 100).kind).toBe('deny')
     expect(resolvePreToolUse([outcome({ exitCode: 2, stderr: 'exit blocked' })], 100).kind).toBe('deny')
   })

@@ -56,25 +56,15 @@ describe('SettingsLoader', () => {
   })
 
   it('takes disableAllHooks from the most specific source that defines it', async () => {
-    const enabled = makeLoader(
-      JSON.stringify({ disableAllHooks: true }),
-      JSON.stringify({ disableAllHooks: false }),
-    )
+    const enabled = makeLoader(JSON.stringify({ disableAllHooks: true }), JSON.stringify({ disableAllHooks: false }))
     expect((await enabled.load('/proj')).disabled).toBe(false)
 
-    const disabled = makeLoader(
-      JSON.stringify({ disableAllHooks: false }),
-      JSON.stringify({}),
-      JSON.stringify({ disableAllHooks: true }),
-    )
+    const disabled = makeLoader(JSON.stringify({ disableAllHooks: false }), JSON.stringify({}), JSON.stringify({ disableAllHooks: true }))
     expect((await disabled.load('/proj')).disabled).toBe(true)
   })
 
   it('merges env with most-specific-wins', async () => {
-    const loader = makeLoader(
-      JSON.stringify({ env: { A: 'user', B: 'user' } }),
-      JSON.stringify({ env: { B: 'project' } }),
-    )
+    const loader = makeLoader(JSON.stringify({ env: { A: 'user', B: 'user' } }), JSON.stringify({ env: { B: 'project' } }))
     const loaded = await loader.load('/proj')
     expect(loaded.env).toEqual({ A: 'user', B: 'project' })
   })
@@ -99,9 +89,7 @@ describe('SettingsLoader', () => {
     const loader = makeLoader(
       JSON.stringify({
         hooks: {
-          PreToolUse: [
-            { hooks: [{ type: 'command', command: 'ok.sh' }, { type: 'command' }, { type: 'prompt', prompt: 'x' }, 'junk'] },
-          ],
+          PreToolUse: [{ hooks: [{ type: 'command', command: 'ok.sh' }, { type: 'command' }, { type: 'prompt', prompt: 'x' }, 'junk'] }],
         },
       }),
     )

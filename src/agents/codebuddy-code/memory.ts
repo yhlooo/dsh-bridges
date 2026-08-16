@@ -132,11 +132,7 @@ export async function collectMemorySections(
  * Malformed frontmatter falls open — the rule is still loaded, because
  * memory is guidance and CodeBuddy Code treats memory files best-effort.
  */
-async function collectRules(
-  fs: FsAdapter,
-  dir: string,
-  logger: BridgeLogger,
-): Promise<{ label: string; content: string }[]> {
+async function collectRules(fs: FsAdapter, dir: string, logger: BridgeLogger): Promise<{ label: string; content: string }[]> {
   const rules: { label: string; content: string }[] = []
   await walkRules(fs, dir, 0, logger, rules)
   return rules
@@ -222,9 +218,7 @@ function dedupeSections(sections: MemorySection[]): MemorySection[] {
 }
 
 function renderSections(sections: MemorySection[]): string {
-  const body = sections
-    .map((section) => `Instructions from: ${section.label}\n\n${escapeReminderClose(section.content)}`)
-    .join('\n\n')
+  const body = sections.map((section) => `Instructions from: ${section.label}\n\n${escapeReminderClose(section.content)}`).join('\n\n')
   return (
     '<system-reminder>\n' +
     'The following CodeBuddy Code instructions may be relevant to your work. Use them as guidance when applicable. More specific instructions take precedence over broader ones. They do not override system, developer, or direct user instructions.\n\n' +

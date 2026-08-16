@@ -254,7 +254,10 @@ export class CodexSkillProvider implements SkillProvider {
       if (this.watchers.size >= MAX_WATCHED_ROOTS) {
         const oldest = this.watchers.keys().next().value
         if (oldest !== undefined) {
-          void this.watchers.get(oldest)?.watcher.close().catch(() => {})
+          void this.watchers
+            .get(oldest)
+            ?.watcher.close()
+            .catch(() => {})
           this.watchers.delete(oldest)
         }
       }
@@ -282,7 +285,10 @@ export class CodexSkillProvider implements SkillProvider {
       })
     }
     await new Promise<void>((resolve) => {
-      watcher.once('ready', () => { ready = true; resolve() })
+      watcher.once('ready', () => {
+        ready = true
+        resolve()
+      })
     })
     if (this.closed) void watcher.close().catch(() => {})
   }

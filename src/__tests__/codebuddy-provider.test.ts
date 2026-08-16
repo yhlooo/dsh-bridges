@@ -141,7 +141,10 @@ describe('CodebuddySkillProvider.list', () => {
       ['/proj/.codebuddy/skills/user-only/SKILL.md', '---\ndescription: user only\n---\nb\n'],
       ['/proj/.codebuddy/skills/disabled/SKILL.md', '---\ndescription: disabled\n---\nc\n'],
       ['/proj/.codebuddy/skills/name-only/SKILL.md', '---\ndescription: long description\n---\nd\n'],
-      ['/proj/.codebuddy/settings.json', JSON.stringify({ skillOverrides: { 'user-only': 'user-invocable-only', disabled: 'off', 'name-only': 'name-only' } })],
+      [
+        '/proj/.codebuddy/settings.json',
+        JSON.stringify({ skillOverrides: { 'user-only': 'user-invocable-only', disabled: 'off', 'name-only': 'name-only' } }),
+      ],
     ])
     const result = await makeProvider(files).list(options)
     const always = result.candidates.find((candidate) => candidate.name === 'always')
@@ -176,9 +179,7 @@ describe('CodebuddySkillProvider.get', () => {
   })
 
   it('returns undefined when the file disappeared', async () => {
-    const files = new Map<string, string>([
-      ['/proj/.codebuddy/skills/gone/SKILL.md', '---\ndescription: x\n---\na\n'],
-    ])
+    const files = new Map<string, string>([['/proj/.codebuddy/skills/gone/SKILL.md', '---\ndescription: x\n---\na\n']])
     const provider = makeProvider(files)
     const { candidates } = await provider.list(options)
     files.delete('/proj/.codebuddy/skills/gone/SKILL.md')

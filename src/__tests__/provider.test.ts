@@ -145,9 +145,7 @@ describe('ClaudeSkillProvider.get', () => {
   })
 
   it('returns undefined when the file disappeared', async () => {
-    const files = new Map<string, string>([
-      ['/proj/.claude/skills/gone/SKILL.md', '---\ndescription: x\n---\na\n'],
-    ])
+    const files = new Map<string, string>([['/proj/.claude/skills/gone/SKILL.md', '---\ndescription: x\n---\na\n']])
     const provider = makeProvider(files)
     const { candidates } = await provider.list(options)
     files.delete('/proj/.claude/skills/gone/SKILL.md')

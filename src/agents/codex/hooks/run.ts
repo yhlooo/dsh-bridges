@@ -108,7 +108,16 @@ async function executeHandler(handler: CommandHook, run: HookRun, logger: Bridge
 
   try {
     const outcome = await collectOutput(child, run.input)
-    return { ...base, ran: true, exitCode: outcome.exitCode, stdout: outcome.stdout, stderr: outcome.stderr, timedOut, cancelled: cancelled || undefined, ...parseHookStdout(outcome.stdout) }
+    return {
+      ...base,
+      ran: true,
+      exitCode: outcome.exitCode,
+      stdout: outcome.stdout,
+      stderr: outcome.stderr,
+      timedOut,
+      cancelled: cancelled || undefined,
+      ...parseHookStdout(outcome.stdout),
+    }
   } catch (error) {
     return { ...base, ran: true, cancelled: cancelled || undefined, failedToStart: error instanceof Error ? error.message : String(error) }
   } finally {
@@ -132,7 +141,10 @@ function spawnCommand(handler: CommandHook, run: HookRun): ChildProcess {
   })
 }
 
-function collectOutput(child: ChildProcess, input: Record<string, unknown>): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
+function collectOutput(
+  child: ChildProcess,
+  input: Record<string, unknown>,
+): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
   return new Promise((resolve, reject) => {
     let stdout = ''
     let stderr = ''

@@ -211,7 +211,9 @@ export class CodexSettingsLoader {
       try {
         value = source.format === 'toml' ? parseToml(text) : JSON.parse(text)
       } catch (error) {
-        this.logger.warn(`codex: ignoring invalid ${source.format.toUpperCase()} settings file ${source.path}: ${error instanceof Error ? error.message : String(error)}`)
+        this.logger.warn(
+          `codex: ignoring invalid ${source.format.toUpperCase()} settings file ${source.path}: ${error instanceof Error ? error.message : String(error)}`,
+        )
         continue
       }
       if (!isPlainObject(value)) {
@@ -288,7 +290,9 @@ function normalizeLayer(value: Record<string, unknown>, source: SettingsSource, 
   }
   const fallbackFilenames = value['project_doc_fallback_filenames']
   if (Array.isArray(fallbackFilenames)) {
-    layer.projectDocFallbackFilenames = fallbackFilenames.filter((entry): entry is string => typeof entry === 'string' && entry.trim() !== '')
+    layer.projectDocFallbackFilenames = fallbackFilenames.filter(
+      (entry): entry is string => typeof entry === 'string' && entry.trim() !== '',
+    )
   }
   const rootMarkers = value['project_root_markers']
   if (Array.isArray(rootMarkers)) {

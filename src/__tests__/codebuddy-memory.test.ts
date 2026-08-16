@@ -60,11 +60,7 @@ describe('collectMemorySections', () => {
       ['/proj/CODEBUDDY.local.md', 'local memory'],
     ])
     const sections = await collect(files)
-    expect(sections.map((section) => section.label)).toEqual([
-      '/home/u/.codebuddy/CODEBUDDY.md',
-      'CODEBUDDY.md',
-      'CODEBUDDY.local.md',
-    ])
+    expect(sections.map((section) => section.label)).toEqual(['/home/u/.codebuddy/CODEBUDDY.md', 'CODEBUDDY.md', 'CODEBUDDY.local.md'])
     expect(sections.map((section) => section.kind)).toEqual(['user', 'project', 'project'])
   })
 
@@ -112,9 +108,7 @@ describe('collectMemorySections', () => {
   })
 
   it('loads a malformed-frontmatter rule as whole text (fail open)', async () => {
-    const files = new Map<string, string>([
-      ['/proj/.codebuddy/rules/broken.md', '---\nname: [unclosed\n---\nBroken frontmatter.\n'],
-    ])
+    const files = new Map<string, string>([['/proj/.codebuddy/rules/broken.md', '---\nname: [unclosed\n---\nBroken frontmatter.\n']])
     const sections = await collect(files)
     expect(sections).toHaveLength(1)
     expect(sections[0]!.content).toContain('Broken frontmatter.')

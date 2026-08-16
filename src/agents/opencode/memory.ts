@@ -123,7 +123,9 @@ export async function collectMemorySections(
     // Project rules: the closest AGENTS.md walking up to the git root, then
     // the closest CLAUDE.md as the compatibility fallback. First match wins
     // per category, exactly like opencode.
-    const projectFile = await findClosestRuleFile(fs, cwd, 'AGENTS.md') ?? (config.claudeCompat ? await findClosestRuleFile(fs, cwd, 'CLAUDE.md') : undefined)
+    const projectFile =
+      (await findClosestRuleFile(fs, cwd, 'AGENTS.md')) ??
+      (config.claudeCompat ? await findClosestRuleFile(fs, cwd, 'CLAUDE.md') : undefined)
     if (projectFile !== undefined) {
       // DSH's own instruction loader reads the workspace root's AGENTS.md
       // and CLAUDE.md (the session cwd), so skip exactly those two files.
@@ -180,7 +182,7 @@ async function collectInstructionSections(
     const resolved = entry.startsWith('~') ? expandHome(entry) : entry
     const absolute = resolveAgainstBase(resolved, baseDir)
     if (hasGlob(absolute)) {
-      for (const file of await expandGlob(fs, absolute, logger)) {
+      for (const file of await expandGlob(fs, absolute)) {
         const content = await readOptional(fs, file)
         if (content !== undefined && content.trim() !== '') sections.push({ label: file, content })
       }
@@ -201,7 +203,7 @@ function hasGlob(path: string): boolean {
 }
 
 /** Minimal `*`/`**`/`?` glob expansion over directory entries (no character classes). */
-async function expandGlob(fs: FsAdapter, pattern: string, logger: BridgeLogger): Promise<string[]> {
+async function expandGlob(fs: FsAdapter, pattern: string): Promise<string[]> {
   const absolute = isAbsolute(pattern) ? pattern : join(process.cwd(), pattern)
   const parts = absolute.split(/[\\/]+/).filter((part) => part !== '' && part !== '.')
   let current = [absolute.startsWith('/') ? '/' : /^[A-Za-z]:/.test(parts[0] ?? '') ? (parts.shift() ?? '') + '\\' : '']
@@ -271,9 +273,7 @@ function dedupeSections(sections: MemorySection[]): MemorySection[] {
 }
 
 function renderSections(sections: MemorySection[]): string {
-  const body = sections
-    .map((section) => `Instructions from: ${section.label}\n\n${escapeReminderClose(section.content)}`)
-    .join('\n\n')
+  const body = sections.map((section) => `Instructions from: ${section.label}\n\n${escapeReminderClose(section.content)}`).join('\n\n')
   return (
     '<system-reminder>\n' +
     'The following opencode instructions may be relevant to your work. Use them as guidance when applicable. More specific instructions take precedence over broader ones. They do not override system, developer, or direct user instructions.\n\n' +
