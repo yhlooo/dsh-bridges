@@ -130,6 +130,46 @@ describe('CodebuddySettingsLoader', () => {
     expect(second).toBe(first)
   })
 
+  describe('permissions', () => {
+    it('merges permission rules additively across levels and deduplicates', async () => {
+      const loader = makeLoader(
+        JSON.stringify({ permissions: { deny: ['Bash(rm *)', 'Read(./.env)'] } }),
+        JSON.stringify({ permissions: { deny: ['Bash(rm *)', 'Edit(/src/**/*.ts)'] } }),
+        JSON.stringify({ permissions: { allow: ['Read(./README.md)'] } }),
+      )
+      const { permissions } = await loader.load('/proj')
+      expect(permissions.deny.map((rule) => rule.raw)).toEqual(['Bash(rm *)', 'Read(./.env)', 'Edit(/src/**/*.ts)'])
+      expect(permissions.allow.map((rule) => rule.raw)).toEqual(['Read(./README.md)'])
+      expect(permissions.ask).toEqual([])
+    })
+
+    it('takes defaultMode from the most specific source', async () => {
+      const loader = makeLoader(
+        JSON.stringify({ permissions: { defaultMode: 'acceptEdits' } }),
+        JSON.stringify({ permissions: { defaultMode: 'plan' } }),
+      )
+      const { permissions } = await loader.load('/proj')
+      expect(permissions.defaultMode).toBe('plan')
+    })
+
+    it('merges additionalDirectories across levels', async () => {
+      const loader = makeLoader(
+        JSON.stringify({ permissions: { additionalDirectories: ['../docs/'] } }),
+        JSON.stringify({ permissions: { additionalDirectories: ['../shared', '../docs/'] } }),
+      )
+      const { permissions } = await loader.load('/proj')
+      expect(permissions.additionalDirectories).toEqual(['../docs/', '../shared'])
+    })
+
+    it('ignores a malformed permissions field', async () => {
+      const loader = makeLoader(JSON.stringify({ permissions: 'nope' }))
+      const { permissions } = await loader.load('/proj')
+      expect(permissions.deny).toEqual([])
+      expect(permissions.allow).toEqual([])
+      expect(permissions.ask).toEqual([])
+    })
+  })
+
   it('exposes the consulted settings paths for watchers', () => {
     const loader = makeLoader('{}')
     expect(loader.sourcePaths(fx('proj'))).toEqual([

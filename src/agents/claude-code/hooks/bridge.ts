@@ -24,8 +24,7 @@ import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import { createUserMessage, type ContentBlock, type UserMessage } from '@deepseek-ai/dsh-llm'
 import type { PostToolDecision, PreToolDecision, ToolExecution, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 import type { FsAdapter } from '../../../fs-adapter.js'
-import type { RuleVerdict } from '../../../permissions/types.js'
-import type { PermissionEvaluator } from '../permissions.js'
+import { composePreToolDecision, type HookToolDecision, type PermissionEvaluator } from '../../../permissions/compose.js'
 import { claudeToolName } from './names.js'
 import type { BridgeLogger } from '../../../util.js'
 import { capString, escapeReminderClose, isPlainObject, killHookChild } from '../../../util.js'
@@ -270,49 +269,9 @@ async function onPreToolUse(
   }
 }
 
-/**
- * Compose a hook decision with the permission-rule verdict, honoring the
- * upstream contract: deny rules always win (a hook `allow` never overrides a
- * matching deny rule), a hook `ask` prompts, a hook `allow` bypasses unless a
- * deny/ask rule matches, and an undecided hook falls through to the rules.
- * Exported for unit tests.
- */
-export async function composePreToolDecision(
-  evaluator: PermissionEvaluator | undefined,
-  exec: ToolExecution,
-  hookDecision: PreToolUseResolution | undefined,
-  logger: BridgeLogger,
-  next: () => Promise<PreToolDecision>,
-): Promise<PreToolDecision> {
-  if (hookDecision?.kind === 'deny') return { kind: 'deny', reason: hookDecision.reason }
-  let rules: RuleVerdict
-  if (evaluator === undefined) {
-    rules = undefined
-  } else {
-    try {
-      rules = await evaluator(exec)
-    } catch (error) {
-      logger.warn(`claude-code: permission rules failed: ${error instanceof Error ? error.message : String(error)}`)
-      rules = undefined
-    }
-  }
-  if (rules?.kind === 'deny') return { kind: 'deny', reason: rules.reason }
-  if (hookDecision?.kind === 'ask') return { kind: 'ask', reason: hookDecision.reason }
-  if (hookDecision?.kind === 'allow') {
-    // Upstream: an ask rule still prompts after a hook grants the permission.
-    if (rules?.kind === 'ask') return { kind: 'ask', reason: rules.reason }
-    return { kind: 'allow' }
-  }
-  if (rules?.kind === 'ask') return { kind: 'ask', reason: rules.reason }
-  if (rules?.kind === 'allow') return { kind: 'allow' }
-  return next()
-}
+export type PreToolUseResolution = HookToolDecision
 
-export type PreToolUseResolution =
-  | { kind: 'deny'; reason: string }
-  | { kind: 'ask'; reason?: string }
-  | { kind: 'allow' }
-  | { kind: 'undecided' }
+export { composePreToolDecision } from '../../../permissions/compose.js'
 
 export function resolvePreToolUse(outcomes: readonly HookOutcome[], maxChars: number): PreToolUseResolution {
   // Precedence: deny > defer > ask > allow; timeouts and failures fail open.

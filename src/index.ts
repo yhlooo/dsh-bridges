@@ -52,6 +52,7 @@ export const Config = z.object({
     skills: z.boolean().default(true),
     memory: z.boolean().default(true),
     hooks: z.boolean().default(true),
+    permissions: z.boolean().default(true),
     userCodebuddyDir: z.string().default('~/.codebuddy'),
     watch: z.boolean().default(true),
     hookTimeoutMs: z.number().default(60_000),

@@ -95,11 +95,18 @@
   组合（deny 规则恒胜、ask 规则压过 hook allow，与上游 hooks 契约一致）；
   `defaultMode`/`disableBypassPermissionsMode` 读取不执行、项目 allow 规则无
   信任门禁（均记限制）；示例与中英文档已同步。
-- [ ] **codebuddy-code**：settings `permissions.allow/ask/deny`（规则语法含
+- [x] **codebuddy-code**：settings `permissions.allow/ask/deny`（规则语法含
   `WebFetch(domain:)`、`mcp__…`、`Agent(…)`、`Skill(…)`）、`permissions.defaultMode`
   （default/acceptEdits/auto/dontAsk/plan/bypassPermissions）、
   `disableBypassPermissionsMode` / `disableAutoMode` / `subagentPermissionMode`；
   `autoMode`（NL 分类器）无 dsh 等价物，单独评估（可忽略并记限制）。
+  **已实现**（2026-08-15）：共享引擎增加 `codebuddy` 方言（Bash 精确/`:*`
+  前缀/glob + 复合命令拆分与 allow 全命中语义 + 重定向精确匹配、文件规则
+  大小写不敏感 + 裸文件名任意深度、MCP 名称归一与 `mcp__*` 仅 deny/ask、
+  `Skill(name)` 精确匹配；`Agent(name)` 无对应字段记限制）；共享
+  `composePreToolDecision` 提炼到 `src/permissions/compose.ts`（claude 桥改为
+  复用）；`defaultMode`/bypass/autoMode 开关读取不执行、内置受保护路径不
+  复制、项目 allow 无信任分层（均记限制）。示例与中英文档已同步。
 - [ ] **codex**：`approval_policy`（含 `granular` 细分）→ dsh 审批策略；
   `sandbox_mode` + `[sandbox_workspace_write]`（`writable_roots`/`network_access`/
   `exclude_tmpdir_env_var`/`exclude_slash_tmp`）→ dsh 沙箱模式（两者几乎 1:1）；

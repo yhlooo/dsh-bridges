@@ -12,7 +12,7 @@ codebuddy-code 桥接如何将 CodeBuddy Code 的资产桥接进来。
 ├── CODEBUDDY.md                  项目记忆（根目录，会话开始注入）
 └── .codebuddy/
     ├── CODEBUDDY.md              项目记忆（.codebuddy 目录内，同时注入；内容相同只保留一份）
-    ├── settings.json             hooks 配置（见下）
+    ├── settings.json             hooks + permissions 配置（见下）
     ├── rules/
     │   ├── conventional-commits.md  alwaysApply: true → 注入（frontmatter 剥离）
     │   └── frontend-only.md         alwaysApply: false → 跳过（演示条件规则不桥接）
@@ -32,6 +32,7 @@ codebuddy-code 桥接如何将 CodeBuddy Code 的资产桥接进来。
 | `<cwd>/CODEBUDDY.md`、`.codebuddy/CODEBUDDY.md` | 会话开始注入（system-reminder 框架） |
 | `.codebuddy/rules/**`（`alwaysApply` 未关闭） | 注入；frontmatter 剥离；`enabled: false` / `alwaysApply: false` 跳过 |
 | `.codebuddy/settings.json` 的 `hooks` | 映射到 DeepSeek Harness 生命周期；`${CODEBUDDY_PROJECT_DIR}` 替换、`once`、60 秒默认超时 |
+| `.codebuddy/settings.json` 的 `permissions` | allow/ask/deny 规则在 `tools/pre-execute` 执行（示例：`Bash(rm -rf *)` 直接拒绝、`Bash(git push:*)` 触发审批、`Read(./README.md)` 免审批放行） |
 
 hook 脚本收到的 JSON 里，工具名是 **CodeBuddy Code 的名字**（`Bash`、
 `Edit`……），matcher 按 CodeBuddy Code 语义（`*`/空匹配全部，其余为正则）

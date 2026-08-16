@@ -276,11 +276,13 @@ describe('decision resolvers', () => {
   })
 
   it('fails open on timeouts and startup failures', () => {
+    const decision = resolvePreToolUse([{ ...base, timedOut: true }, { ...base, failedToStart: 'ENOENT' }], 1000)
+    expect(decision).toEqual({ kind: 'undecided' })
+  })
+
+  it('maps an explicit allow', () => {
     const decision = resolvePreToolUse(
-      [
-        { ...base, timedOut: true },
-        { ...base, failedToStart: 'ENOENT' },
-      ],
+      [{ ...base, output: { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } } }],
       1000,
     )
     expect(decision).toEqual({ kind: 'allow' })
