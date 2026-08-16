@@ -101,9 +101,20 @@ describe('opencode permission evaluation', () => {
     expect(normal?.kind).toBe('allow')
   })
 
-  it('applies the string form to every tool', async () => {
-    const result = await evaluate('ask', 'todo_write', {})()
+  it('applies the string form to mapped tools', async () => {
+    const result = await evaluate('ask', 'bash', { command: 'git status' })()
     expect(result?.kind).toBe('ask')
+  })
+
+  it('defers to the DSH approval policy for tools without an opencode family', async () => {
+    // DSH-only tools (todo_write, pwsh, exit_plan_mode, mcp__* tools) must
+    // never be force-allowed by an opencode permission config.
+    const todo = await evaluate({ bash: 'deny' }, 'todo_write', {})()
+    expect(todo).toBeUndefined()
+    const mcp = await evaluate({ bash: 'deny' }, 'mcp__server__tool', {})()
+    expect(mcp).toBeUndefined()
+    const pwsh = await evaluate({ bash: 'deny' }, 'pwsh', {})()
+    expect(pwsh).toBeUndefined()
   })
 
   it('maps dsh tools onto opencode families', async () => {

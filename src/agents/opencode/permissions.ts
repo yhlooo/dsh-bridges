@@ -10,10 +10,12 @@
  * deny `.env*` except `.env.example`).
  *
  * The bridge mirrors this: when any config layer defines `permission`, the
- * bridge evaluates it — unmatched calls resolve to opencode's built-in
- * defaults, so an opencode project's permissive posture carries over. When no
- * layer defines `permission`, the bridge stays out of the way and DeepSeek
- * Harness policy applies. `doom_loop` (repeat-detection) and `webfetch`
+ * bridge evaluates it — calls on families with no matching rule resolve to
+ * opencode's built-in defaults, so an opencode project's permissive posture
+ * carries over. DSH-only tools without an opencode family (todo_write,
+ * pwsh, exit_plan_mode, MCP tools, …) always defer to DeepSeek Harness's own
+ * approval policy. When no layer defines `permission`, the bridge stays out
+ * of the way entirely. `doom_loop` (repeat-detection) and `webfetch`
  * (URL-fetch tool) have no DSH seam and are recorded as limitations;
  * `lsp` has no DSH tool.
  * @module dsh-bridges/agents/opencode/permissions
@@ -141,14 +143,15 @@ export function evaluateOpencodePermissions(
   args: unknown,
   context: { cwd: string; home: string },
 ): RuleVerdict {
-  const families = DSH_TO_OPENCODE_FAMILIES[toolName] ?? [undefined]
+  const families = DSH_TO_OPENCODE_FAMILIES[toolName]
+  // DSH-only tools (todo_write, pwsh, exit_plan_mode, mcp__* tools, …) have
+  // no opencode permission family; defer to DeepSeek Harness's own approval
+  // policy instead of mirroring a permissive default for tools opencode
+  // never had.
+  if (families === undefined) return undefined
   const verdicts: OpencodeAction[] = []
   let externalPath: string | undefined
   for (const family of families) {
-    if (family === undefined) {
-      verdicts.push(evaluateFamily(permissions, '<unmapped>', undefined, 'text', context) ?? 'allow')
-      continue
-    }
     const { value, kind } = familyValue(family, args)
     const action = evaluateFamily(permissions, family, value, kind, context)
     if (action === undefined) continue
