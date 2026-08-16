@@ -374,6 +374,7 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md` 与 `CLAUDE.md`。�
 
 DeepSeek Harness 核心自行加载工作区根 `AGENTS.md`。本桥接在会话开始时额外注入 Codex 的指令链（system-reminder 框架）：
 
+- 最具体配置层的 `developer_instructions`（最先注入，与 Codex 一致）
 - `$CODEX_HOME/AGENTS.override.md`（存在时），否则 `$CODEX_HOME/AGENTS.md`（先非空先胜；`CODEX_HOME` 会被遵守）
 - 从仓库根向下到工作目录，每目录一个文件：`AGENTS.override.md` > `AGENTS.md` > `project_doc_fallback_filenames`；越靠工作目录越靠后、越优先
 - 根目录的普通 `AGENTS.md` 跳过（DeepSeek Harness 已加载）；空文件跳过；项目累计达到 `project_doc_max_bytes`（默认 32 KiB）即停止追加
@@ -420,6 +421,6 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md`。本桥接在会话
 尚未桥接（按子系统记录）：
 
 - **Skills**：`agents/openai.yaml` 元数据（`allow_implicit_invocation`、工具依赖）、插件分发的技能、符号链接的技能目录（桥接经文件系统读取，但不解析符号链接身份）、curated 插件目录。
-- **Memory**：`model_instructions_file`、Codex 的 8,000 字符初始列表预算（DeepSeek Harness 有自己的目录预算）。
+- **Memory**：`model_instructions_file`（替换内置指令——不在范围内）、Codex 的 8,000 字符初始列表预算（DeepSeek Harness 有自己的目录预算）。
 - **Hooks**：`PermissionRequest`（DeepSeek Harness 没有"即将请求审批"的接缝）、`PreCompact`/`PostCompact`（无压缩前接缝；`compact` 会话来源会触发 SessionStart hooks 代替）、Codex 的 hook trust 审核流程（`/hooks`——桥接与其他桥接一致、无 trust 闸门运行）、后台 hook 输出在下个安全点投递、`systemMessage`/`suppressOutput` 仅用户通道、`additionalContextLimit` 溢出落盘（桥接按字符截断替代）、插件捆绑与托管 `requirements.toml` hooks、`transcript_path`（桥接没有真实转录文件）、`updatedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）。
 - **Rules / 配置**：`rules/*.rules`（实验性 Starlark DSL）、`notify`、`[agents]` 子代理角色、`requirements.toml`、profile 文件（`--profile`）、未信任项目门禁（项目 `.codex/` 层无条件读取——桥接没有 trust 状态）。
