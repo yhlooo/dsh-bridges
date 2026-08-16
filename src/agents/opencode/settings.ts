@@ -19,7 +19,7 @@
  * results are cached per working directory and invalidated by file stamps.
  * @module dsh-bridges/agents/opencode/settings
  */
-import { join } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 import type { FsAdapter } from '../../fs-adapter.js'
 import type { BridgeLogger } from '../../util.js'
 import { expandHome, isPlainObject } from '../../util.js'
@@ -47,6 +47,21 @@ export interface LoadedOpencodeSettings {
   permissions?: OpencodePermissionConfig
   /** `mcp` servers, project overriding global per name. */
   mcp: ReadonlyMap<string, OpencodeMcpEntry>
+  /** `references` aliases, project overriding global; paths resolved absolute. */
+  references: ReadonlyMap<string, OpencodeReference>
+  /** `skills.paths` extra skill roots (resolved against their config file). */
+  skillPaths: readonly { path: string }[]
+}
+
+/** One `references.<alias>` entry with a resolved local path or repository. */
+export interface OpencodeReference {
+  alias: string
+  /** Absolute path for local `path` references (already resolved). */
+  path?: string
+  /** Git repository reference (not fetched by the bridge). */
+  repository?: string
+  description?: string
+  hidden?: boolean
 }
 
 /** One `mcp.<name>` entry (local stdio or remote HTTP). */
@@ -170,6 +185,8 @@ export class OpencodeSettingsLoader {
     let instructions: { entries: readonly string[]; baseDir: string } | undefined
     const permissions = new Map<string, OpencodePermissionFamily>()
     const mcp = new Map<string, OpencodeMcpEntry>()
+    const references = new Map<string, OpencodeReference>()
+    const skillPaths: { path: string }[] = []
     let defaultAction: OpencodeAction | undefined
     let permissionConfigured = false
     for (const { source, value } of parsed) {
@@ -185,6 +202,8 @@ export class OpencodeSettingsLoader {
       }
       const layerMcp = readMcp(value['mcp'], this.logger, source.path)
       for (const [name, entry] of layerMcp) mcp.set(name, entry)
+      for (const [alias, entry] of readReferences(value['references'], source.dir, this.logger, source.path)) references.set(alias, entry)
+      for (const path of readSkillPaths(value['skills'], source.dir)) skillPaths.push(path)
     }
     for (const [name, command] of projectCommands) commands.set(name, command)
 
@@ -199,6 +218,8 @@ export class OpencodeSettingsLoader {
           }
         : undefined,
       mcp,
+      references,
+      skillPaths,
     }
   }
 }
@@ -264,6 +285,58 @@ function readJsonCommands(value: unknown, commands: Map<string, OpencodeJsonComm
     })
   }
   return commands
+}
+
+const REFERENCE_ALIAS_RE = /^[^/\s`,\x00-\x1f]+$/
+
+/** Parse `references`: `<alias>: { path | repository, description?, hidden? }` or a string shorthand. */
+function readReferences(value: unknown, baseDir: string, logger: BridgeLogger, path: string): Map<string, OpencodeReference> {
+  const result = new Map<string, OpencodeReference>()
+  if (value === undefined) return result
+  if (!isPlainObject(value)) {
+    logger.warn(`opencode: ignoring malformed references field in ${path}: must be an object`)
+    return result
+  }
+  for (const [alias, raw] of Object.entries(value)) {
+    if (!REFERENCE_ALIAS_RE.test(alias) || alias === '') {
+      logger.warn(`opencode: skipping reference with invalid alias ${JSON.stringify(alias)} in ${path}`)
+      continue
+    }
+    let entry: Record<string, unknown>
+    if (typeof raw === 'string') entry = { path: raw }
+    else if (isPlainObject(raw)) entry = raw
+    else continue
+    const reference: OpencodeReference = { alias, hidden: entry['hidden'] === true }
+    if (typeof entry['description'] === 'string' && entry['description'].trim() !== '') reference.description = entry['description']
+    const localPath = entry['path']
+    if (typeof localPath === 'string' && localPath.trim() !== '') {
+      reference.path = resolveReferencePath(localPath, baseDir)
+    } else if (typeof entry['repository'] === 'string' && entry['repository'].trim() !== '') {
+      reference.repository = entry['repository']
+    } else {
+      logger.warn(`opencode: skipping reference ${JSON.stringify(alias)} in ${path}: neither path nor repository defined`)
+      continue
+    }
+    result.set(alias, reference)
+  }
+  return result
+}
+
+/** Resolve a reference path: `~` home, absolute, else relative to the config file's directory. */
+function resolveReferencePath(path: string, baseDir: string): string {
+  if (path === '~' || path.startsWith('~/')) return expandHome(path)
+  return isAbsolute(path) ? path : join(baseDir, path)
+}
+
+/** Parse `skills.paths` (extra skill folders) and `skills.urls` (network — ignored). */
+function readSkillPaths(value: unknown, baseDir: string): { path: string }[] {
+  if (!isPlainObject(value) || !Array.isArray(value['paths'])) return []
+  const result: { path: string }[] = []
+  for (const entry of value['paths']) {
+    if (typeof entry !== 'string' || entry.trim() === '') continue
+    result.push({ path: resolveReferencePath(entry.trim(), baseDir) })
+  }
+  return result
 }
 
 function readStringArray(value: unknown): string[] | undefined {

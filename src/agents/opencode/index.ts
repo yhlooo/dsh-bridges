@@ -21,6 +21,7 @@ import type { BridgeLogger } from '../../util.js'
 import { createMcpBridge } from './mcp.js'
 import { registerMemory } from './memory.js'
 import { createPermissionsBridge } from './permissions.js'
+import { registerReferences } from './references.js'
 import { OpencodeSettingsLoader } from './settings.js'
 import { OpencodeSkillProvider } from './skills/provider.js'
 
@@ -100,6 +101,7 @@ export function registerOpencodeBridge(ctx: Context, logger: BridgeLogger, fs: F
       claudeCompat: resolved.claudeCompat,
       maxBytes: resolved.memoryMaxBytes,
     })
+    registerReferences(ctx, logger, loader)
   }
 
   if (resolved.permissions) {

@@ -23,7 +23,7 @@
  * skills keep winning over opencode assets.
  * @module dsh-bridges/agents/opencode/skills/provider
  */
-import { join, dirname } from 'node:path'
+import { dirname, join } from 'node:path'
 import { watch } from 'chokidar'
 import type { SkillCandidate, SkillDefinition, SkillLookupOptions, SkillProvider, SkillProviderControl } from '@deepseek-ai/dsh-skill'
 import { isSkillName } from '@deepseek-ai/dsh-skill'
@@ -41,6 +41,7 @@ export const PROVIDER_NAME = 'opencode'
  * commands override same-name command files at the same level.
  */
 const RANK_PROJECT_SKILLS = 145
+const RANK_PROJECT_EXTRA_SKILLS = 146
 const RANK_PROJECT_JSON_COMMANDS = 147
 const RANK_PROJECT_COMMANDS = 150
 const RANK_USER_SKILLS = 155
@@ -50,7 +51,7 @@ const RANK_USER_COMMANDS = 160
 /** opencode caps the skill `description` at 1,024 characters. */
 const MAX_DESCRIPTION_CHARS = 1024
 
-type RootKind = 'user-skills' | 'user-json-commands' | 'user-commands' | 'project-skills' | 'project-json-commands' | 'project-commands'
+type RootKind = 'user-skills' | 'user-json-commands' | 'user-commands' | 'project-skills' | 'project-extra-skills' | 'project-json-commands' | 'project-commands'
 
 interface SkillRoot {
   kind: RootKind
@@ -99,7 +100,7 @@ export class OpencodeSkillProvider implements SkillProvider {
     private readonly invalidate: SkillProviderControl['invalidate'],
   ) {}
 
-  private resolveRoots(cwd?: string): SkillRoot[] {
+  private async resolveRoots(cwd?: string): Promise<SkillRoot[]> {
     const userDir = expandHome(this.config.userOpencodeDir)
     const roots: SkillRoot[] = [
       { kind: 'user-skills', path: join(userDir, 'skills'), rank: RANK_USER_SKILLS },
@@ -107,9 +108,23 @@ export class OpencodeSkillProvider implements SkillProvider {
       { kind: 'user-commands', path: join(userDir, 'commands'), rank: RANK_USER_COMMANDS },
     ]
     if (cwd) {
+      // Upward `.opencode/skills` discovery (opencode walks from cwd to the
+      // git worktree root; closest directories win on same-rank conflicts
+      // through candidate order).
+      for (const dir of await this.projectDirs(cwd)) {
+        roots.push({ kind: 'project-skills', path: join(dir, '.opencode', 'skills'), rank: RANK_PROJECT_SKILLS })
+      }
+      // `skills.paths` extra roots from opencode.json(c).
+      try {
+        const settings = await this.settings.load(cwd)
+        for (const entry of settings.skillPaths) {
+          roots.push({ kind: 'project-extra-skills', path: entry.path, rank: RANK_PROJECT_EXTRA_SKILLS })
+        }
+      } catch (error) {
+        if (!isAbort(error)) this.logger.warn(`opencode: cannot read config for skills.paths: ${errorMessage(error)}`)
+      }
       const projectDir = join(cwd, '.opencode')
       roots.push(
-        { kind: 'project-skills', path: join(projectDir, 'skills'), rank: RANK_PROJECT_SKILLS },
         { kind: 'project-json-commands', path: join(projectDir, 'commands'), rank: RANK_PROJECT_JSON_COMMANDS },
         { kind: 'project-commands', path: join(projectDir, 'commands'), rank: RANK_PROJECT_COMMANDS },
       )
@@ -117,8 +132,22 @@ export class OpencodeSkillProvider implements SkillProvider {
     return roots
   }
 
+  /** The directory chain from the git root down to `cwd`, closest first. */
+  private async projectDirs(cwd: string): Promise<string[]> {
+    const dirs: string[] = []
+    let dir: string = cwd
+    for (let depth = 0; depth < 32; depth++) {
+      dirs.push(dir)
+      if (await this.fs.dirExists(join(dir, '.git'))) break
+      const parent = dirname(dir)
+      if (parent === dir) break
+      dir = parent
+    }
+    return dirs
+  }
+
   async list(options: SkillLookupOptions) {
-    const roots = this.resolveRoots(options.cwd)
+    const roots = await this.resolveRoots(options.cwd)
     const jsonCommands = await this.readJsonCommands(options.cwd, options.signal)
     const candidates: SkillCandidate[] = []
     let complete = true
@@ -126,7 +155,8 @@ export class OpencodeSkillProvider implements SkillProvider {
       if (options.signal?.aborted) return { candidates, complete: false }
       switch (root.kind) {
         case 'user-skills':
-        case 'project-skills': {
+        case 'project-skills':
+        case 'project-extra-skills': {
           const result = await this.listSkills(root, options, candidates)
           complete = complete && result.complete
           if (!result.continue) return { candidates, complete }
