@@ -14,27 +14,23 @@ A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin tha
 ## Quick start
 
 ```sh
-# 1. install into each profile you use — <name> is web (the Web UI) or
-#    headless (one-shot CLI); each profile installs its own plugins
-dsh plugin --profile <name> add dsh-bridges
+# the general form:
+#   dsh plugin --profile <profile-name> add dsh-bridges
+#   dsh --profile <profile-name>
+
+# Web UI example:
+dsh plugin --profile web add dsh-bridges
+dsh web    # = dsh --profile web
 ```
 
 ```sh
-# 2. the Web UI: start it, then open the project in the GUI
-dsh --profile web
-# open my-claude-project (has .claude/ assets) as the workspace — its skills,
-# commands, memory, and hooks are bridged automatically
-```
-
-```sh
-# 3. or a one-shot CLI run (headless): the invoking directory is the workspace
-cd my-claude-project
+# headless (one-shot CLI) is also supported — the invoking directory is the workspace:
+dsh plugin --profile headless add dsh-bridges
+cd my-project
 dsh --profile headless "list the skills available in your catalog"
-# → .claude skills and commands are registered as /name skills, CLAUDE.md is
-#   injected, and the project's settings.json hooks run unchanged.
 ```
 
-To install from a checkout of this repository, build it first: `pnpm install && pnpm build && dsh plugin --profile <name> add .`
+To install from a checkout of this repository, build it first: `pnpm install && pnpm build && dsh plugin --profile <profile-name> add .`
 
 Complete example projects for each agent tool are available in [`examples/`](examples/) (`claude-code`, `codebuddy-code`, `opencode`, `codex`); open one as the session workspace to observe its skills, memory, and hooks being bridged.
 

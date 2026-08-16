@@ -14,27 +14,23 @@
 ## 快速上手
 
 ```sh
-# 1. 每个要用的 profile 各装一次——<name> 取 web（Web UI）或
-#   headless（一次性 CLI 运行）；各 profile 的插件互不共享
-dsh plugin --profile <name> add dsh-bridges
+# 一般形式：
+#   dsh plugin --profile <profile-name> add dsh-bridges
+#   dsh --profile <profile-name>
+
+# Web UI 示例：
+dsh plugin --profile web add dsh-bridges
+dsh web    # = dsh --profile web
 ```
 
 ```sh
-# 2. Web UI：启动后，在界面里打开项目
-dsh --profile web
-# 在界面里把 my-claude-project（已有 .claude/ 资产）打开为会话工作区，
-# 其 skills、commands、记忆与 hooks 自动桥接进来
-```
-
-```sh
-# 3. 或一次性 CLI 运行（headless）：启动目录即会话工作区
-cd my-claude-project
+# 也支持 headless（一次性 CLI 运行），启动目录即会话工作区：
+dsh plugin --profile headless add dsh-bridges
+cd my-project
 dsh --profile headless "list the skills available in your catalog"
-# → .claude 技能与命令注册为 /名字 技能，CLAUDE.md 被注入，
-#   项目中的 settings.json hooks 原样运行。
 ```
 
-从本仓库源码安装（需先编译）：`pnpm install && pnpm build && dsh plugin --profile <name> add .`
+从本仓库源码安装（需先编译）：`pnpm install && pnpm build && dsh plugin --profile <profile-name> add .`
 
 每个受支持的 agent 工具在 [`examples/`](examples/) 下各有一个完整示例项目
 （`claude-code`、`codebuddy-code`、`opencode`、`codex`）；以示例目录作为会话

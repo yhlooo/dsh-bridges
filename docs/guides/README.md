@@ -9,21 +9,21 @@ hooks) with its limitations. For a quick start, see the
 
 ## Install
 
-Plugins install into a DeepSeek Harness profile with the profile plugin manager (pnpm); `<name>` is `web` (the Web UI) or `headless` (one-shot CLI runs), and each profile installs its own plugins:
+Plugins install into a DeepSeek Harness profile with the profile plugin manager (pnpm); `<profile-name>` is `web` (the Web UI) or `headless` (one-shot CLI runs), and each profile installs its own plugins:
 
 ```sh
 # from a checkout of this repository (compile src/ → lib/ first):
 pnpm install && pnpm build
-dsh plugin --profile <name> add .
+dsh plugin --profile <profile-name> add .
 
 # or, once published, from a tarball / registry package:
-dsh plugin --profile <name> add dsh-bridges
+dsh plugin --profile <profile-name> add dsh-bridges
 ```
 
 The plugin manager appends the package to the profile's `dsh.profile.bundles`, and its `cordis.patch.yml` inserts one `bridges` row into the composed tree. Verify with:
 
 ```sh
-dsh --profile <name> --dump-config   # the row "dsh-bridges" should appear
+dsh --profile <profile-name> --dump-config   # the row "dsh-bridges" should appear
 ```
 
 Then start DeepSeek Harness in a project that has agent assets — `.claude/`, `.codebuddy/`, `.opencode/`, `.agents/skills/`, or `.codex/` (plus their user-level counterparts, e.g. `~/.claude/`); assets are discovered per session workspace.

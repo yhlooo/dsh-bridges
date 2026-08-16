@@ -47,7 +47,7 @@ opencode 没有 hooks 文件格式，因此本示例不含 hooks——它属于 
 
 ```sh
 # 1. 安装插件（repo 根目录，先 pnpm install && pnpm build）
-dsh plugin --profile <name> add .    # <name> = web（Web GUI）或 headless（一次性 CLI）
+dsh plugin --profile <profile-name> add .    # <profile-name> = web（Web GUI）或 headless（一次性 CLI）
 
 # 2. 启动 Web GUI，在界面里把 examples/opencode 打开为会话工作区
 dsh --profile web

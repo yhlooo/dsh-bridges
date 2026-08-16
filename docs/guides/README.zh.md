@@ -6,21 +6,21 @@
 
 ## 安装
 
-插件通过 profile 的插件管理器（pnpm）安装到某个 DeepSeek Harness profile；`<name>` 取 `web`（Web GUI）或 `headless`（一次性 CLI 运行），每个 profile 独立安装插件：
+插件通过 profile 的插件管理器（pnpm）安装到某个 DeepSeek Harness profile；`<profile-name>` 取 `web`（Web GUI）或 `headless`（一次性 CLI 运行），每个 profile 独立安装插件：
 
 ```sh
 # 从本仓库 checkout 安装（先编译 src/ → lib/）：
 pnpm install && pnpm build
-dsh plugin --profile <name> add .
+dsh plugin --profile <profile-name> add .
 
 # 或将来从发布的 tarball / registry 包安装：
-dsh plugin --profile <name> add dsh-bridges
+dsh plugin --profile <profile-name> add dsh-bridges
 ```
 
 插件管理器会把该包追加到 profile 的 `dsh.profile.bundles`，其 `cordis.patch.yml` 向组合树注入一行 `bridges`。验证：
 
 ```sh
-dsh --profile <name> --dump-config   # 应能看到 "dsh-bridges" 这一行
+dsh --profile <profile-name> --dump-config   # 应能看到 "dsh-bridges" 这一行
 ```
 
 然后在带有 agent 资产（`.claude/`、`.codebuddy/`、`.opencode/`、`.agents/skills/`、`.codex/`，以及它们 `~/` 下的用户级对应目录，如 `~/.claude/`）的项目里启动 DeepSeek Harness；资产按会话工作区发现。
