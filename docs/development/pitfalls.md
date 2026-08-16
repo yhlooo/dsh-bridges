@@ -306,3 +306,17 @@ User=4、Admin=5），工作区层因此也不读（上游 issue #18186）。
 
 **正确写法**：实现注释引用"公式 + 表格"作为权威，guides 权限小节写明
 "以表格+公式为准"；契约测试直接钉住 `final = 4 + priority/1000` 的行为。
+
+## 34. e2e fixture 里的 `.git/HEAD` 标记不会被 git 跟踪，必须运行时创建
+
+**现象**：pi/cursor 的记忆 e2e 本地全绿、CI 干净 checkout 全红——pi 断言
+`Sub rules.` 缺失、cursor 规则注入 waitFor 超时。
+
+**原因**：git 从不跟踪路径中含 `.git` 组件的文件（`git add` 静默忽略），
+所以 fixture 里的 `.git/HEAD` 仓库标记只存在于本地工作树；CI checkout 里
+缺失 → `findRepositoryRoot` 回退为 cwd → pi 把 cwd 的 AGENTS.md 当成"核心
+已加载"去重、cursor 的 rules 目录锚到子目录而找不到。
+
+**正确写法**：fixture 目录不提交任何 `.git` 内容；需要仓库根标记的测试在
+`fixtureCopy` 之后调用 `e2e/harness.ts` 的 `markRepoRoot(dir)`（运行时
+`mkdir .git` + 写 HEAD）。gemini 的边界标记同样处理，保证本地与 CI 一致。
