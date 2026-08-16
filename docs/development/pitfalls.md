@@ -212,3 +212,11 @@ opencode / codex 的规则文件去重：DSH 核心已加载的只有**工作区
 **原因**：上游 Codex 的 system 层是 Unix-only（`/etc/codex/config.toml`），Windows 没有对应位置；直接 `join` 字面量在 win32 下得到"当前盘相对"的怪路径。
 
 **正确写法**：`resolve('/etc/codex')`——POSIX 不变，win32 解析为 `<盘符>:\etc\codex`（当前盘根），两侧一致。settings.ts 与 skills/provider.ts 两处要同步改（`SYSTEM_CODEX_DIR` 常量与 provider 的 `join(resolve('/etc/codex'), 'skills')`）。
+
+## 27. 提示可见的路径 label 要用 `join`，别用模板串拼分隔符
+
+**现象**：Windows CI 上 codebuddy-memory 测试红：label 是 `D:\home\u\.codebuddy/CODEBUDDY.md`（混合分隔符），与 `fx(...)` 期望值不等。
+
+**原因**：`` `${userDir}/CODEBUDDY.md` `` 模板串在 win32 上拼出 `/` 与 `\` 混用；这些 label 会进注入正文、用户可见。四个桥的 user 层 label（claude/codebuddy/opencode/codex 各一处）都有此模式。
+
+**正确写法**：绝对路径 label 一律 `join(dir, 'NAME.md')`（或直接复用已 join 好的变量）。相对展示名（如 `.codebuddy/CODEBUDDY.md`）是有意为之，保持原样。
