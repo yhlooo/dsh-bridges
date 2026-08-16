@@ -19,6 +19,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { FsAdapter } from '../../fs-adapter.js'
 import type { BridgeLogger } from '../../util.js'
 import { registerMemory } from './memory.js'
+import { createPermissionsBridge } from './permissions.js'
 import { OpencodeSettingsLoader } from './settings.js'
 import { OpencodeSkillProvider } from './skills/provider.js'
 
@@ -29,6 +30,8 @@ export interface OpencodeConfig {
   skills?: boolean
   /** Inject opencode rules (AGENTS.md, CLAUDE.md fallback, instructions). */
   memory?: boolean
+  /** Enforce `permission` rules from opencode.json(c) at the tools seam. */
+  permissions?: boolean
   /** User-level opencode config directory (usually `~/.config/opencode`). */
   userOpencodeDir?: string
   /** User-level Claude Code directory for the CLAUDE.md compatibility fallback. */
@@ -45,6 +48,7 @@ export const OPENCODE_DEFAULTS: Required<OpencodeConfig> = {
   enabled: true,
   skills: true,
   memory: true,
+  permissions: true,
   userOpencodeDir: '~/.config/opencode',
   userClaudeDir: '~/.claude',
   claudeCompat: true,
@@ -89,5 +93,9 @@ export function registerOpencodeBridge(ctx: Context, logger: BridgeLogger, fs: F
       claudeCompat: resolved.claudeCompat,
       maxBytes: resolved.memoryMaxBytes,
     })
+  }
+
+  if (resolved.permissions) {
+    createPermissionsBridge(ctx, logger, loader)
   }
 }

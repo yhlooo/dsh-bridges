@@ -67,6 +67,7 @@ Every tool bridge owns a config section under the `bridges` row; a later patch l
       enabled: true                   # master switch for the opencode bridge
       skills: true                    # discover .opencode / ~/.config/opencode skills and commands (+ JSON commands)
       memory: true                    # inject AGENTS.md rules (with CLAUDE.md fallback) and instructions files
+      permissions: true               # enforce permission rules from opencode.json(c)
       userOpencodeDir: '~/.config/opencode'  # user-level opencode directory
       userClaudeDir: '~/.claude'      # user-level Claude Code directory for the CLAUDE.md fallback
       claudeCompat: true              # honor opencode's Claude Code compatibility fallbacks
@@ -275,13 +276,26 @@ DeepSeek Harness's own loader reads the workspace-root `AGENTS.md` and `CLAUDE.m
 
 Budget 32 KiB: broader user-level sections are dropped first, then the most specific ones are truncated.
 
+### Permissions
+
+Reads the `permission` field from `opencode.json(c)` (global + project layers; per family the most specific layer that defines it wins) and enforces it at the `tools/pre-execute` seam with opencode's semantics:
+
+- Grammar: a bare string (`permission: "allow" | "ask" | "deny"`) or an object keyed by family — `*` (default), `read`, `edit` (covers `edit`/`write`), `glob`, `grep`, `bash`, `task`, `skill`, `question`, `websearch`, `external_directory`, plus `lsp`/`doom_loop` (see limitations). Families hold either an action or ordered `pattern → action` rules where the **last matching rule wins** (put `"*"` first, specific rules after, as opencode documents).
+- Wildcards are opencode's (`*` any chars, `?` one char); `~`/`$HOME` expand at the pattern start; worktree-relative patterns match paths relative to the working directory.
+- Built-in defaults apply when `permission` is configured: most families allow, `external_directory` asks, and reads deny `.env` / `.env.*` except `.env.example` — the upstream defaults.
+- DSH tool mapping: `read`→read, `edit`/`write`→edit, `glob`→glob, `grep`→grep, `bash`→bash, `subagent`→task (family-level only; subagent-type patterns have no DSH field), `skill`→skill (matches the skill name), `ask_user_question`→question, `web`/`web_search`→websearch (matches the query). Unmapped tools resolve through `*` / the defaults.
+- `external_directory` triggers when a read/edit/write path falls outside the working directory; its default is `ask`, matching opencode.
+- When **no** config layer defines `permission`, the bridge stays out of the way and DeepSeek Harness policy applies unchanged. When it is defined, unmatched calls resolve to opencode's permissive defaults — the upstream posture carries over (allow skips approval, ask prompts, deny blocks).
+
+Not bridged (recorded as limitations): `doom_loop` (repeat-detection has no seam), `webfetch` (no URL-fetch tool), `lsp` (no LSP tool), the deprecated legacy `tools` boolean config, and per-agent permission overrides (`agent.<name>.permission` — DeepSeek Harness sessions carry no opencode agent identity).
+
 ### Limitations
 
 Not bridged yet (documented per subsystem):
 
-- **Skills / commands**: nested command directories (not documented by opencode), `$ARGUMENTS`/`$1`/`!`command``/`@file` substitution in command templates, `agent`/`model`/`subtask` command options, custom agents, permission-based skill filtering (`permission.skill` `deny`/`ask` patterns).
+- **Skills / commands**: nested command directories (not documented by opencode), `$ARGUMENTS`/`$1`/`!`command``/`@file` substitution in command templates, `agent`/`model`/`subtask` command options, custom agents.
 - **Memory**: `OPENCODE_CONFIG` / `OPENCODE_CONFIG_DIR` / `OPENCODE_CONFIG_CONTENT` overrides, remote/managed config layers, upward config-file discovery (project `opencode.json` is read at the cwd only), `{env:…}`/`{file:…}` substitution in config.
-- **Plugins / permissions / MCP**: opencode's JavaScript plugin system (its event hooks need the opencode runtime), permission rules, MCP server config, custom tools — none of these have a file-format bridge here.
+- **Plugins / MCP / tools**: opencode's JavaScript plugin system (its event hooks need the opencode runtime), MCP server config, custom tools — none of these have a file-format bridge here.
 - **Overlap note**: when `claudeCode.memory` is also enabled, the `~/.claude/CLAUDE.md` fallback can be injected twice (once per bridge); keep one of the two memory switches off, or accept the duplicate block.
 
 ## The Codex bridge
