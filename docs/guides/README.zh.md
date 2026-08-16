@@ -247,19 +247,20 @@ DeepSeek Harness 没有命名 subagent 注册表——技能指示模型按上�
 
 | CodeBuddy Code 位置 | 注册为 |
 | :--- | :--- |
-| `.codebuddy/skills/<name>/SKILL.md` | 项目级技能 |
-| `.codebuddy/commands/<name>.md` | 项目级命令（即技能） |
-| `~/.codebuddy/skills/<name>/SKILL.md` | 用户级技能 |
-| `~/.codebuddy/commands/<name>.md` | 用户级命令（即技能） |
+| `.codebuddy/skills/<name>/SKILL.md`（也支持嵌套 `<group>/<name>/SKILL.md`） | 项目级技能（嵌套：技能名 `group-name`） |
+| `.codebuddy/commands/<name>.md`（也支持嵌套 `<group>/<name>.md`） | 项目级命令（即技能；嵌套：技能名 `group-name`） |
+| `~/.codebuddy/skills/<name>/SKILL.md`（也支持嵌套 `<group>/<name>/SKILL.md`） | 用户级技能（嵌套：技能名 `group-name`） |
+| `~/.codebuddy/commands/<name>.md`（也支持嵌套 `<group>/<name>.md`） | 用户级命令（即技能；嵌套：技能名 `group-name`） |
 
 映射规则：
 
-- DeepSeek Harness 技能名取目录名 / 文件名（必须 kebab-case；不合法的名字跳过并告警）。嵌套命令的限定名是 `group:name`（含 `:` 非 kebab-case），同样跳过 + 告警，不做转写。
+- DeepSeek Harness 技能名取目录名 / 文件名（必须 kebab-case；不合法的名字跳过并告警）。
+- 嵌套资产递归发现：上游限定名 `group:name`（`skills/pathto/skill/SKILL.md` → 技能 `pathto:skill`，`commands/frontend/build.md` → 命令 `/frontend:build`）映射为 kebab-case 技能名 `group-name`（`pathto-skill`、`frontend-build`），因为 DeepSeek Harness 技能名不允许含 `:`。限定名非 kebab-case 的目录整棵跳过。扁平的 `group-name.md` 与嵌套的 `group/name.md` 会落到同一个技能名上——注册表保留先发现的候选。
 - 只读目录型技能（目录内 `SKILL.md`）；扁平 `<name>.md` 技能是 Claude Code 扩展，CodeBuddy Code 文档未记载，不读取。
 - 优先级与 CodeBuddy Code 一致：**项目资产覆盖用户资产**（与 Claude Code 相反，因此 rank 段独立分配）；同级下技能覆盖同名命令。同名冲突时 DeepSeek Harness 原生技能（`.dsh/skills`、`.agents/skills`、运行时技能）永远胜出——桥接注册在全局技能层，会被更近的 preset 层遮蔽。
 - `description` + `when_to_use` 合并为技能描述（1,536 字符上限截断；`description` 缺省时回退到正文首段）。`when_to_use` 未见于 CodeBuddy Code 文档，为兼容 Claude 资产而识别。
 - `disable-model-invocation` → 该技能退出模型目录，但仍可用 `/名字` 调用。`user-invocable: false` → 不面向人工调用，仅模型可用。`metadata` 原样透传。
-- 叠加应用 `skillOverrides` 设置：`name-only` 折叠描述、`user-invocable-only` 对模型隐藏（仍可人工调用）、`off` 双面关闭。最具体的合法值生效（local > project > user），非法值按文件过滤后回退上一有效层级，与 CodeBuddy Code 一致。
+- 叠加应用 `skillOverrides` 设置：`name-only` 折叠描述、`user-invocable-only` 对模型隐藏（仍可人工调用）、`off` 双面关闭。最具体的合法值生效（local > project > user），非法值按文件过滤后回退上一有效层级，与 CodeBuddy Code 一致。嵌套技能同时接受 kebab-case 名（`pathto-skill`）与上游限定名（`pathto:skill`）作为键。
 - 技能目录整体作为资源基目录，`SKILL.md` 里引用的支撑文件（`scripts/`、`references/` 等）按需解析。
 - 已存在的技能根目录与 settings 文件会被监听；改动无需重启即可在会话内生效。
 
@@ -328,7 +329,7 @@ DeepSeek Harness 核心自行加载 `AGENTS.md` 与根目录 `CLAUDE.md`，但�
 
 尚未桥接（按子系统记录）：
 
-- **Skills**：扁平 `.md` 技能、嵌套命令（`group:name` 非 kebab-case）、插件技能；`allowed-tools`、`model`、`context: fork`、`agent`、frontmatter `hooks`；正文内联 Shell 命令执行、`$ARGUMENTS` 替换、`@file` 引用。
+- **Skills**：扁平 `.md` 技能、插件技能；`allowed-tools`、`model`、`context: fork`、`agent`、frontmatter `hooks`；正文内联 Shell 命令执行、`$ARGUMENTS` 替换、`@file` 引用。
 - **Memory**：条件规则（`alwaysApply: false` + `paths`）、`@import` 展开、向上递归查找、嵌套子树动态加载、Auto Memory。
 - **Hooks**：`prompt` / `agent` handler 类型（需要 LLM 判定）；`Notification`、`PreCompact`/`PostCompact`、`PermissionRequest`/`PermissionDenied`、`Elicitation`、`FileChanged`、`Setup`、`StopFailure`、`TeammateIdle`、`InstructionsLoaded`、`ConfigChange`、`CwdChanged`、`WorktreeCreate`/`WorktreeRemove`、`TaskCreated`/`TaskCompleted`、`ElicitationResult` 等事件；frontmatter hooks（及 `allowUntrustedFrontmatterHooks` 闸门）；插件 `hooks/hooks.json`；`transcript_path` 输入字段（桥接没有真实转录文件）；`suppressOutput` / `systemMessage` 仅面向用户的通道（DeepSeek Harness 无此通道）；`modifiedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）。Windows 上 hook 走系统 shell 而非 CodeBuddy Code 强制的 Git Bash。
 - **Plugins**：仅插件 *skills* 与插件 *hooks* 已列入限制；插件捆绑的 commands、agents、`.mcp.json` MCP 服务器、`.lsp.json` LSP 服务器、settings 覆盖与 `bin/` 助手也未桥接（插件需要 marketplace 运行时）。

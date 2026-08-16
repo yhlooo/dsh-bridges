@@ -4,11 +4,15 @@
  *
  * Discovery reads the CodeBuddy Code asset locations:
  *
- * - `~/.codebuddy/skills/<name>/SKILL.md`
- * - `~/.codebuddy/commands/*.md` (nested subdirectories qualify names with
- *   `:`; those names are not kebab-case and are skipped)
- * - `<cwd>/.codebuddy/skills/<name>/SKILL.md`
- * - `<cwd>/.codebuddy/commands/*.md`
+ * - `~/.codebuddy/skills/<name>/SKILL.md` (nested subdirectories qualify names
+ *   with `:`, e.g. `skills/pathto/skill/SKILL.md` → the `pathto:skill` skill)
+ * - `~/.codebuddy/commands/*.md` (nested subdirectories qualify names with `:`,
+ *   e.g. `commands/frontend/build.md` → the `/frontend:build` command)
+ * - `<cwd>/.codebuddy/skills/<name>/SKILL.md` (nested as above)
+ * - `<cwd>/.codebuddy/commands/*.md` (nested as above)
+ *
+ * DSH skills require kebab-case names, so qualified `group:name` names are
+ * mapped onto `group-name` (`pathto:skill` → the `pathto-skill` skill).
  *
  * CodeBuddy Code only documents directory skills (a `SKILL.md` inside a named
  * directory); flat `<name>.md` skills are a Claude Code extension and are not
@@ -52,8 +56,8 @@ const RANK_USER_COMMANDS = 140
 
 /** Cap on the composed routing description; CodeBuddy Code documents no listing limit, so the bridge keeps Claude Code's 1,536 characters as a safety bound. */
 const MAX_DESCRIPTION_CHARS = 1536
-/** Recursion bound for nested command discovery. */
-const MAX_COMMAND_DEPTH = 8
+/** Recursion bound for nested skill/command discovery. */
+const MAX_NESTING_DEPTH = 8
 
 type RootKind = 'user-skills' | 'user-commands' | 'user-agents' | 'project-skills' | 'project-commands' | 'project-agents'
 
@@ -66,8 +70,10 @@ interface SkillRoot {
 interface CandidateLocator {
   root: string
   rootKind: RootKind
-  /** Directory name (skill bundle) or qualified command name (`group:name`). */
+  /** DSH skill name (kebab-case; the upstream qualified name with `:` mapped to `-`). */
   entry: string
+  /** Upstream qualified name (`group:name`), equal to `entry` for top-level assets. */
+  qualified: string
   kind: 'bundle' | 'command' | 'agent'
   /** Absolute path of the SKILL.md / command markdown file. */
   file: string
@@ -153,45 +159,88 @@ export class CodebuddySkillProvider implements SkillProvider {
     return { candidates, complete }
   }
 
-  /** Discover `SKILL.md` bundles directly under a skills root. */
+  /**
+   * Discover `SKILL.md` bundles below a skills root.
+   *
+   * CodeBuddy Code names a nested bundle by its qualified path (`:`-separated,
+   * e.g. `skills/pathto/skill/SKILL.md` → the `pathto:skill` skill); DSH skills
+   * require kebab-case names, so the qualified name is mapped onto
+   * `pathto-skill`. Directories whose own qualified name is not kebab-case are
+   * skipped wholesale, since every bundle below them would yield an invalid
+   * skill name.
+   */
   private async listSkills(
     root: SkillRoot,
     overrides: ReadonlyMap<string, SkillOverrideState>,
     options: SkillLookupOptions,
     candidates: SkillCandidate[],
+    depth = 0,
+    prefix = '',
   ): Promise<{ complete: boolean; continue: boolean }> {
+    if (depth > MAX_NESTING_DEPTH) return { complete: true, continue: true }
+    const qualifiedPrefix = prefix.replace(/[/\\]+/g, ':')
+    if (prefix !== '' && !isSkillName(qualifiedPrefix.replace(/:/g, '-'))) {
+      this.logger.warn(
+        `codebuddy-code: skipping skill directory ${join(root.path, prefix)}: qualified name ${JSON.stringify(qualifiedPrefix)} is not kebab-case; DSH skills require kebab-case names`,
+      )
+      return { complete: true, continue: true }
+    }
     let entries
     try {
-      entries = await this.fs.listDir(root.path, options.signal)
+      entries = await this.fs.listDir(prefix === '' ? root.path : join(root.path, prefix), options.signal)
     } catch (error) {
       if (isAbort(error)) return { complete: false, continue: false }
       if (isMissing(error)) return { complete: true, continue: true } // confirmed-absent root is a valid empty state
       this.logger.warn(`codebuddy-code: cannot read skill root ${root.path}: ${errorMessage(error)}`)
       return { complete: false, continue: true }
     }
+    let complete = true
     for (const entry of entries) {
       if (options.signal?.aborted) return { complete: false, continue: false }
       if (!entry.isDir) continue // CodeBuddy Code documents directory skills only
+      const qualified = qualifiedPrefix === '' ? entry.name : `${qualifiedPrefix}:${entry.name}`
+      const name = qualified.replace(/:/g, '-')
+      const relativeDir = prefix === '' ? entry.name : join(prefix, entry.name)
+      const file = join(root.path, relativeDir, 'SKILL.md')
       try {
-        const file = join(root.path, entry.name, 'SKILL.md')
-        if (!(await this.fs.fileExists(file, options.signal))) continue
-        const text = await this.fs.readText(file, options.signal)
-        candidates.push(this.summary(root, entry.name, 'bundle', file, text, overrides.get(entry.name) ?? 'on'))
+        if (await this.fs.fileExists(file, options.signal)) {
+          if (!isSkillName(name)) {
+            this.logger.warn(
+              `codebuddy-code: skipping skill ${file}: qualified name ${JSON.stringify(qualified)} is not kebab-case; DSH skills require kebab-case names`,
+            )
+          } else {
+            const text = await this.fs.readText(file, options.signal)
+            candidates.push(this.summary(root, name, qualified, 'bundle', file, text, resolveOverride(overrides, name, qualified)))
+          }
+        }
       } catch (error) {
         if (isAbort(error)) return { complete: false, continue: false }
-        if (isMissing(error)) continue // vanished mid-scan
-        if (error instanceof FrontmatterError) {
-          this.logger.warn(`codebuddy-code: skipping malformed skill ${root.path}: ${error.message}`)
-          continue
+        if (!isMissing(error)) {
+          if (error instanceof FrontmatterError) {
+            this.logger.warn(`codebuddy-code: skipping malformed skill ${root.path}: ${error.message}`)
+          } else {
+            this.logger.warn(`codebuddy-code: cannot read skill entry under ${root.path}: ${errorMessage(error)}`)
+            complete = false
+          }
         }
-        this.logger.warn(`codebuddy-code: cannot read skill entry under ${root.path}: ${errorMessage(error)}`)
-        return { complete: false, continue: true }
       }
+      // Recurse regardless: `group/sub/SKILL.md` is the nested skill `group:sub`,
+      // and a vanished/unreadable bundle does not hide deeper ones.
+      const result = await this.listSkills(root, overrides, options, candidates, depth + 1, relativeDir)
+      if (!result.continue) return result
+      complete = complete && result.complete
     }
-    return { complete: true, continue: true }
+    return { complete, continue: true }
   }
 
-  /** Discover command `.md` files recursively; nested files qualify with `:`. */
+  /**
+   * Discover command `.md` files recursively.
+   *
+   * Upstream, nested files qualify with `:` (`commands/frontend/build.md` →
+   * the `/frontend:build` command); DSH skills require kebab-case names, so
+   * the qualified name is mapped onto `frontend-build`. Directories whose own
+   * qualified name is not kebab-case are skipped wholesale.
+   */
   private async listCommands(
     root: SkillRoot,
     options: SkillLookupOptions,
@@ -199,7 +248,14 @@ export class CodebuddySkillProvider implements SkillProvider {
     depth: number,
     prefix = '',
   ): Promise<{ complete: boolean; continue: boolean }> {
-    if (depth > MAX_COMMAND_DEPTH) return { complete: true, continue: true }
+    if (depth > MAX_NESTING_DEPTH) return { complete: true, continue: true }
+    const qualifiedPrefix = prefix.replace(/[/\\]+/g, ':')
+    if (prefix !== '' && !isSkillName(qualifiedPrefix.replace(/:/g, '-'))) {
+      this.logger.warn(
+        `codebuddy-code: skipping command directory ${join(root.path, prefix)}: qualified name ${JSON.stringify(qualifiedPrefix)} is not kebab-case; DSH skills require kebab-case names`,
+      )
+      return { complete: true, continue: true }
+    }
     let entries
     try {
       entries = await this.fs.listDir(prefix === '' ? root.path : join(root.path, prefix), options.signal)
@@ -217,20 +273,18 @@ export class CodebuddySkillProvider implements SkillProvider {
         continue
       }
       if (!entry.isFile || !entry.name.toLowerCase().endsWith('.md')) continue
-      // Subdirectory commands are named `group:name` (a colon is not
-      // kebab-case, so they are skipped with a warning per DSH's name policy).
-      const qualified =
-        prefix === '' ? stripMarkdownExtension(entry.name) : `${prefix.replace(/[/\\]+/g, ':')}:${stripMarkdownExtension(entry.name)}`
+      const qualified = prefix === '' ? stripMarkdownExtension(entry.name) : `${qualifiedPrefix}:${stripMarkdownExtension(entry.name)}`
+      const name = qualified.replace(/:/g, '-')
       const file = join(root.path, prefix, entry.name)
       try {
         const text = await this.fs.readText(file, options.signal)
-        if (!isSkillName(qualified)) {
+        if (!isSkillName(name)) {
           this.logger.warn(
-            `codebuddy-code: skipping command ${JSON.stringify(qualified)}: nested command names are not kebab-case; DSH skills require kebab-case names`,
+            `codebuddy-code: skipping command ${JSON.stringify(qualified)}: qualified name is not kebab-case; DSH skills require kebab-case names`,
           )
           continue
         }
-        candidates.push(this.summary(root, qualified, 'command', file, text, 'on'))
+        candidates.push(this.summary(root, name, qualified, 'command', file, text, 'on'))
       } catch (error) {
         if (isAbort(error)) return { complete: false, continue: false }
         if (isMissing(error)) continue
@@ -288,7 +342,15 @@ export class CodebuddySkillProvider implements SkillProvider {
         `subagent name ${JSON.stringify(definition.name)} is not kebab-case; DSH skills require kebab-case names`,
       )
     }
-    const locator: CandidateLocator = { root: root.path, rootKind: root.kind, entry: definition.name, kind: 'agent', file, override: 'on' }
+    const locator: CandidateLocator = {
+      root: root.path,
+      rootKind: root.kind,
+      entry: definition.name,
+      qualified: definition.name,
+      kind: 'agent',
+      file,
+      override: 'on',
+    }
     return {
       name: definition.name,
       description: capString(definition.description, MAX_DESCRIPTION_CHARS),
@@ -315,6 +377,7 @@ export class CodebuddySkillProvider implements SkillProvider {
   private summary(
     root: SkillRoot,
     entry: string,
+    qualified: string,
     kind: 'bundle' | 'command',
     file: string,
     text: string,
@@ -327,7 +390,7 @@ export class CodebuddySkillProvider implements SkillProvider {
     const { frontmatter, body } = parsed
     const invocation = applyOverride({ modelInvocable: frontmatter.modelInvocable, userInvocable: frontmatter.userInvocable }, override)
     const description = this.composeDescription(frontmatter.description, frontmatter.whenToUse, body, override)
-    const locator: CandidateLocator = { root: root.path, rootKind: root.kind, entry, kind, file, override }
+    const locator: CandidateLocator = { root: root.path, rootKind: root.kind, entry, qualified, kind, file, override }
     return {
       name: entry,
       description,
@@ -398,7 +461,9 @@ export class CodebuddySkillProvider implements SkillProvider {
       throw error
     }
     const { frontmatter, body } = parsed
-    const override = await this.readOverrides(options.cwd, options.signal).then((overrides) => overrides.get(locator.entry) ?? 'on')
+    const override = await this.readOverrides(options.cwd, options.signal).then((overrides) =>
+      resolveOverride(overrides, locator.entry, locator.qualified),
+    )
     const invocation = applyOverride({ modelInvocable: frontmatter.modelInvocable, userInvocable: frontmatter.userInvocable }, override)
     return {
       name: locator.entry,
@@ -449,7 +514,9 @@ export class CodebuddySkillProvider implements SkillProvider {
     const watcher = watch(target.path, {
       persistent: true,
       ignoreInitial: true,
-      depth: target.kind === 'commands-dir' ? 0 : target.kind === 'skills-dir' ? 2 : 0,
+      // Directory targets traverse fully so nested skill bundles and command
+      // files are covered; a settings target is a single file.
+      ...(target.kind === 'settings-file' ? { depth: 0 } : {}),
       atomic: true,
       awaitWriteFinish: { stabilityThreshold: WATCH_STABILITY_MS, pollInterval: 100 },
     })
@@ -496,7 +563,14 @@ function applyOverride(
   }
 }
 
-/** Whether a watch event can change the catalog for its target. */
+/**
+ * Whether a watch event can change the catalog for its target.
+ *
+ * Directory targets are watched with unlimited depth: any directory
+ * appearance/removal (skill bundles, command groups) and any `.md` file (a
+ * `SKILL.md` at any depth for skills roots; any `.md` command file for command
+ * roots) can change the catalog; other files cannot.
+ */
 function isRelevantWatchEvent(target: WatchTarget, event: string, path: string): boolean {
   if (target.kind === 'settings-file') {
     // Any add/change/unlink of the settings file changes skillOverrides.
@@ -506,18 +580,18 @@ function isRelevantWatchEvent(target: WatchTarget, event: string, path: string):
   if (relative === '') {
     return event === 'addDir' || event === 'unlinkDir'
   }
-  const depth = relative.split(/[/\\]/).length
-  if (target.kind === 'commands-dir') {
-    if (event === 'addDir' || event === 'unlinkDir') return true
-    return relative.toLowerCase().endsWith('.md')
-  }
-  // skills-dir: depth-1 bundle dirs and depth-2 SKILL.md files matter.
-  if (depth === 1) return event === 'addDir' || event === 'unlinkDir'
-  if (depth === 2) {
-    if (event === 'unlinkDir') return true
-    return basename(path).toLowerCase() === 'skill.md'
-  }
-  return false
+  if (event === 'addDir' || event === 'unlinkDir') return true // bundle or command-group directory appeared/left
+  if (target.kind === 'commands-dir') return relative.toLowerCase().endsWith('.md')
+  // skills-dir: only SKILL.md files at any depth matter.
+  return basename(path).toLowerCase() === 'skill.md'
+}
+
+/**
+ * Pick the `skillOverrides` state for a skill. Nested assets accept both the
+ * DSH kebab-case name and the upstream qualified `group:name` key.
+ */
+function resolveOverride(overrides: ReadonlyMap<string, SkillOverrideState>, name: string, qualified: string): SkillOverrideState {
+  return overrides.get(name) ?? overrides.get(qualified) ?? 'on'
 }
 
 function isAbort(error: unknown): boolean {

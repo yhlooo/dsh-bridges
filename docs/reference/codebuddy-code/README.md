@@ -61,16 +61,16 @@
 
 | CodeBuddy Code 位置 | 注册为 | rank |
 | :--- | :--- | :--- |
-| `.codebuddy/skills/<name>/SKILL.md` | 项目级技能 | 125 |
-| `.codebuddy/commands/<name>.md` | 项目级命令（即技能） | 130 |
-| `~/.codebuddy/skills/<name>/SKILL.md` | 用户级技能 | 135 |
-| `~/.codebuddy/commands/<name>.md` | 用户级命令（即技能） | 140 |
+| `.codebuddy/skills/<name>/SKILL.md`（含嵌套 `<group>/<name>/SKILL.md`） | 项目级技能（嵌套技能名 `group-name`） | 125 |
+| `.codebuddy/commands/<name>.md`（含嵌套 `<group>/<name>.md`） | 项目级命令（即技能；嵌套技能名 `group-name`） | 130 |
+| `~/.codebuddy/skills/<name>/SKILL.md`（含嵌套 `<group>/<name>/SKILL.md`） | 用户级技能（嵌套技能名 `group-name`） | 135 |
+| `~/.codebuddy/commands/<name>.md`（含嵌套 `<group>/<name>.md`） | 用户级命令（即技能；嵌套技能名 `group-name`） | 140 |
 
 - 优先级遵循 CodeBuddy Code 上游语义：**项目级 > 用户级**（与 Claude Code 相反），同级下技能 > 命令；rank 越小越优先，段在 DSH 运行时技能（250）之下。
 - 技能只读目录型 `SKILL.md`；扁平 `<name>.md` 是 Claude Code 扩展，CodeBuddy Code 文档未记载，不读取。
-- 嵌套命令限定名为 `group:name`（含 `:` 非 kebab-case），按"跳过 + warn、不转写"策略处理。
+- 嵌套资产（skills 与 commands）递归发现：上游限定名 `group:name` 因 DSH 技能名语法不含 `:`，按 `:` → `-` 转写为 `group-name`（如 `pathto:skill` → `pathto-skill`、`/frontend:build` → `frontend-build`）；限定名非 kebab-case 的目录整棵跳过 + warn（不转写）。扁平 `group-name.md` 与嵌套 `group/name.md` 映射到同一技能名，注册表保留先发现的候选。
 - frontmatter：`disable-model-invocation` → `modelInvocable` 取反；`user-invocable` → `userInvocable`；非法布尔值丢弃整个条目 + warn（fail closed）。`when_to_use` 未见于 CodeBuddy Code 文档，但为兼容 Claude 资产而识别（合并进描述）。`allowed-tools`、`context: fork`、`agent`、`model`、skill frontmatter `hooks` 不桥接。
-- `skillOverrides`（`on` / `name-only` / `user-invocable-only` / `off`）按 PROJECT_LOCAL > PROJECT > USER 逐文件取最具体的合法值（非法值按文件过滤后回退上一有效层级；全非法视为 `on`）：`name-only` 折叠描述为空串，`user-invocable-only` → `modelInvocable: false`，`off` → 双面关闭。
+- `skillOverrides`（`on` / `name-only` / `user-invocable-only` / `off`）按 PROJECT_LOCAL > PROJECT > USER 逐文件取最具体的合法值（非法值按文件过滤后回退上一有效层级；全非法视为 `on`）：`name-only` 折叠描述为空串，`user-invocable-only` → `modelInvocable: false`，`off` → 双面关闭。嵌套技能同时接受 kebab-case 名与上游限定名作为键。
 
 ### Memory → `agent/session-start` 注入
 
@@ -105,6 +105,6 @@
 
 ### 不桥接（限制清单）
 
-- Skills：扁平 `.md` 技能、嵌套命令（`group:name`）、插件技能；`allowed-tools`、`model`、`context: fork`、`agent`、frontmatter `hooks`；正文 `!`command`` 内联执行、`$ARGUMENTS` 替换、`@file` 引用。
+- Skills：扁平 `.md` 技能、插件技能；`allowed-tools`、`model`、`context: fork`、`agent`、frontmatter `hooks`；正文 `!`command`` 内联执行、`$ARGUMENTS` 替换、`@file` 引用。
 - Memory：条件规则（`alwaysApply: false` + `paths`）、`@import`、向上递归查找、嵌套子树动态加载、Auto Memory。
 - Hooks：`prompt` / `agent` handler 类型、frontmatter hooks（含 `allowUntrustedFrontmatterHooks` 闸门）、插件 `hooks/hooks.json`、`transcript_path` 字段（桥接无法提供真实转录文件）、`suppressOutput` / `systemMessage`（DSH 无仅面向用户的通道）。

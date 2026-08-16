@@ -96,13 +96,53 @@ describe('CodebuddySkillProvider.list', () => {
     expect(result.candidates.map((candidate) => candidate.name)).toEqual(['bundle'])
   })
 
-  it('skips nested commands whose qualified names are not kebab-case', async () => {
+  it('maps nested commands to kebab-case group-name skills', async () => {
     const files = new Map<string, string>([
       [fx('proj', '.codebuddy', 'commands', 'deploy.md'), '---\ndescription: deploy\n---\na\n'],
       [fx('proj', '.codebuddy', 'commands', 'frontend', 'build.md'), '---\ndescription: build\n---\nb\n'],
+      [fx('proj', '.codebuddy', 'commands', 'backend', 'deploy', 'staging.md'), '---\ndescription: staging\n---\nc\n'],
+      [fx('home', 'u', '.codebuddy', 'commands', 'notes', 'daily.md'), '---\ndescription: daily\n---\nd\n'],
     ])
     const result = await makeProvider(files).list(options)
-    expect(result.candidates.map((candidate) => candidate.name)).toEqual(['deploy'])
+    const names = result.candidates.map((candidate) => candidate.name).sort()
+    expect(names).toEqual(['backend-deploy-staging', 'deploy', 'frontend-build', 'notes-daily'])
+    const nested = result.candidates.find((candidate) => candidate.name === 'frontend-build')!
+    expect(nested.source).toBe('project-codebuddy')
+    expect(nested.rank).toBe(130)
+    expect(nested.path).toBe(fx('proj', '.codebuddy', 'commands', 'frontend', 'build.md'))
+    const userNested = result.candidates.find((candidate) => candidate.name === 'notes-daily')!
+    expect(userNested.source).toBe('user-codebuddy')
+    expect(userNested.rank).toBe(140)
+  })
+
+  it('discovers nested skill bundles and maps them to kebab-case names', async () => {
+    const files = new Map<string, string>([
+      [fx('proj', '.codebuddy', 'skills', 'pathto', 'skill', 'SKILL.md'), '---\ndescription: nested skill\n---\nBody.\n'],
+      [fx('proj', '.codebuddy', 'skills', 'deploy', 'SKILL.md'), '---\ndescription: deploy\n---\nb\n'],
+      [fx('home', 'u', '.codebuddy', 'skills', 'team', 'tools', 'SKILL.md'), '---\ndescription: tools\n---\nc\n'],
+    ])
+    const result = await makeProvider(files).list(options)
+    const names = result.candidates.map((candidate) => candidate.name).sort()
+    expect(names).toEqual(['deploy', 'pathto-skill', 'team-tools'])
+    const nested = result.candidates.find((candidate) => candidate.name === 'pathto-skill')!
+    expect(nested.source).toBe('project-codebuddy')
+    expect(nested.rank).toBe(125)
+    expect(nested.path).toBe(fx('proj', '.codebuddy', 'skills', 'pathto', 'skill', 'SKILL.md'))
+    const userNested = result.candidates.find((candidate) => candidate.name === 'team-tools')!
+    expect(userNested.source).toBe('user-codebuddy')
+    expect(userNested.rank).toBe(135)
+  })
+
+  it('skips nested directories whose qualified names are not kebab-case', async () => {
+    const files = new Map<string, string>([
+      [fx('proj', '.codebuddy', 'skills', 'opsX', 'inner', 'SKILL.md'), '---\ndescription: x\n---\na\n'],
+      [fx('proj', '.codebuddy', 'skills', 'good', 'SKILL.md'), '---\ndescription: y\n---\nb\n'],
+      [fx('proj', '.codebuddy', 'commands', 'myGroup', 'run.md'), '---\ndescription: z\n---\nc\n'],
+      [fx('proj', '.codebuddy', 'commands', 'fine', 'run.md'), '---\ndescription: w\n---\nd\n'],
+    ])
+    const result = await makeProvider(files).list(options)
+    expect(result.candidates.map((candidate) => candidate.name).sort()).toEqual(['fine-run', 'good'])
+    expect(result.complete).toBe(true)
   })
 
   it('skips names that are not kebab-case', async () => {
@@ -159,6 +199,22 @@ describe('CodebuddySkillProvider.list', () => {
     expect(nameOnly?.description).toBe('')
   })
 
+  it('applies skillOverrides to nested skills keyed by the upstream qualified name', async () => {
+    const files = new Map<string, string>([
+      [fx('proj', '.codebuddy', 'skills', 'pathto', 'skill', 'SKILL.md'), '---\ndescription: nested\n---\na\n'],
+      [fx('proj', '.codebuddy', 'skills', 'pathto', 'other', 'SKILL.md'), '---\ndescription: other\n---\nb\n'],
+      [
+        fx('proj', '.codebuddy', 'settings.json'),
+        JSON.stringify({ skillOverrides: { 'pathto:skill': 'off', 'pathto-other': 'user-invocable-only' } }),
+      ],
+    ])
+    const result = await makeProvider(files).list(options)
+    const byQualified = result.candidates.find((candidate) => candidate.name === 'pathto-skill')!
+    expect(byQualified.invocation).toEqual({ modelInvocable: false, userInvocable: false })
+    const byKebab = result.candidates.find((candidate) => candidate.name === 'pathto-other')!
+    expect(byKebab.invocation).toEqual({ modelInvocable: false, userInvocable: true })
+  })
+
   it('returns an empty catalog for a project without CodeBuddy assets', async () => {
     const files = new Map<string, string>([[fx('proj', 'README.md'), 'x']])
     const result = await makeProvider(files).list(options)
@@ -178,6 +234,20 @@ describe('CodebuddySkillProvider.get', () => {
     const definition = await provider.get(candidates[0]!, options)
     expect(definition?.content).toBe('Step one.\n')
     expect(definition?.resourceBase).toEqual({ kind: 'directory', path: fx('proj', '.codebuddy', 'skills', 'deploy') })
+  })
+
+  it('loads a nested skill with its own directory as the resource base', async () => {
+    const files = new Map<string, string>([
+      [fx('proj', '.codebuddy', 'skills', 'pathto', 'skill', 'SKILL.md'), '---\ndescription: Nested\n---\nNested body.\n'],
+      [fx('proj', '.codebuddy', 'skills', 'pathto', 'skill', 'script.py'), 'x'],
+    ])
+    const provider = makeProvider(files)
+    const { candidates } = await provider.list(options)
+    const nested = candidates.find((candidate) => candidate.name === 'pathto-skill')!
+    const definition = await provider.get(nested, options)
+    expect(definition?.name).toBe('pathto-skill')
+    expect(definition?.content).toBe('Nested body.\n')
+    expect(definition?.resourceBase).toEqual({ kind: 'directory', path: fx('proj', '.codebuddy', 'skills', 'pathto', 'skill') })
   })
 
   it('returns undefined when the file disappeared', async () => {

@@ -251,19 +251,20 @@ Reads the CodeBuddy Code skill locations and registers them on the DeepSeek Harn
 
 | CodeBuddy Code location | Registered as |
 | :--- | :--- |
-| `.codebuddy/skills/<name>/SKILL.md` | project-level skill |
-| `.codebuddy/commands/<name>.md` | project-level command (a skill) |
-| `~/.codebuddy/skills/<name>/SKILL.md` | user-level skill |
-| `~/.codebuddy/commands/<name>.md` | user-level command (a skill) |
+| `.codebuddy/skills/<name>/SKILL.md` (also nested `<group>/<name>/SKILL.md`) | project-level skill (nested: named `group-name`) |
+| `.codebuddy/commands/<name>.md` (also nested `<group>/<name>.md`) | project-level command (a skill; nested: named `group-name`) |
+| `~/.codebuddy/skills/<name>/SKILL.md` (also nested `<group>/<name>/SKILL.md`) | user-level skill (nested: named `group-name`) |
+| `~/.codebuddy/commands/<name>.md` (also nested `<group>/<name>.md`) | user-level command (a skill; nested: named `group-name`) |
 
 Mapping rules:
 
-- The DeepSeek Harness skill name is the directory / file name (must be kebab-case; non-kebab names are skipped with a warning). Nested commands qualify as `group:name` — not kebab-case — and are skipped the same way.
+- The DeepSeek Harness skill name is the directory / file name (must be kebab-case; non-kebab names are skipped with a warning).
+- Nested assets are discovered recursively: the upstream qualified name `group:name` (`skills/pathto/skill/SKILL.md` → the `pathto:skill` skill, `commands/frontend/build.md` → the `/frontend:build` command) maps onto the kebab-case skill name `group-name` (`pathto-skill`, `frontend-build`), because DeepSeek Harness skill names cannot contain `:`. Directories whose own qualified name is not kebab-case are skipped wholesale. A flat `group-name.md` and a nested `group/name.md` collide on the same skill name — the registry keeps whichever candidate it discovers first.
 - Only directory skills (`SKILL.md` inside a named directory) are read; flat `<name>.md` skills are a Claude Code extension that CodeBuddy Code does not document.
 - Precedence mirrors CodeBuddy Code: **project assets override user assets** (the inverse of Claude Code, whose band the ranks therefore do not share), and a skill overrides a same-name command at the same level. Native DeepSeek Harness skills (`.dsh/skills`, `.agents/skills`, runtime skills) still win on name conflicts — the bridge registers on the global skills layer, which nearer preset layers shadow.
 - `description` + `when_to_use` become the skill description (combined and capped at 1,536 characters; falls back to the first body paragraph). `when_to_use` is not in the CodeBuddy Code docs but is honored for Claude Code asset compatibility.
 - `disable-model-invocation` → the skill leaves the model catalog but stays user-invocable (`/name`). `user-invocable: false` → hidden from human invocation, model-only. `metadata` is carried through.
-- The `skillOverrides` setting is applied on top: `name-only` collapses the description, `user-invocable-only` hides the skill from the model catalog, `off` hides it everywhere. Most-specific valid value wins (local > project > user), invalid values fall back per file, exactly like CodeBuddy Code.
+- The `skillOverrides` setting is applied on top: `name-only` collapses the description, `user-invocable-only` hides the skill from the model catalog, `off` hides it everywhere. Most-specific valid value wins (local > project > user), invalid values fall back per file, exactly like CodeBuddy Code. Nested skills accept both the kebab-case name (`pathto-skill`) and the upstream qualified name (`pathto:skill`) as keys.
 - Skill bundles keep their directory as the resource base, so supporting files (`scripts/`, `references/`, …) referenced by `SKILL.md` resolve on demand.
 - Existing skill roots and the settings files are watched; edits appear in the session without a restart.
 
@@ -332,7 +333,7 @@ Not bridged (recorded as limitations): `permissionMode`, `skills`, `mcpServers`,
 
 Not bridged yet (documented per subsystem):
 
-- **Skills**: flat `.md` skills, nested commands (`group:name` names are not kebab-case), plugin skills; `allowed-tools`, `model`, `context: fork`, `agent`, and skill frontmatter `hooks`; inline shell-command execution, `$ARGUMENTS` substitution, and `@file` references in bodies.
+- **Skills**: flat `.md` skills, plugin skills; `allowed-tools`, `model`, `context: fork`, `agent`, and skill frontmatter `hooks`; inline shell-command execution, `$ARGUMENTS` substitution, and `@file` references in bodies.
 - **Memory**: conditional rules (`alwaysApply: false` plus `paths`), `@import` expansion, upward-directory discovery, nested-subtree dynamic loading, Auto Memory.
 - **Hooks**: handler types `prompt` and `agent` (both need an LLM evaluation); `Notification`, `PreCompact`/`PostCompact`, `PermissionRequest`/`PermissionDenied`, `Elicitation`, `FileChanged`, `Setup`, `StopFailure`, `TeammateIdle`, `InstructionsLoaded`, `ConfigChange`, `CwdChanged`, `WorktreeCreate`/`WorktreeRemove`, `TaskCreated`/`TaskCompleted`, `ElicitationResult`, and the remaining events; frontmatter hooks (and the `allowUntrustedFrontmatterHooks` gate); plugin `hooks/hooks.json`; the `transcript_path` input field (the bridge has no transcript file to point at); `suppressOutput`/`systemMessage` user-only channels (DeepSeek Harness has no non-model notice channel); `modifiedInput` rewriting (DeepSeek Harness freezes tool arguments before policy). Windows runs hooks through the system shell rather than CodeBuddy Code's forced Git Bash.
 - **Plugins**: only plugin *skills* and plugin *hooks* are acknowledged as limitations; plugin-bundled commands, agents, `.mcp.json` MCP servers, `.lsp.json` LSP servers, settings overrides, and `bin/` helpers are not bridged either (plugins need the marketplace runtime).
