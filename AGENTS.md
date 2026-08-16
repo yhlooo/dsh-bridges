@@ -129,7 +129,10 @@ chore: bump dev dependencies
 
 - 功能开发在 `dev/...` 分支上进行，通过 PR 合入 `main`；文档等例行改动可直接
   提交 `main`。PR 与 push 的 CI（`.github/workflows/ci.yml`）跑
-  typecheck/build/test/pack 检查，合入前应保持全绿。
+  typecheck/build/test/pack 检查，合入前应保持全绿。CI 按文件过滤触发：
+  只改 `*.md`（根级）、`docs/**`、`LICENSE`、`.devcontainer/**`、
+  `.github/**`、`examples/**` 及 `.git*`/prettier 配置的推送与 PR 会跳过
+  CI（详见 ci.yml 的 `paths-ignore`）；其余任何文件变更都照常全量跑。
 
 ### 用 gh 创建 PR
 
