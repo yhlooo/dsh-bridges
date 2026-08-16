@@ -56,8 +56,23 @@ describe('hookBlockMessage', () => {
 })
 
 describe('runEventHooks (command hooks)', () => {
+  // Codex handlers are shell-command-only (no args field, per upstream), so
+  // the commands below must parse identically under cmd and POSIX shells.
+  // Keep the timeout sleep short: on Windows the kill targets the direct
+  // child and the orphaned grandchild holds the pipes until it exits.
   it('captures JSON output and exit code', async () => {
-    const [outcome] = await run({ groups: [{ hooks: [{ type: 'command', command: 'printf \'{"continue":false,"reason":"halt"}\'' }] }] })
+    const [outcome] = await run({
+      groups: [
+        {
+          hooks: [
+            {
+              type: 'command',
+              command: 'node -e "process.stdout.write(JSON.stringify({continue:false,reason:\'halt\'}))"',
+            },
+          ],
+        },
+      ],
+    })
     expect(outcome!.ran).toBe(true)
     expect(outcome!.exitCode).toBe(0)
     expect(outcome!.output?.continue).toBe(false)
@@ -65,25 +80,70 @@ describe('runEventHooks (command hooks)', () => {
 
   it('captures exit code 2 with stderr', async () => {
     const [outcome] = await run({
-      groups: [{ hooks: [{ type: 'command', command: 'echo "blocked by policy" >&2; exit 2' }] }],
+      groups: [
+        {
+          hooks: [
+            {
+              type: 'command',
+              command: 'node -e "process.stderr.write(\'blocked by policy\');process.exit(2)"',
+            },
+          ],
+        },
+      ],
     })
     expect(outcome!.exitCode).toBe(2)
     expect(hookBlockMessage(outcome!)).toBe('blocked by policy')
   })
 
   it('captures plain stdout', async () => {
-    const [outcome] = await run({ groups: [{ hooks: [{ type: 'command', command: 'echo "context line"' }] }] })
+    const [outcome] = await run({
+      groups: [
+        {
+          hooks: [
+            {
+              type: 'command',
+              command: 'node -e "process.stdout.write(\'context line\')"',
+            },
+          ],
+        },
+      ],
+    })
     expect(outcome!.plainText).toBe('context line')
   })
 
   it('times out and fails open', async () => {
-    const [outcome] = await run({ groups: [{ hooks: [{ type: 'command', command: 'sleep 30', timeout: 1 }] }], timeoutMs: 50_000 })
+    const [outcome] = await run({
+      groups: [
+        {
+          hooks: [
+            {
+              type: 'command',
+              command: 'node -e "setTimeout(()=>{},3000)"',
+              timeout: 1,
+            },
+          ],
+        },
+      ],
+      timeoutMs: 50_000,
+    })
     expect(outcome!.timedOut).toBe(true)
     expect(outcome!.exitCode).toBeNull()
   })
 
   it('runs async hooks detached without waiting', async () => {
-    const [outcome] = await run({ groups: [{ hooks: [{ type: 'command', command: 'sleep 5', async: true }] }] })
+    const [outcome] = await run({
+      groups: [
+        {
+          hooks: [
+            {
+              type: 'command',
+              command: 'node -e "setTimeout(()=>{},5000)"',
+              async: true,
+            },
+          ],
+        },
+      ],
+    })
     expect(outcome!.ran).toBe(true)
     expect(outcome!.detached).toBe(true)
     expect(outcome!.exitCode).toBeNull()
@@ -91,7 +151,7 @@ describe('runEventHooks (command hooks)', () => {
 
   it('runs no handlers when the matcher does not match', async () => {
     const outcomes = await run({
-      groups: [{ matcher: '^Edit$', hooks: [{ type: 'command', command: 'echo "no"' }] }],
+      groups: [{ matcher: '^Edit$', hooks: [{ type: 'command', command: 'node -e "process.stdout.write(\'no\')"' }] }],
       matchedValue: 'Bash',
     })
     expect(outcomes).toHaveLength(0)
