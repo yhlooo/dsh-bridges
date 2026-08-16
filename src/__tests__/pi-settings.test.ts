@@ -57,10 +57,11 @@ function makeLoader(files: Map<string, string>): PiSettingsLoader {
 
 describe('pi settings merge', () => {
   it('reads global skills/prompts arrays and resolves relative paths against the config dir', async () => {
+    const absPrompts = fx('abs', 'prompts')
     const files = new Map<string, string>([
       [
         fx('home', 'u', '.pi', 'agent', 'settings.json'),
-        JSON.stringify({ skills: ['extra-skills', '~/shared/skills'], prompts: ['/abs/prompts'], enableSkillCommands: false }),
+        JSON.stringify({ skills: ['extra-skills', '~/shared/skills'], prompts: [absPrompts], enableSkillCommands: false }),
       ],
     ])
     const loaded = await makeLoader(files).load(fx('proj'))
@@ -69,7 +70,7 @@ describe('pi settings merge', () => {
       expandHome('~/shared/skills'),
     ])
     expect(loaded.skillPaths.every((entry) => entry.project === false)).toBe(true)
-    expect(loaded.promptPaths.map((entry) => entry.path)).toEqual([fx('abs', 'prompts')])
+    expect(loaded.promptPaths.map((entry) => entry.path)).toEqual([absPrompts])
     expect(loaded.enableSkillCommands).toBe(false)
     expect(loaded.defaultProjectTrust).toBe('ask')
     expect(loaded.projectTrusted).toBe(false) // ask ≡ untrusted in non-interactive sessions
