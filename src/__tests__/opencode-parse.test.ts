@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { firstParagraph, FrontmatterError, isOpencodeName, parseCommandFile, parseSkillFile, splitFrontmatter } from '../agents/opencode/skills/parse.js'
+import {
+  firstParagraph,
+  FrontmatterError,
+  isOpencodeName,
+  parseCommandFile,
+  parseSkillFile,
+  splitFrontmatter,
+} from '../agents/opencode/skills/parse.js'
 import { stripJsoncComments } from '../agents/opencode/settings.js'
 
 describe('splitFrontmatter', () => {
@@ -37,7 +44,9 @@ describe('parseSkillFile', () => {
   })
 
   it('fails closed when name does not match the directory', () => {
-    expect(() => parseSkillFile('---\nname: other-name\ndescription: x\n---\nBody.\n', 'skill-a')).toThrow(/does not match the directory name/)
+    expect(() => parseSkillFile('---\nname: other-name\ndescription: x\n---\nBody.\n', 'skill-a')).toThrow(
+      /does not match the directory name/,
+    )
   })
 
   it('fails closed when description is missing', () => {
@@ -95,9 +104,9 @@ describe('firstParagraph', () => {
 
 describe('stripJsoncComments', () => {
   it('strips line and block comments outside strings', () => {
-    expect(
-      stripJsoncComments('{\n  // line comment\n  "a": "keep // me", /* block */\n  "b": 1\n}'),
-    ).toBe('{\n  \n  "a": "keep // me", \n  "b": 1\n}')
+    expect(stripJsoncComments('{\n  // line comment\n  "a": "keep // me", /* block */\n  "b": 1\n}')).toBe(
+      '{\n  \n  "a": "keep // me", \n  "b": 1\n}',
+    )
   })
 
   it('keeps strings with escaped quotes intact', () => {

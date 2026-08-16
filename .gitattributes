@@ -1,0 +1,3 @@
+# Check text files out with LF everywhere so prettier/format checks are
+# identical on Linux and Windows runners (avoids CRLF false failures).
+* text=auto eol=lf

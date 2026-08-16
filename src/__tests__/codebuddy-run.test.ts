@@ -52,7 +52,9 @@ describe('hookBlockMessage', () => {
   }
 
   it('prefers JSON reason over stopReason, plain stdout, and stderr', () => {
-    expect(hookBlockMessage({ ...base, output: { reason: 'json reason', stopReason: 'stop' }, plainText: 'plain', stderr: 'err' })).toBe('json reason')
+    expect(hookBlockMessage({ ...base, output: { reason: 'json reason', stopReason: 'stop' }, plainText: 'plain', stderr: 'err' })).toBe(
+      'json reason',
+    )
     expect(hookBlockMessage({ ...base, output: { stopReason: 'stop' }, plainText: 'plain', stderr: 'err' })).toBe('stop')
   })
 
@@ -64,9 +66,21 @@ describe('hookBlockMessage', () => {
 })
 
 describe('runEventHooks (command hooks)', () => {
+  // Hook commands run in exec form (`node` + args): no shell parsing, so the
+  // same handlers behave identically under cmd and POSIX shells.
   it('captures JSON output and exit code', async () => {
     const [outcome] = await run({
-      groups: [{ hooks: [{ type: 'command', command: 'printf \'{"continue":false,"reason":"halt"}\'' }] }],
+      groups: [
+        {
+          hooks: [
+            {
+              type: 'command',
+              command: 'node',
+              args: ['-e', 'process.stdout.write(JSON.stringify({continue:false,reason:"halt"}))'],
+            },
+          ],
+        },
+      ],
     })
     expect(outcome!.ran).toBe(true)
     expect(outcome!.exitCode).toBe(0)
@@ -75,7 +89,17 @@ describe('runEventHooks (command hooks)', () => {
 
   it('captures exit code 2 with stdout and stderr', async () => {
     const [outcome] = await run({
-      groups: [{ hooks: [{ type: 'command', command: 'echo "blocked by policy" >&2; echo "stdout reason"; exit 2' }] }],
+      groups: [
+        {
+          hooks: [
+            {
+              type: 'command',
+              command: 'node',
+              args: ['-e', 'process.stderr.write("blocked by policy");process.stdout.write("stdout reason");process.exit(2)'],
+            },
+          ],
+        },
+      ],
     })
     expect(outcome!.exitCode).toBe(2)
     expect(outcome!.stderr).toContain('blocked by policy')
@@ -84,14 +108,34 @@ describe('runEventHooks (command hooks)', () => {
 
   it('captures plain stdout', async () => {
     const [outcome] = await run({
-      groups: [{ hooks: [{ type: 'command', command: 'echo "context line"' }] }],
+      groups: [
+        {
+          hooks: [
+            {
+              type: 'command',
+              command: 'node',
+              args: ['-e', 'process.stdout.write("context line")'],
+            },
+          ],
+        },
+      ],
     })
     expect(outcome!.plainText).toBe('context line')
   })
 
   it('runs exec form without a shell', async () => {
     const [outcome] = await run({
-      groups: [{ hooks: [{ type: 'command', command: 'node', args: ['-e', 'process.stdout.write(JSON.stringify({continue:false,stopReason:"halted"}))'] }] }],
+      groups: [
+        {
+          hooks: [
+            {
+              type: 'command',
+              command: 'node',
+              args: ['-e', 'process.stdout.write(JSON.stringify({continue:false,stopReason:"halted"}))'],
+            },
+          ],
+        },
+      ],
     })
     expect(outcome!.output?.continue).toBe(false)
     expect(outcome!.output?.stopReason).toBe('halted')
@@ -99,7 +143,7 @@ describe('runEventHooks (command hooks)', () => {
 
   it('times out and fails open', async () => {
     const [outcome] = await run({
-      groups: [{ hooks: [{ type: 'command', command: 'sleep 5' }] }],
+      groups: [{ hooks: [{ type: 'command', command: 'node', args: ['-e', 'setTimeout(()=>{},5000)'] }] }],
       timeoutMs: 300,
     })
     expect(outcome!.timedOut).toBe(true)
@@ -109,22 +153,21 @@ describe('runEventHooks (command hooks)', () => {
   it('filters by matcher and if', async () => {
     const outcomes = await run({
       groups: [
-        { matcher: 'Edit', hooks: [{ type: 'command', command: 'echo no' }] },
-        { matcher: 'Bash', hooks: [{ type: 'command', command: 'echo yes', if: 'Bash(git *)' }] },
-        { matcher: 'Bash', hooks: [{ type: 'command', command: 'echo also' }] },
+        { matcher: 'Edit', hooks: [{ type: 'command', command: 'node', args: ['-e', 'process.stdout.write("no")'] }] },
+        { matcher: 'Bash', hooks: [{ type: 'command', command: 'node', args: ['-e', 'process.stdout.write("yes")'], if: 'Bash(git *)' }] },
+        { matcher: 'Bash', hooks: [{ type: 'command', command: 'node', args: ['-e', 'process.stdout.write("also")'] }] },
       ],
     })
     // The Edit group is filtered out entirely; the `if` handler stays but does not run.
-    expect(outcomes.map((outcome) => outcome.handler.command)).toEqual(['echo yes', 'echo also'])
-    expect(outcomes[0]!.ran).toBe(false) // `if` does not match npm test
-    expect(outcomes[1]!.ran).toBe(true)
+    expect(outcomes.map((outcome) => outcome.ran)).toEqual([false, true])
+    expect(outcomes).toHaveLength(2)
   })
 
   it('matches substring matchers like CodeBuddy Code', async () => {
     const outcomes = await run({
       groups: [
-        { matcher: 'sh', hooks: [{ type: 'command', command: 'echo matched' }] },
-        { matcher: '^Bash$', hooks: [{ type: 'command', command: 'echo exact' }] },
+        { matcher: 'sh', hooks: [{ type: 'command', command: 'node', args: ['-e', 'process.stdout.write("matched")'] }] },
+        { matcher: '^Bash$', hooks: [{ type: 'command', command: 'node', args: ['-e', 'process.stdout.write("exact")'] }] },
       ],
     })
     expect(outcomes[0]!.ran).toBe(true) // "Bash" contains "sh"
@@ -133,7 +176,7 @@ describe('runEventHooks (command hooks)', () => {
 
   it('marks detached async handlers', async () => {
     const [outcome] = await run({
-      groups: [{ hooks: [{ type: 'command', command: 'sleep 2', async: true }] }],
+      groups: [{ hooks: [{ type: 'command', command: 'node', args: ['-e', 'setTimeout(()=>{},2000)'], async: true }] }],
     })
     expect(outcome!.ran).toBe(true)
     expect(outcome!.detached).toBe(true)
@@ -154,7 +197,10 @@ describe('runEventHooks (command hooks)', () => {
             {
               type: 'command',
               command: 'node',
-              args: ['-e', 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const j=JSON.parse(d);console.log(j.hook_event_name+"|"+j.tool_name+"|"+process.env.CODEBUDDY_PROJECT_DIR)})'],
+              args: [
+                '-e',
+                'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const j=JSON.parse(d);console.log(j.hook_event_name+"|"+j.tool_name+"|"+process.env.CODEBUDDY_PROJECT_DIR)})',
+              ],
             },
           ],
         },
@@ -199,7 +245,10 @@ describe('decision resolvers', () => {
     const deny = resolvePreToolUse(
       [
         { ...base, output: { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } } },
-        { ...base, output: { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: 'danger' } } },
+        {
+          ...base,
+          output: { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: 'danger' } },
+        },
       ],
       1000,
     )
@@ -215,14 +264,25 @@ describe('decision resolvers', () => {
 
   it('maps ask', () => {
     const decision = resolvePreToolUse(
-      [{ ...base, output: { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask', permissionDecisionReason: 'confirm' } } }],
+      [
+        {
+          ...base,
+          output: { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask', permissionDecisionReason: 'confirm' } },
+        },
+      ],
       1000,
     )
     expect(decision).toEqual({ kind: 'ask', reason: 'confirm' })
   })
 
   it('fails open on timeouts and startup failures', () => {
-    const decision = resolvePreToolUse([{ ...base, timedOut: true }, { ...base, failedToStart: 'ENOENT' }], 1000)
+    const decision = resolvePreToolUse(
+      [
+        { ...base, timedOut: true },
+        { ...base, failedToStart: 'ENOENT' },
+      ],
+      1000,
+    )
     expect(decision).toEqual({ kind: 'allow' })
   })
 })

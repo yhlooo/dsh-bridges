@@ -1,0 +1,23 @@
+name: upstream-conformance
+
+on:
+  schedule:
+    # Weekly Monday 06:30 UTC — upstream drift sentinel.
+    - cron: '30 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Probe pinned upstream CLIs and drift
+        run: node scripts/upstream-probe.mjs

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FsAdapter, BridgeDirEntry } from '../fs-adapter.js'
 import { SettingsLoader } from '../agents/claude-code/hooks/settings.js'
+import { fx } from './fixture-paths.js'
 
 const silent = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
 
@@ -28,10 +29,10 @@ class MemoryFs implements FsAdapter {
 
 function makeLoader(userJson: string, projectJson?: string, localJson?: string): SettingsLoader {
   const files = new Map<string, string>()
-  files.set('/home/u/.claude/settings.json', userJson)
-  if (projectJson !== undefined) files.set('/proj/.claude/settings.json', projectJson)
-  if (localJson !== undefined) files.set('/proj/.claude/settings.local.json', localJson)
-  return new SettingsLoader(silent, new MemoryFs(files), { userClaudeDir: '/home/u/.claude' })
+  files.set(fx('home', 'u', '.claude', 'settings.json'), userJson)
+  if (projectJson !== undefined) files.set(fx('proj', '.claude', 'settings.json'), projectJson)
+  if (localJson !== undefined) files.set(fx('proj', '.claude', 'settings.local.json'), localJson)
+  return new SettingsLoader(silent, new MemoryFs(files), { userClaudeDir: fx('home', 'u', '.claude') })
 }
 
 describe('SettingsLoader', () => {
@@ -40,7 +41,7 @@ describe('SettingsLoader', () => {
       JSON.stringify({ hooks: { PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: 'a.sh' }] }] } }),
       JSON.stringify({ hooks: { PreToolUse: [{ matcher: 'Edit', hooks: [{ type: 'command', command: 'b.sh' }] }] } }),
     )
-    const loaded = await loader.load('/proj')
+    const loaded = await loader.load(fx('proj'))
     expect(loaded.disabled).toBe(false)
     expect(loaded.byEvent.get('PreToolUse')).toHaveLength(2)
   })
@@ -51,31 +52,21 @@ describe('SettingsLoader', () => {
       JSON.stringify({ hooks: { Stop: [{ hooks: [handler] }] } }),
       JSON.stringify({ hooks: { Stop: [{ hooks: [handler] }] } }),
     )
-    const loaded = await loader.load('/proj')
+    const loaded = await loader.load(fx('proj'))
     expect(loaded.byEvent.get('Stop')?.[0]?.hooks).toHaveLength(1)
   })
 
   it('takes disableAllHooks from the most specific source that defines it', async () => {
-    const enabled = makeLoader(
-      JSON.stringify({ disableAllHooks: true }),
-      JSON.stringify({ disableAllHooks: false }),
-    )
-    expect((await enabled.load('/proj')).disabled).toBe(false)
+    const enabled = makeLoader(JSON.stringify({ disableAllHooks: true }), JSON.stringify({ disableAllHooks: false }))
+    expect((await enabled.load(fx('proj'))).disabled).toBe(false)
 
-    const disabled = makeLoader(
-      JSON.stringify({ disableAllHooks: false }),
-      JSON.stringify({}),
-      JSON.stringify({ disableAllHooks: true }),
-    )
-    expect((await disabled.load('/proj')).disabled).toBe(true)
+    const disabled = makeLoader(JSON.stringify({ disableAllHooks: false }), JSON.stringify({}), JSON.stringify({ disableAllHooks: true }))
+    expect((await disabled.load(fx('proj'))).disabled).toBe(true)
   })
 
   it('merges env with most-specific-wins', async () => {
-    const loader = makeLoader(
-      JSON.stringify({ env: { A: 'user', B: 'user' } }),
-      JSON.stringify({ env: { B: 'project' } }),
-    )
-    const loaded = await loader.load('/proj')
+    const loader = makeLoader(JSON.stringify({ env: { A: 'user', B: 'user' } }), JSON.stringify({ env: { B: 'project' } }))
+    const loaded = await loader.load(fx('proj'))
     expect(loaded.env).toEqual({ A: 'user', B: 'project' })
   })
 
@@ -84,14 +75,14 @@ describe('SettingsLoader', () => {
       JSON.stringify({ allowedHttpHookUrls: ['https://a.example/*'], httpHookAllowedEnvVars: ['X'] }),
       JSON.stringify({ allowedHttpHookUrls: ['https://b.example/*'], httpHookAllowedEnvVars: ['Y'] }),
     )
-    const loaded = await loader.load('/proj')
+    const loaded = await loader.load(fx('proj'))
     expect(loaded.allowedHttpHookUrls).toEqual(['https://a.example/*', 'https://b.example/*'])
     expect(loaded.httpHookAllowedEnvVars).toEqual(['X', 'Y'])
   })
 
   it('ignores invalid JSON with a warning instead of throwing', async () => {
     const loader = makeLoader('{not json', JSON.stringify({ hooks: { Stop: [{ hooks: [{ type: 'command', command: 'x.sh' }] }] } }))
-    const loaded = await loader.load('/proj')
+    const loaded = await loader.load(fx('proj'))
     expect(loaded.byEvent.get('Stop')).toHaveLength(1)
   })
 
@@ -99,20 +90,18 @@ describe('SettingsLoader', () => {
     const loader = makeLoader(
       JSON.stringify({
         hooks: {
-          PreToolUse: [
-            { hooks: [{ type: 'command', command: 'ok.sh' }, { type: 'command' }, { type: 'prompt', prompt: 'x' }, 'junk'] },
-          ],
+          PreToolUse: [{ hooks: [{ type: 'command', command: 'ok.sh' }, { type: 'command' }, { type: 'prompt', prompt: 'x' }, 'junk'] }],
         },
       }),
     )
-    const loaded = await loader.load('/proj')
+    const loaded = await loader.load(fx('proj'))
     expect(loaded.byEvent.get('PreToolUse')?.[0]?.hooks).toHaveLength(1)
   })
 
   it('returns a stable cached view while the files are unchanged', async () => {
     const loader = makeLoader(JSON.stringify({ env: { A: '1' } }))
-    const first = await loader.load('/proj')
-    const second = await loader.load('/proj')
+    const first = await loader.load(fx('proj'))
+    const second = await loader.load(fx('proj'))
     expect(second).toBe(first)
   })
 })

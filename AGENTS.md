@@ -130,6 +130,27 @@ chore: bump dev dependencies
 - 功能开发在 `dev/...` 分支上进行，通过 PR 合入 `main`；文档等例行改动可直接
   提交 `main`。PR 与 push 的 CI（`.github/workflows/ci.yml`）跑
   typecheck/build/test/pack 检查，合入前应保持全绿。
+
+### 用 gh 创建 PR
+
+- devcontainer 已预装 `gh`（oh-my-zsh 的 `gh` 插件已启用）；首次使用跑一次
+  `gh auth login`（浏览器 device flow）。git 走 SSH（host 的 `~/.ssh` 由
+  devcontainer 挂载），认证与推送互不依赖。
+- 流程：把分支推到 origin，再建 PR：
+
+  ```
+  git push -u origin dev/<name>
+  gh pr create --base main --head dev/<name> \
+      --title "<conventional type>: <描述>" \
+      --body-file <file>
+  ```
+
+- PR 标题与提交同一套 Conventional Commits 格式；正文固定三段：**Summary**
+  （分层改动与关键点）、**Validation**（本地验证结果；首次在 CI 跑的项要
+  明确标注，如 windows-latest 腿）、**Notes**（提交清单与文档同步情况）。
+- 建 PR 后用 `gh pr checks <number>` 确认 CI（ubuntu + windows 双腿）状态；
+  红项修完追加提交即自动重跑，全绿后再合入 `main`，不要在红灯时合并。
+
 - 发布在 `main` 主干上进行：先 bump `package.json` 版本
   （`npm version patch|minor|major`）并推送提交，再打 `v<版本>` tag 并推送
   tag。

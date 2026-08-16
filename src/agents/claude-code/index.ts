@@ -63,9 +63,12 @@ export function registerClaudeCodeBridge(ctx: Context, logger: BridgeLogger, fs:
       provider = new ClaudeSkillProvider(logger, fs, { userClaudeDir: resolved.userClaudeDir, watch: resolved.watch }, control.invalidate)
       return provider
     })
-    ctx.effect(() => () => {
-      void provider?.dispose()
-    }, 'claude-code skill watchers')
+    ctx.effect(
+      () => () => {
+        void provider?.dispose()
+      },
+      'claude-code skill watchers',
+    )
   }
 
   if (resolved.memory) {

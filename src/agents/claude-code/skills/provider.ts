@@ -142,9 +142,7 @@ export class ClaudeSkillProvider implements SkillProvider {
 
   private summary(root: SkillRoot, entry: string, kind: 'bundle' | 'flat', file: string, text: string): SkillCandidate {
     if (!isSkillName(entry)) {
-      throw new FrontmatterError(
-        `skill name ${JSON.stringify(entry)} is not kebab-case; DSH skills require kebab-case names`,
-      )
+      throw new FrontmatterError(`skill name ${JSON.stringify(entry)} is not kebab-case; DSH skills require kebab-case names`)
     }
     const parsed = parseSkillFile(text)
     const { frontmatter, body } = parsed
@@ -205,9 +203,7 @@ export class ClaudeSkillProvider implements SkillProvider {
       source: locator.rootKind.startsWith('user') ? 'user-claude' : 'project-claude',
       provider: PROVIDER_NAME,
       resourceBase:
-        locator.kind === 'bundle'
-          ? { kind: 'directory', path: dirname(locator.file) }
-          : { kind: 'directory', path: locator.root },
+        locator.kind === 'bundle' ? { kind: 'directory', path: dirname(locator.file) } : { kind: 'directory', path: locator.root },
       content: body,
       path: locator.file,
       metadata: frontmatter.metadata,
@@ -228,7 +224,10 @@ export class ClaudeSkillProvider implements SkillProvider {
       if (this.watchers.size >= MAX_WATCHED_ROOTS) {
         const oldest = this.watchers.keys().next().value
         if (oldest !== undefined) {
-          void this.watchers.get(oldest)?.close().catch(() => {})
+          void this.watchers
+            .get(oldest)
+            ?.close()
+            .catch(() => {})
           this.watchers.delete(oldest)
         }
       }
@@ -256,7 +255,10 @@ export class ClaudeSkillProvider implements SkillProvider {
       })
     }
     await new Promise<void>((resolve) => {
-      watcher.once('ready', () => { ready = true; resolve() })
+      watcher.once('ready', () => {
+        ready = true
+        resolve()
+      })
     })
     if (this.closed) void watcher.close().catch(() => {})
   }

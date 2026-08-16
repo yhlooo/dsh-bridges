@@ -67,11 +67,4 @@ export interface HookOutcome {
 
 /** The hook events this bridge maps onto DSH lifecycles. */
 export type BridgedHookEvent =
-  | 'SessionStart'
-  | 'SubagentStart'
-  | 'UserPromptSubmit'
-  | 'PreToolUse'
-  | 'PostToolUse'
-  | 'Stop'
-  | 'SubagentStop'
-  | 'SessionEnd'
+  'SessionStart' | 'SubagentStart' | 'UserPromptSubmit' | 'PreToolUse' | 'PostToolUse' | 'Stop' | 'SubagentStop' | 'SessionEnd'

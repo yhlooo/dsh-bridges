@@ -1,0 +1,11 @@
+node_modules/
+lib/
+coverage/
+pnpm-lock.yaml
+docs/
+examples/
+e2e/fixtures/
+AGENTS.md
+README.md
+README_CN.md
+LICENSE

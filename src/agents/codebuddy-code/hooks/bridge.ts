@@ -27,7 +27,7 @@ import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import { createUserMessage, type ContentBlock, type UserMessage } from '@deepseek-ai/dsh-llm'
 import type { PostToolDecision, PreToolDecision, ToolExecution, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 import type { BridgeLogger } from '../../../util.js'
-import { capString, escapeReminderClose, isPlainObject } from '../../../util.js'
+import { capString, escapeReminderClose, isPlainObject, killHookChild } from '../../../util.js'
 import { CodebuddySettingsLoader } from '../settings.js'
 import { codebuddyToolName } from './names.js'
 import { hookBlockMessage, runEventHooks } from './run.js'
@@ -53,12 +53,7 @@ interface StopState {
   count: number
 }
 
-export function createHookBridge(
-  ctx: Context,
-  logger: BridgeLogger,
-  loader: CodebuddySettingsLoader,
-  config: HookBridgeConfig,
-): void {
+export function createHookBridge(ctx: Context, logger: BridgeLogger, loader: CodebuddySettingsLoader, config: HookBridgeConfig): void {
   const activeChildren = new Set<ChildProcess>()
   const stopStates = new Map<string, StopState>()
   const onceStates = new Map<string, Set<string>>()
@@ -71,7 +66,9 @@ export function createHookBridge(
     void onSessionStart(payload.agent, payload.source, loader, logger, config, onSpawn)
   })
 
-  ctx.on('agent/pre-step', (payload, next) => onUserPromptSubmit(payload.agent, payload.messages, payload.signal, stopStates, loader, logger, config, onSpawn, next))
+  ctx.on('agent/pre-step', (payload, next) =>
+    onUserPromptSubmit(payload.agent, payload.messages, payload.signal, stopStates, loader, logger, config, onSpawn, next),
+  )
 
   ctx.on('tools/pre-execute', (exec, next) => onPreToolUse(exec, onceStates, loader, logger, config, onSpawn, next))
 
@@ -83,16 +80,15 @@ export function createHookBridge(
     void onSessionEnd(payload.agent, onceStates, loader, logger, config, onSpawn)
   })
 
-  ctx.effect(() => () => {
-    for (const child of activeChildren) {
-      try {
-        child.kill('SIGTERM')
-      } catch {
-        // already gone
+  ctx.effect(
+    () => () => {
+      for (const child of activeChildren) {
+        killHookChild(child, 'SIGTERM')
       }
-    }
-    activeChildren.clear()
-  }, 'codebuddy-code hook children')
+      activeChildren.clear()
+    },
+    'codebuddy-code hook children',
+  )
 }
 
 // ── SessionStart ─────────────────────────────────────────────────────────────
@@ -154,7 +150,10 @@ async function onUserPromptSubmit(
   if (agent.session.header.delegationDepth !== undefined) return next()
   const userMessages = messages.filter((message) => message.role === 'user' && message.source.kind === 'user')
   if (userMessages.length === 0) return next()
-  const prompt = userMessages.map(messageText).filter((text) => text !== '').join('\n')
+  const prompt = userMessages
+    .map(messageText)
+    .filter((text) => text !== '')
+    .join('\n')
 
   const cwd = agent.session.header.cwd
   const settings = await loader.load(cwd)
@@ -247,7 +246,9 @@ async function onPreToolUse(
     for (const outcome of outcomes) {
       const modified = outcome.output?.hookSpecificOutput?.modifiedInput
       if (modified !== undefined) {
-        logger.warn('codebuddy-code: a PreToolUse hook returned modifiedInput; DSH freezes tool arguments before policy, so input rewriting is ignored')
+        logger.warn(
+          'codebuddy-code: a PreToolUse hook returned modifiedInput; DSH freezes tool arguments before policy, so input rewriting is ignored',
+        )
       }
     }
     const contexts = collectHookContext('PreToolUse', outcomes, config.maxHookOutputChars)
@@ -273,10 +274,16 @@ export function resolvePreToolUse(
     const specific = outcome.output?.hookSpecificOutput
     const decision = specific?.permissionDecision
     if (outcome.exitCode === 2) {
-      return { kind: 'deny', reason: firstNonEmpty(hookBlockMessage(outcome), capString(outcome.stderr, maxChars), 'blocked by a CodeBuddy Code hook') }
+      return {
+        kind: 'deny',
+        reason: firstNonEmpty(hookBlockMessage(outcome), capString(outcome.stderr, maxChars), 'blocked by a CodeBuddy Code hook'),
+      }
     }
     if (decision === 'deny') {
-      return { kind: 'deny', reason: firstNonEmpty(specific?.permissionDecisionReason, hookBlockMessage(outcome), 'denied by a CodeBuddy Code hook') }
+      return {
+        kind: 'deny',
+        reason: firstNonEmpty(specific?.permissionDecisionReason, hookBlockMessage(outcome), 'denied by a CodeBuddy Code hook'),
+      }
     }
     if (decision === 'ask') ask = { kind: 'ask', reason: specific?.permissionDecisionReason }
     if (outcome.output?.continue === false) {
@@ -352,7 +359,11 @@ async function onPostToolUse(
     const downstream = await next()
     if (post.contexts.length === 0 && post.replacementContent === undefined) return downstream
     if (downstream.kind === 'block') {
-      return { kind: 'block', feedback: downstream.feedback, additionalContexts: [...(downstream.additionalContexts ?? []), ...post.contexts] }
+      return {
+        kind: 'block',
+        feedback: downstream.feedback,
+        additionalContexts: [...(downstream.additionalContexts ?? []), ...post.contexts],
+      }
     }
     const base = { kind: 'accept' as const, additionalContexts: [...(downstream.additionalContexts ?? []), ...post.contexts] }
     if (post.replacementContent !== undefined && downstream.value === undefined) {
@@ -526,11 +537,7 @@ export function resolveBlockDecision(outcomes: readonly HookOutcome[], maxChars:
   for (const outcome of outcomes) {
     if (!outcome.ran || outcome.detached) continue
     if (outcome.exitCode === 2) {
-      return firstNonEmpty(
-        hookBlockMessage(outcome),
-        capString(outcome.stderr, maxChars),
-        'blocked by a CodeBuddy Code hook',
-      )
+      return firstNonEmpty(hookBlockMessage(outcome), capString(outcome.stderr, maxChars), 'blocked by a CodeBuddy Code hook')
     }
     if (outcome.output?.continue === false) {
       return firstNonEmpty(outcome.output.stopReason, outcome.output.reason, 'stopped by a CodeBuddy Code hook')

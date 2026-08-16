@@ -1,8 +1,10 @@
+import { sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { BridgeDirEntry, FsAdapter } from '../fs-adapter.js'
 import { CodebuddySkillProvider } from '../agents/codebuddy-code/skills/provider.js'
 import { CodebuddySettingsLoader } from '../agents/codebuddy-code/settings.js'
 import type { SkillLookupOptions } from '@deepseek-ai/dsh-skill'
+import { fx } from './fixture-paths.js'
 
 const silent = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
 
@@ -11,18 +13,18 @@ class TreeFs implements FsAdapter {
   constructor(public files: Map<string, string>) {}
 
   private children(path: string): BridgeDirEntry[] {
-    const prefix = path.endsWith('/') ? path : `${path}/`
+    const prefix = path.endsWith(sep) ? path : `${path}${sep}`
     const names = new Set<string>()
     for (const key of this.files.keys()) {
       if (!key.startsWith(prefix)) continue
       const rest = key.slice(prefix.length)
       if (rest === '') continue
-      names.add(rest.split('/')[0]!)
+      names.add(rest.split(sep)[0]!)
     }
     return [...names].map((name) => ({
       name,
-      isDir: [...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}/`)),
-      isFile: ![...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}/`)),
+      isDir: [...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}${sep}`)),
+      isFile: ![...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}${sep}`)),
     }))
   }
 
@@ -44,25 +46,25 @@ class TreeFs implements FsAdapter {
     return 'v1'
   }
   async dirExists(path: string): Promise<boolean> {
-    return [...this.files.keys()].some((key) => key.startsWith(`${path}/`))
+    return [...this.files.keys()].some((key) => key.startsWith(`${path}${sep}`))
   }
 }
 
 function makeProvider(files: Map<string, string>): CodebuddySkillProvider {
   const fs = new TreeFs(files)
-  const settings = new CodebuddySettingsLoader(silent, fs, { userCodebuddyDir: '/home/u/.codebuddy' })
-  return new CodebuddySkillProvider(silent, fs, { userCodebuddyDir: '/home/u/.codebuddy', watch: false }, settings, () => {})
+  const settings = new CodebuddySettingsLoader(silent, fs, { userCodebuddyDir: fx('home', 'u', '.codebuddy') })
+  return new CodebuddySkillProvider(silent, fs, { userCodebuddyDir: fx('home', 'u', '.codebuddy'), watch: false }, settings, () => {})
 }
 
-const options: SkillLookupOptions = { cwd: '/proj' }
+const options: SkillLookupOptions = { cwd: fx('proj') }
 
 describe('CodebuddySkillProvider.list', () => {
   it('discovers project and user skill bundles and commands', async () => {
     const files = new Map<string, string>([
-      ['/home/u/.codebuddy/skills/personal/SKILL.md', '---\ndescription: Personal skill\n---\nBody.\n'],
-      ['/proj/.codebuddy/skills/deploy/SKILL.md', '---\ndescription: Deploy\n---\nDeploy body.\n'],
-      ['/proj/.codebuddy/commands/lint.md', '---\ndescription: Lint the repo\n---\nRun lint.\n'],
-      ['/home/u/.codebuddy/commands/notes.md', '# Notes\n\nTake notes.\n'],
+      [fx('home', 'u', '.codebuddy', 'skills', 'personal', 'SKILL.md'), '---\ndescription: Personal skill\n---\nBody.\n'],
+      [fx('proj', '.codebuddy', 'skills', 'deploy', 'SKILL.md'), '---\ndescription: Deploy\n---\nDeploy body.\n'],
+      [fx('proj', '.codebuddy', 'commands', 'lint.md'), '---\ndescription: Lint the repo\n---\nRun lint.\n'],
+      [fx('home', 'u', '.codebuddy', 'commands', 'notes.md'), '# Notes\n\nTake notes.\n'],
     ])
     const result = await makeProvider(files).list(options)
     const names = result.candidates.map((candidate) => candidate.name).sort()
@@ -71,10 +73,10 @@ describe('CodebuddySkillProvider.list', () => {
 
   it('assigns ranks: project beats user, skills beat commands (CodeBuddy precedence)', async () => {
     const files = new Map<string, string>([
-      ['/home/u/.codebuddy/skills/shared/SKILL.md', '---\ndescription: user skill\n---\na\n'],
-      ['/home/u/.codebuddy/commands/shared.md', '---\ndescription: user command\n---\nb\n'],
-      ['/proj/.codebuddy/skills/shared/SKILL.md', '---\ndescription: project skill\n---\nc\n'],
-      ['/proj/.codebuddy/commands/shared.md', '---\ndescription: project command\n---\nd\n'],
+      [fx('home', 'u', '.codebuddy', 'skills', 'shared', 'SKILL.md'), '---\ndescription: user skill\n---\na\n'],
+      [fx('home', 'u', '.codebuddy', 'commands', 'shared.md'), '---\ndescription: user command\n---\nb\n'],
+      [fx('proj', '.codebuddy', 'skills', 'shared', 'SKILL.md'), '---\ndescription: project skill\n---\nc\n'],
+      [fx('proj', '.codebuddy', 'commands', 'shared.md'), '---\ndescription: project command\n---\nd\n'],
     ])
     const result = await makeProvider(files).list(options)
     // The registry resolves duplicate names by rank; the project skill must win.
@@ -87,8 +89,8 @@ describe('CodebuddySkillProvider.list', () => {
 
   it('reads directory skills only; flat md files in skills/ are ignored', async () => {
     const files = new Map<string, string>([
-      ['/proj/.codebuddy/skills/flat.md', '---\ndescription: flat\n---\na\n'],
-      ['/proj/.codebuddy/skills/bundle/SKILL.md', '---\ndescription: bundle\n---\nb\n'],
+      [fx('proj', '.codebuddy', 'skills', 'flat.md'), '---\ndescription: flat\n---\na\n'],
+      [fx('proj', '.codebuddy', 'skills', 'bundle', 'SKILL.md'), '---\ndescription: bundle\n---\nb\n'],
     ])
     const result = await makeProvider(files).list(options)
     expect(result.candidates.map((candidate) => candidate.name)).toEqual(['bundle'])
@@ -96,8 +98,8 @@ describe('CodebuddySkillProvider.list', () => {
 
   it('skips nested commands whose qualified names are not kebab-case', async () => {
     const files = new Map<string, string>([
-      ['/proj/.codebuddy/commands/deploy.md', '---\ndescription: deploy\n---\na\n'],
-      ['/proj/.codebuddy/commands/frontend/build.md', '---\ndescription: build\n---\nb\n'],
+      [fx('proj', '.codebuddy', 'commands', 'deploy.md'), '---\ndescription: deploy\n---\na\n'],
+      [fx('proj', '.codebuddy', 'commands', 'frontend', 'build.md'), '---\ndescription: build\n---\nb\n'],
     ])
     const result = await makeProvider(files).list(options)
     expect(result.candidates.map((candidate) => candidate.name)).toEqual(['deploy'])
@@ -105,8 +107,8 @@ describe('CodebuddySkillProvider.list', () => {
 
   it('skips names that are not kebab-case', async () => {
     const files = new Map<string, string>([
-      ['/proj/.codebuddy/skills/camelCase/SKILL.md', '---\ndescription: nope\n---\na\n'],
-      ['/proj/.codebuddy/skills/good-name/SKILL.md', '---\ndescription: yes\n---\nb\n'],
+      [fx('proj', '.codebuddy', 'skills', 'camelCase', 'SKILL.md'), '---\ndescription: nope\n---\na\n'],
+      [fx('proj', '.codebuddy', 'skills', 'good-name', 'SKILL.md'), '---\ndescription: yes\n---\nb\n'],
     ])
     const result = await makeProvider(files).list(options)
     expect(result.candidates.map((candidate) => candidate.name)).toEqual(['good-name'])
@@ -114,8 +116,8 @@ describe('CodebuddySkillProvider.list', () => {
 
   it('derives the description from description/when_to_use and the first paragraph', async () => {
     const files = new Map<string, string>([
-      ['/proj/.codebuddy/skills/with-when/SKILL.md', '---\ndescription: Base\nwhen_to_use: When asked\n---\nBody.\n'],
-      ['/proj/.codebuddy/skills/no-desc/SKILL.md', '---\nname: display\n---\n# Title\n\nFell back paragraph.\n'],
+      [fx('proj', '.codebuddy', 'skills', 'with-when', 'SKILL.md'), '---\ndescription: Base\nwhen_to_use: When asked\n---\nBody.\n'],
+      [fx('proj', '.codebuddy', 'skills', 'no-desc', 'SKILL.md'), '---\nname: display\n---\n# Title\n\nFell back paragraph.\n'],
     ])
     const result = await makeProvider(files).list(options)
     const withWhen = result.candidates.find((candidate) => candidate.name === 'with-when')
@@ -127,8 +129,8 @@ describe('CodebuddySkillProvider.list', () => {
 
   it('maps invocation policy from the frontmatter', async () => {
     const files = new Map<string, string>([
-      ['/proj/.codebuddy/skills/task/SKILL.md', '---\ndisable-model-invocation: true\n---\na\n'],
-      ['/proj/.codebuddy/skills/hidden/SKILL.md', '---\nuser-invocable: false\n---\nb\n'],
+      [fx('proj', '.codebuddy', 'skills', 'task', 'SKILL.md'), '---\ndisable-model-invocation: true\n---\na\n'],
+      [fx('proj', '.codebuddy', 'skills', 'hidden', 'SKILL.md'), '---\nuser-invocable: false\n---\nb\n'],
     ])
     const result = await makeProvider(files).list(options)
     expect(result.candidates.find((candidate) => candidate.name === 'task')?.invocation.modelInvocable).toBe(false)
@@ -137,11 +139,14 @@ describe('CodebuddySkillProvider.list', () => {
 
   it('applies skillOverrides from settings on top of the frontmatter', async () => {
     const files = new Map<string, string>([
-      ['/proj/.codebuddy/skills/always/SKILL.md', '---\ndescription: normal\n---\na\n'],
-      ['/proj/.codebuddy/skills/user-only/SKILL.md', '---\ndescription: user only\n---\nb\n'],
-      ['/proj/.codebuddy/skills/disabled/SKILL.md', '---\ndescription: disabled\n---\nc\n'],
-      ['/proj/.codebuddy/skills/name-only/SKILL.md', '---\ndescription: long description\n---\nd\n'],
-      ['/proj/.codebuddy/settings.json', JSON.stringify({ skillOverrides: { 'user-only': 'user-invocable-only', disabled: 'off', 'name-only': 'name-only' } })],
+      [fx('proj', '.codebuddy', 'skills', 'always', 'SKILL.md'), '---\ndescription: normal\n---\na\n'],
+      [fx('proj', '.codebuddy', 'skills', 'user-only', 'SKILL.md'), '---\ndescription: user only\n---\nb\n'],
+      [fx('proj', '.codebuddy', 'skills', 'disabled', 'SKILL.md'), '---\ndescription: disabled\n---\nc\n'],
+      [fx('proj', '.codebuddy', 'skills', 'name-only', 'SKILL.md'), '---\ndescription: long description\n---\nd\n'],
+      [
+        fx('proj', '.codebuddy', 'settings.json'),
+        JSON.stringify({ skillOverrides: { 'user-only': 'user-invocable-only', disabled: 'off', 'name-only': 'name-only' } }),
+      ],
     ])
     const result = await makeProvider(files).list(options)
     const always = result.candidates.find((candidate) => candidate.name === 'always')
@@ -155,7 +160,7 @@ describe('CodebuddySkillProvider.list', () => {
   })
 
   it('returns an empty catalog for a project without CodeBuddy assets', async () => {
-    const files = new Map<string, string>([['/proj/README.md', 'x']])
+    const files = new Map<string, string>([[fx('proj', 'README.md'), 'x']])
     const result = await makeProvider(files).list(options)
     expect(result.candidates).toEqual([])
     expect(result.complete).toBe(true)
@@ -165,23 +170,21 @@ describe('CodebuddySkillProvider.list', () => {
 describe('CodebuddySkillProvider.get', () => {
   it('loads the current body and resource base for a bundle', async () => {
     const files = new Map<string, string>([
-      ['/proj/.codebuddy/skills/deploy/SKILL.md', '---\ndescription: Deploy\n---\nStep one.\n'],
-      ['/proj/.codebuddy/skills/deploy/template.md', 'x'],
+      [fx('proj', '.codebuddy', 'skills', 'deploy', 'SKILL.md'), '---\ndescription: Deploy\n---\nStep one.\n'],
+      [fx('proj', '.codebuddy', 'skills', 'deploy', 'template.md'), 'x'],
     ])
     const provider = makeProvider(files)
     const { candidates } = await provider.list(options)
     const definition = await provider.get(candidates[0]!, options)
     expect(definition?.content).toBe('Step one.\n')
-    expect(definition?.resourceBase).toEqual({ kind: 'directory', path: '/proj/.codebuddy/skills/deploy' })
+    expect(definition?.resourceBase).toEqual({ kind: 'directory', path: fx('proj', '.codebuddy', 'skills', 'deploy') })
   })
 
   it('returns undefined when the file disappeared', async () => {
-    const files = new Map<string, string>([
-      ['/proj/.codebuddy/skills/gone/SKILL.md', '---\ndescription: x\n---\na\n'],
-    ])
+    const files = new Map<string, string>([[fx('proj', '.codebuddy', 'skills', 'gone', 'SKILL.md'), '---\ndescription: x\n---\na\n']])
     const provider = makeProvider(files)
     const { candidates } = await provider.list(options)
-    files.delete('/proj/.codebuddy/skills/gone/SKILL.md')
+    files.delete(fx('proj', '.codebuddy', 'skills', 'gone', 'SKILL.md'))
     await expect(provider.get(candidates[0]!, options)).resolves.toBeUndefined()
   })
 })

@@ -30,7 +30,7 @@
  * working directory and invalidated by file stamps.
  * @module dsh-bridges/agents/codex/settings
  */
-import { dirname, isAbsolute, join } from 'node:path'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { parse as parseToml } from 'smol-toml'
 import type { FsAdapter } from '../../fs-adapter.js'
 import type { BridgeLogger } from '../../util.js'
@@ -71,7 +71,12 @@ interface RawLayer {
   projectRootMarkers?: string[]
 }
 
-const SYSTEM_CODEX_DIR = '/etc/codex'
+/**
+ * Codex's system config root (`/etc/codex`, Unix-only upstream). `resolve`
+ * keeps it identical on POSIX and gives it the current drive root on Windows
+ * (`D:\etc\codex`), where the naive literal would yield a drive-less path.
+ */
+const SYSTEM_CODEX_DIR = resolve('/etc/codex')
 const CODEX_DEFAULTS: { projectDocMaxBytes: number; projectDocFallbackFilenames: string[]; projectRootMarkers: string[] } = {
   projectDocMaxBytes: 32 * 1024,
   projectDocFallbackFilenames: [],
@@ -211,7 +216,9 @@ export class CodexSettingsLoader {
       try {
         value = source.format === 'toml' ? parseToml(text) : JSON.parse(text)
       } catch (error) {
-        this.logger.warn(`codex: ignoring invalid ${source.format.toUpperCase()} settings file ${source.path}: ${error instanceof Error ? error.message : String(error)}`)
+        this.logger.warn(
+          `codex: ignoring invalid ${source.format.toUpperCase()} settings file ${source.path}: ${error instanceof Error ? error.message : String(error)}`,
+        )
         continue
       }
       if (!isPlainObject(value)) {
@@ -288,7 +295,9 @@ function normalizeLayer(value: Record<string, unknown>, source: SettingsSource, 
   }
   const fallbackFilenames = value['project_doc_fallback_filenames']
   if (Array.isArray(fallbackFilenames)) {
-    layer.projectDocFallbackFilenames = fallbackFilenames.filter((entry): entry is string => typeof entry === 'string' && entry.trim() !== '')
+    layer.projectDocFallbackFilenames = fallbackFilenames.filter(
+      (entry): entry is string => typeof entry === 'string' && entry.trim() !== '',
+    )
   }
   const rootMarkers = value['project_root_markers']
   if (Array.isArray(rootMarkers)) {

@@ -1,7 +1,8 @@
 /**
- * Shared small utilities for the claude-code bridge.
- * @module @dsh-bridges/claude-code/util
+ * Shared small utilities for the dsh-bridges subsystems.
+ * @module dsh-bridges/util
  */
+import type { ChildProcess } from 'node:child_process'
 import { homedir } from 'node:os'
 import { isAbsolute, join, resolve } from 'node:path'
 
@@ -18,6 +19,22 @@ export function expandHome(path: string): string {
   if (path === '~') return homedir()
   if (path.startsWith('~/') || path.startsWith('~\\')) return join(homedir(), path.slice(2))
   return path
+}
+
+/**
+ * Terminate a hook child the same way timeout/abort handling does: the whole
+ * POSIX process group, so shell grandchildren die too instead of being
+ * orphaned. Windows has no process-group kill, so the direct child is killed
+ * there (grandchildren leak on Windows — a known platform limitation).
+ */
+export function killHookChild(child: ChildProcess, signal: NodeJS.Signals): void {
+  if (child.exitCode !== null || child.signalCode !== null) return
+  try {
+    if (process.platform === 'win32' || child.pid === undefined) child.kill(signal)
+    else process.kill(-child.pid, signal)
+  } catch {
+    // already gone
+  }
 }
 
 /** Resolve a possibly-relative path against an optional base directory. */

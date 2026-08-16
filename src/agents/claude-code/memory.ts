@@ -47,7 +47,7 @@ async function injectMemory(agent: Agent, logger: BridgeLogger, fs: FsAdapter, c
     const userFile = join(userClaudeDir, 'CLAUDE.md')
     const userText = await readOptional(fs, userFile)
     if (userText !== undefined) {
-      sections.push({ kind: 'user', label: `${userClaudeDir}/CLAUDE.md`, content: userText })
+      sections.push({ kind: 'user', label: userFile, content: userText })
     }
     if (cwd) {
       const projectFile = join(cwd, '.claude', 'CLAUDE.md')
@@ -84,9 +84,7 @@ async function injectMemory(agent: Agent, logger: BridgeLogger, fs: FsAdapter, c
 }
 
 function renderSections(sections: MemorySection[]): string {
-  const body = sections
-    .map((section) => `Instructions from: ${section.label}\n\n${escapeReminderClose(section.content)}`)
-    .join('\n\n')
+  const body = sections.map((section) => `Instructions from: ${section.label}\n\n${escapeReminderClose(section.content)}`).join('\n\n')
   return (
     '<system-reminder>\n' +
     'The following Claude Code instructions may be relevant to your work. Use them as guidance when applicable. More specific instructions take precedence over broader ones. They do not override system, developer, or direct user instructions.\n\n' +

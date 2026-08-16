@@ -174,3 +174,49 @@ Codex 的用户技能固定是 `$HOME/.agents/skills`（与 `~/.codex`、`CODEX_
 ## 22. 记忆去重要用"路径级"判断，别用内容比对
 
 opencode / codex 的规则文件去重：DSH 核心已加载的只有**工作区根**的 `AGENTS.md` 与 `CLAUDE.md`（即 session cwd 下的这两个文件）。判断"该不该注入"要按**路径**（找到的项目规则文件 === `cwd/AGENTS.md` / `cwd/CLAUDE.md` 就跳过），而不是按内容比对——内容比对会把"父目录规则恰好与根文件同文"误判为重复而漏注入（父目录文件 DSH 并没有加载）。
+
+## 23. teardown 只 kill 直接子进程会留下孤儿孙进程
+
+**现象**：hook 命令经 `shell: true` 包装，`spawn` 返回的 child 是 shell，真正的 hook 进程是孙进程。teardown 时 `child.kill('SIGTERM')` 只杀了 shell，"杀干净"的假象来自 `close` 事件（shell 已死）；孙进程成为孤儿继续跑满整个存活期。
+
+**原因**：`run.ts` 的超时/取消路径用的是**进程组 kill**（POSIX：`process.kill(-child.pid)`，配合 `detached: true` 让 shell 成为新进程组组长），而三个 bridge 的 `ctx.effect` teardown 写的是普通 `child.kill`——两条路径语义不一致。
+
+**正确写法**：共享 `killHookChild`（`src/util.ts`），teardown 与超时/取消走同一套组杀逻辑。用 e2e 验证时，fixture 的 pid 要写**孙进程**的 pid（`node` 脚本写 `process.pid`），写 shell 的 pid（`$$`）会掩盖这个泄漏。Windows 没有进程组 kill，只能杀直接子进程，孙进程泄漏是已知平台限制（e2e 里该断言 `skipIf(win32)`）。
+
+## 24. 单元测试的内存 fixture 路径必须是平台语义的
+
+**现象**：CI 加 windows-latest 后，provider/settings/memory 测试在 Windows 上目录扫描全空（catalog 全 `[]`）。
+
+**原因**：内存 fixture 的 Map 键硬编码 POSIX 绝对路径（`/proj/...`、`/home/u/...`），而被测代码用 `node:path` 拼接——Windows 上是 win32 语义（盘符根 + `\`），两边字符串对不上；测试里自写的 FsAdapter 还写死了 `'/'` 分隔符逻辑（`` `${path}/` ``、`split('/')`）。
+
+**正确写法**：
+- 共享 `src/__tests__/fixture-paths.ts` 的 `fx(...)`（平台 `join`）构造所有绝对 fixture 路径，断言里的期望路径也用同一构造；
+- Adapter 内分隔符统一 `import { sep } from 'node:path'`（`` `${path}${sep}` ``、`split(sep)`）。
+- 新增 fixture 时不要硬编码 `/proj` 等字面量；写好后在 Linux 上跑一遍，语义必须不变。
+
+## 25. run 测试的 hook 命令要跨 shell（exec form 优先）
+
+**现象**：CI Windows 上 run 测试失败——`printf` 不存在、`echo ... >&2; exit 2` 是 cmd 语法错误、`sleep` 不是 Windows 命令。
+
+**原因**：hook 命令串经 `shell: true` 执行，POSIX `/bin/sh` 与 Windows `cmd.exe` 的语法和命令集不同。
+
+**正确写法**：
+- 有 `args` 字段的桥（claude-code / codebuddy-code）用 **exec form**：`command: 'node'` + `args: ['-e', '...']`——不经 shell、双平台一致，且超时 kill 直接作用于 node 进程本身，没有孤儿管道问题；
+- codex 的上游契约只有 shell command（无 `args` 字段），只能 shell form：用 `node -e "..."` 写法（双引号内避免 `%`/`!`/`&`；`;` 与 `'` 在 cmd 里是字面量，`\"` 在两种 shell 下都安全）；
+- 超时场景的 sleep 保持"刚超过 timeout"（3–5s）：Windows 上 kill 只杀直接子进程（cmd），孤儿孙进程继续持有管道，`close` 事件要等它退出才会触发。
+
+## 26. 硬编码的 POSIX system 目录要用 `resolve` 转成平台绝对路径
+
+**现象**：codex 桥的 system 层写死 `join('/etc/codex', 'skills')`，Windows 上解析成无盘符的 `\etc\codex\skills`，与 fixture 的 `fx('etc','codex',...)`（`<盘符>:\etc\codex`）对不上，system 层测试在 Windows 红。
+
+**原因**：上游 Codex 的 system 层是 Unix-only（`/etc/codex/config.toml`），Windows 没有对应位置；直接 `join` 字面量在 win32 下得到"当前盘相对"的怪路径。
+
+**正确写法**：`resolve('/etc/codex')`——POSIX 不变，win32 解析为 `<盘符>:\etc\codex`（当前盘根），两侧一致。settings.ts 与 skills/provider.ts 两处要同步改（`SYSTEM_CODEX_DIR` 常量与 provider 的 `join(resolve('/etc/codex'), 'skills')`）。
+
+## 27. 提示可见的路径 label 要用 `join`，别用模板串拼分隔符
+
+**现象**：Windows CI 上 codebuddy-memory 测试红：label 是 `D:\home\u\.codebuddy/CODEBUDDY.md`（混合分隔符），与 `fx(...)` 期望值不等。
+
+**原因**：`` `${userDir}/CODEBUDDY.md` `` 模板串在 win32 上拼出 `/` 与 `\` 混用；这些 label 会进注入正文、用户可见。四个桥的 user 层 label（claude/codebuddy/opencode/codex 各一处）都有此模式。
+
+**正确写法**：绝对路径 label 一律 `join(dir, 'NAME.md')`（或直接复用已 join 好的变量）。相对展示名（如 `.codebuddy/CODEBUDDY.md`）是有意为之，保持原样。

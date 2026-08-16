@@ -30,7 +30,7 @@ import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import { createUserMessage, type ContentBlock, type UserMessage } from '@deepseek-ai/dsh-llm'
 import type { PostToolDecision, PreToolDecision, ToolExecution, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 import type { BridgeLogger } from '../../../util.js'
-import { capString, escapeReminderClose, isPlainObject } from '../../../util.js'
+import { capString, escapeReminderClose, isPlainObject, killHookChild } from '../../../util.js'
 import { CodexSettingsLoader } from '../settings.js'
 import { codexToolName } from './names.js'
 import { hookBlockMessage, runEventHooks } from './run.js'
@@ -52,12 +52,7 @@ interface StopState {
   count: number
 }
 
-export function createHookBridge(
-  ctx: Context,
-  logger: BridgeLogger,
-  loader: CodexSettingsLoader,
-  config: HookBridgeConfig,
-): void {
+export function createHookBridge(ctx: Context, logger: BridgeLogger, loader: CodexSettingsLoader, config: HookBridgeConfig): void {
   const activeChildren = new Set<ChildProcess>()
   const stopStates = new Map<string, StopState>()
   const onSpawn = (child: ChildProcess) => {
@@ -72,7 +67,9 @@ export function createHookBridge(
       : onSessionStart(payload.agent, payload.source, loader, logger, config, onSpawn))
   })
 
-  ctx.on('agent/pre-step', (payload, next) => onUserPromptSubmit(payload.agent, payload.messages, payload.signal, stopStates, loader, logger, config, onSpawn, next))
+  ctx.on('agent/pre-step', (payload, next) =>
+    onUserPromptSubmit(payload.agent, payload.messages, payload.signal, stopStates, loader, logger, config, onSpawn, next),
+  )
 
   ctx.on('tools/pre-execute', (exec, next) => onPreToolUse(exec, loader, logger, config, onSpawn, next))
 
@@ -89,16 +86,15 @@ export function createHookBridge(
     void onSessionEnd(payload.agent, loader, logger, config, onSpawn)
   })
 
-  ctx.effect(() => () => {
-    for (const child of activeChildren) {
-      try {
-        child.kill('SIGTERM')
-      } catch {
-        // already gone
+  ctx.effect(
+    () => () => {
+      for (const child of activeChildren) {
+        killHookChild(child, 'SIGTERM')
       }
-    }
-    activeChildren.clear()
-  }, 'codex hook children')
+      activeChildren.clear()
+    },
+    'codex hook children',
+  )
 }
 
 // ── SessionStart / SubagentStart ─────────────────────────────────────────────
@@ -189,7 +185,10 @@ async function onUserPromptSubmit(
   if (agent.session.header.delegationDepth !== undefined) return next()
   const userMessages = messages.filter((message) => message.role === 'user' && message.source.kind === 'user')
   if (userMessages.length === 0) return next()
-  const prompt = userMessages.map(messageText).filter((text) => text !== '').join('\n')
+  const prompt = userMessages
+    .map(messageText)
+    .filter((text) => text !== '')
+    .join('\n')
 
   const cwd = agent.session.header.cwd
   const settings = await loader.load(cwd)
@@ -272,7 +271,9 @@ async function onPreToolUse(
     for (const outcome of outcomes) {
       const updated = outcome.output?.hookSpecificOutput?.updatedInput
       if (updated !== undefined) {
-        logger.warn('codex: a PreToolUse hook returned updatedInput; DSH freezes tool arguments before policy, so input rewriting is ignored')
+        logger.warn(
+          'codex: a PreToolUse hook returned updatedInput; DSH freezes tool arguments before policy, so input rewriting is ignored',
+        )
       }
     }
     const contexts = collectHookContext('PreToolUse', outcomes, config.maxHookOutputChars)
@@ -286,14 +287,20 @@ async function onPreToolUse(
   }
 }
 
-export function resolvePreToolUse(outcomes: readonly HookOutcome[], maxChars: number): { kind: 'allow' } | { kind: 'deny'; reason: string } {
+export function resolvePreToolUse(
+  outcomes: readonly HookOutcome[],
+  maxChars: number,
+): { kind: 'allow' } | { kind: 'deny'; reason: string } {
   // Deny wins; `ask` is parsed but not supported by Codex itself, so it is
   // ignored (the call continues). Timeouts and failures fail open.
   for (const outcome of outcomes) {
     if (!outcome.ran || outcome.detached) continue
     const specific = outcome.output?.hookSpecificOutput
     if (outcome.exitCode === 2) {
-      return { kind: 'deny', reason: firstNonEmpty(hookBlockMessage(outcome), capString(outcome.stderr, maxChars), 'blocked by a Codex hook') }
+      return {
+        kind: 'deny',
+        reason: firstNonEmpty(hookBlockMessage(outcome), capString(outcome.stderr, maxChars), 'blocked by a Codex hook'),
+      }
     }
     if (outcome.output?.decision === 'block') {
       return { kind: 'deny', reason: firstNonEmpty(outcome.output.reason, 'blocked by a Codex hook') }
@@ -331,9 +338,7 @@ async function onPostToolUse(
       tool_name: codexName,
       tool_input: codexToolInput(codexName, exec.arguments),
       tool_use_id: String(exec.callId),
-      tool_response: result.isError
-        ? { error: result.error.message }
-        : { value: result.value, content: contentText(result.content) },
+      tool_response: result.isError ? { error: result.error.message } : { value: result.value, content: contentText(result.content) },
     }
     const outcomes = await runEventHooks(
       {
@@ -352,7 +357,11 @@ async function onPostToolUse(
     const downstream = await next()
     if (post.contexts.length === 0 && post.replacementContent === undefined) return downstream
     if (downstream.kind === 'block') {
-      return { kind: 'block', feedback: downstream.feedback, additionalContexts: [...(downstream.additionalContexts ?? []), ...post.contexts] }
+      return {
+        kind: 'block',
+        feedback: downstream.feedback,
+        additionalContexts: [...(downstream.additionalContexts ?? []), ...post.contexts],
+      }
     }
     const base = { kind: 'accept' as const, additionalContexts: [...(downstream.additionalContexts ?? []), ...post.contexts] }
     if (post.replacementContent !== undefined && downstream.value === undefined) {
@@ -367,7 +376,10 @@ async function onPostToolUse(
   }
 }
 
-function resolvePostToolUse(outcomes: readonly HookOutcome[], maxChars: number): { contexts: UserMessage[]; replacementContent?: ContentBlock[] } {
+function resolvePostToolUse(
+  outcomes: readonly HookOutcome[],
+  maxChars: number,
+): { contexts: UserMessage[]; replacementContent?: ContentBlock[] } {
   const contextTexts: string[] = []
   let replacement: ContentBlock[] | undefined
   for (const outcome of outcomes) {
@@ -460,7 +472,12 @@ async function onSubagentStop(
         event: 'SubagentStop',
         groups,
         matchedValue: agentType(agent),
-        input: { ...commonInput(agent, 'SubagentStop'), agent_id: String(agent.session.id), agent_type: agentType(agent), stop_hook_active: state.count > 0 },
+        input: {
+          ...commonInput(agent, 'SubagentStop'),
+          agent_id: String(agent.session.id),
+          agent_type: agentType(agent),
+          stop_hook_active: state.count > 0,
+        },
         cwd: cwd ?? process.cwd(),
         signal,
         defaultTimeoutMs: config.hookTimeoutMs,

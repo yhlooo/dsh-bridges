@@ -1,7 +1,9 @@
+import { sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { BridgeDirEntry, FsAdapter } from '../fs-adapter.js'
 import { collectMemorySections } from '../agents/codex/memory.js'
 import { CodexSettingsLoader } from '../agents/codex/settings.js'
+import { fx } from './fixture-paths.js'
 
 const silent = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
 
@@ -9,18 +11,18 @@ class TreeFs implements FsAdapter {
   constructor(public files: Map<string, string>) {}
 
   private children(path: string): BridgeDirEntry[] {
-    const prefix = path.endsWith('/') ? path : `${path}/`
+    const prefix = path.endsWith(sep) ? path : `${path}${sep}`
     const names = new Set<string>()
     for (const key of this.files.keys()) {
       if (!key.startsWith(prefix)) continue
       const rest = key.slice(prefix.length)
       if (rest === '') continue
-      names.add(rest.split('/')[0]!)
+      names.add(rest.split(sep)[0]!)
     }
     return [...names].map((name) => ({
       name,
-      isDir: [...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}/`)),
-      isFile: ![...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}/`)),
+      isDir: [...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}${sep}`)),
+      isFile: ![...this.files.keys()].some((key) => key.startsWith(`${prefix}${name}${sep}`)),
     }))
   }
 
@@ -42,25 +44,25 @@ class TreeFs implements FsAdapter {
     return this.files.has(path) ? `v:${this.files.get(path)}` : undefined
   }
   async dirExists(path: string): Promise<boolean> {
-    return [...this.files.keys()].some((key) => key.startsWith(`${path}/`))
+    return [...this.files.keys()].some((key) => key.startsWith(`${path}${sep}`))
   }
 }
 
-const config = { userCodexDir: '/home/u/.codex', maxBytes: 32_768 }
+const config = { userCodexDir: fx('home', 'u', '.codex'), maxBytes: 32_768 }
 
-function collect(files: Map<string, string>, cwd = '/proj/sub') {
+function collect(files: Map<string, string>, cwd = fx('proj', 'sub')) {
   const fs = new TreeFs(files)
-  const loader = new CodexSettingsLoader(silent, fs, { userCodexDir: '/home/u/.codex' })
+  const loader = new CodexSettingsLoader(silent, fs, { userCodexDir: fx('home', 'u', '.codex') })
   return collectMemorySections(cwd, silent, fs, loader, config)
 }
 
 describe('codex memory', () => {
   it('injects the global AGENTS.md plus the root-to-cwd instruction chain', async () => {
     const files = new Map<string, string>([
-      ['/home/u/.codex/AGENTS.md', 'Global guidance.\n'],
-      ['/proj/.git/HEAD', 'x'],
-      ['/proj/AGENTS.override.md', 'Root override.\n'],
-      ['/proj/sub/AGENTS.md', 'Nested guidance.\n'],
+      [fx('home', 'u', '.codex', 'AGENTS.md'), 'Global guidance.\n'],
+      [fx('proj', '.git', 'HEAD'), 'x'],
+      [fx('proj', 'AGENTS.override.md'), 'Root override.\n'],
+      [fx('proj', 'sub', 'AGENTS.md'), 'Nested guidance.\n'],
     ])
     const sections = await collect(files)
     expect(sections.map((section) => [section.kind, section.content])).toEqual([
@@ -72,9 +74,9 @@ describe('codex memory', () => {
 
   it('prefers the global AGENTS.override.md over AGENTS.md', async () => {
     const files = new Map<string, string>([
-      ['/home/u/.codex/AGENTS.md', 'Base.\n'],
-      ['/home/u/.codex/AGENTS.override.md', 'Override.\n'],
-      ['/proj/.git/HEAD', 'x'],
+      [fx('home', 'u', '.codex', 'AGENTS.md'), 'Base.\n'],
+      [fx('home', 'u', '.codex', 'AGENTS.override.md'), 'Override.\n'],
+      [fx('proj', '.git', 'HEAD'), 'x'],
     ])
     const sections = await collect(files)
     expect(sections[0]!.content).toBe('Override.\n')
@@ -82,20 +84,20 @@ describe('codex memory', () => {
 
   it('skips empty files', async () => {
     const files = new Map<string, string>([
-      ['/home/u/.codex/AGENTS.md', '   \n'],
-      ['/proj/.git/HEAD', 'x'],
-      ['/proj/AGENTS.md', 'Real root guidance.\n'],
+      [fx('home', 'u', '.codex', 'AGENTS.md'), '   \n'],
+      [fx('proj', '.git', 'HEAD'), 'x'],
+      [fx('proj', 'AGENTS.md'), 'Real root guidance.\n'],
     ])
-    const sections = await collect(files, '/proj')
+    const sections = await collect(files, fx('proj'))
     expect(sections).toHaveLength(0) // root AGENTS.md is DSH-loaded; global was empty
   })
 
   it('skips the root plain AGENTS.md that DSH already loads, keeping overrides and nested files', async () => {
     const files = new Map<string, string>([
-      ['/home/u/.codex/AGENTS.md', 'Global.\n'],
-      ['/proj/.git/HEAD', 'x'],
-      ['/proj/AGENTS.md', 'Root dsh loads.\n'],
-      ['/proj/sub/AGENTS.md', 'Nested.\n'],
+      [fx('home', 'u', '.codex', 'AGENTS.md'), 'Global.\n'],
+      [fx('proj', '.git', 'HEAD'), 'x'],
+      [fx('proj', 'AGENTS.md'), 'Root dsh loads.\n'],
+      [fx('proj', 'sub', 'AGENTS.md'), 'Nested.\n'],
     ])
     const sections = await collect(files)
     expect(sections.map((section) => [section.kind, section.content])).toEqual([
@@ -106,9 +108,9 @@ describe('codex memory', () => {
 
   it('honors project_doc_fallback_filenames for extra instruction filenames', async () => {
     const files = new Map<string, string>([
-      ['/proj/.git/HEAD', 'x'],
-      ['/proj/.codex/config.toml', 'project_doc_fallback_filenames = ["TEAM.md"]\n'],
-      ['/proj/sub/TEAM.md', 'Team guidance.\n'],
+      [fx('proj', '.git', 'HEAD'), 'x'],
+      [fx('proj', '.codex', 'config.toml'), 'project_doc_fallback_filenames = ["TEAM.md"]\n'],
+      [fx('proj', 'sub', 'TEAM.md'), 'Team guidance.\n'],
     ])
     const sections = await collect(files)
     expect(sections.map((section) => section.content)).toEqual(['Team guidance.\n'])
@@ -116,10 +118,10 @@ describe('codex memory', () => {
 
   it('stops adding project files at project_doc_max_bytes', async () => {
     const files = new Map<string, string>([
-      ['/proj/.git/HEAD', 'x'],
-      ['/proj/.codex/config.toml', 'project_doc_max_bytes = 10\n'],
-      ['/proj/AGENTS.override.md', 'Root override content.\n'],
-      ['/proj/sub/AGENTS.md', 'Nested content that should not fit.\n'],
+      [fx('proj', '.git', 'HEAD'), 'x'],
+      [fx('proj', '.codex', 'config.toml'), 'project_doc_max_bytes = 10\n'],
+      [fx('proj', 'AGENTS.override.md'), 'Root override content.\n'],
+      [fx('proj', 'sub', 'AGENTS.md'), 'Nested content that should not fit.\n'],
     ])
     const sections = await collect(files)
     const project = sections.filter((section) => section.kind === 'project')
@@ -129,9 +131,9 @@ describe('codex memory', () => {
 
   it('prefers AGENTS.override.md over AGENTS.md per directory', async () => {
     const files = new Map<string, string>([
-      ['/proj/.git/HEAD', 'x'],
-      ['/proj/sub/AGENTS.md', 'Plain.\n'],
-      ['/proj/sub/AGENTS.override.md', 'Override.\n'],
+      [fx('proj', '.git', 'HEAD'), 'x'],
+      [fx('proj', 'sub', 'AGENTS.md'), 'Plain.\n'],
+      [fx('proj', 'sub', 'AGENTS.override.md'), 'Override.\n'],
     ])
     const sections = await collect(files)
     expect(sections.map((section) => section.content)).toEqual(['Override.\n'])

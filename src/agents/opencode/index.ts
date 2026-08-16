@@ -74,9 +74,12 @@ export function registerOpencodeBridge(ctx: Context, logger: BridgeLogger, fs: F
       )
       return provider
     })
-    ctx.effect(() => () => {
-      void provider?.dispose()
-    }, 'opencode skill watchers')
+    ctx.effect(
+      () => () => {
+        void provider?.dispose()
+      },
+      'opencode skill watchers',
+    )
   }
 
   if (resolved.memory) {

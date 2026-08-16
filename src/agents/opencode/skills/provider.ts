@@ -175,7 +175,10 @@ export class OpencodeSkillProvider implements SkillProvider {
     return { candidates, complete }
   }
 
-  private async readJsonCommands(cwd: string | undefined, signal?: AbortSignal): Promise<{ all: readonly { name: string; template: string; description?: string }[]; project: ReadonlySet<string> }> {
+  private async readJsonCommands(
+    cwd: string | undefined,
+    signal?: AbortSignal,
+  ): Promise<{ all: readonly { name: string; template: string; description?: string }[]; project: ReadonlySet<string> }> {
     if (signal?.aborted) return { all: [], project: new Set() }
     try {
       const settings = await this.settings.load(cwd)
@@ -337,7 +340,10 @@ export class OpencodeSkillProvider implements SkillProvider {
       if (!command) return undefined
       return {
         name: locator.entry,
-        description: capString(command.description && command.description.trim() !== '' ? command.description : firstParagraph(command.template), MAX_DESCRIPTION_CHARS),
+        description: capString(
+          command.description && command.description.trim() !== '' ? command.description : firstParagraph(command.template),
+          MAX_DESCRIPTION_CHARS,
+        ),
         invocation: { modelInvocable: true, userInvocable: true },
         source: locator.rootKind.startsWith('project') ? 'project-opencode' : 'user-opencode',
         provider: PROVIDER_NAME,
@@ -411,7 +417,10 @@ export class OpencodeSkillProvider implements SkillProvider {
       if (this.watchers.size >= MAX_WATCHED_ROOTS) {
         const oldest = this.watchers.keys().next().value
         if (oldest !== undefined) {
-          void this.watchers.get(oldest)?.watcher.close().catch(() => {})
+          void this.watchers
+            .get(oldest)
+            ?.watcher.close()
+            .catch(() => {})
           this.watchers.delete(oldest)
         }
       }
@@ -439,7 +448,10 @@ export class OpencodeSkillProvider implements SkillProvider {
       })
     }
     await new Promise<void>((resolve) => {
-      watcher.once('ready', () => { ready = true; resolve() })
+      watcher.once('ready', () => {
+        ready = true
+        resolve()
+      })
     })
     if (this.closed) void watcher.close().catch(() => {})
   }

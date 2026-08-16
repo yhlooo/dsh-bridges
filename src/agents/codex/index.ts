@@ -64,7 +64,8 @@ export function registerCodexBridge(ctx: Context, logger: BridgeLogger, fs: FsAd
 
   // Codex honors CODEX_HOME for its user-level directory; the bridge does
   // the same so sessions inside `CODEX_HOME=... codex` keep their assets.
-  const userCodexDir = process.env['CODEX_HOME'] && process.env['CODEX_HOME'].trim() !== '' ? process.env['CODEX_HOME'] : resolved.userCodexDir
+  const userCodexDir =
+    process.env['CODEX_HOME'] && process.env['CODEX_HOME'].trim() !== '' ? process.env['CODEX_HOME'] : resolved.userCodexDir
 
   // The settings loader is shared between the hook bridge, the skill
   // provider, and the memory bridge: all three read config.toml /
@@ -83,9 +84,12 @@ export function registerCodexBridge(ctx: Context, logger: BridgeLogger, fs: FsAd
       )
       return provider
     })
-    ctx.effect(() => () => {
-      void provider?.dispose()
-    }, 'codex skill watchers')
+    ctx.effect(
+      () => () => {
+        void provider?.dispose()
+      },
+      'codex skill watchers',
+    )
   }
 
   if (resolved.memory) {
