@@ -52,11 +52,11 @@ Claude Code 写好的 hook 原样可用。
 
 ```sh
 # 1. 安装插件（repo 根目录，先 pnpm install && pnpm build）
-dsh plugin --profile <name> add .
+dsh plugin --profile <name> add .    # <name> = web（Web GUI）或 headless（一次性 CLI）
 
-# 2. 在本目录启动 DeepSeek Harness
+# 2. 在本目录启动 DeepSeek Harness Web GUI
 cd examples/claude-code
-dsh --profile <name>
+dsh --profile web
 ```
 
 - **Skills / Commands**：让模型 `skill changelog-writer` 生成 changelog，

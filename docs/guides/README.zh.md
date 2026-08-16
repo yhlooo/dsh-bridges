@@ -6,7 +6,7 @@
 
 ## 安装
 
-插件通过 profile 的插件管理器（pnpm）安装到某个 DeepSeek Harness profile：
+插件通过 profile 的插件管理器（pnpm）安装到某个 DeepSeek Harness profile；`<name>` 取 `web`（Web GUI）或 `headless`（一次性 CLI 运行），每个 profile 独立安装插件：
 
 ```sh
 # 从本仓库 checkout 安装（先编译 src/ → lib/）：

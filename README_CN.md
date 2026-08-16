@@ -14,12 +14,14 @@
 ## 快速上手
 
 ```sh
-# 1. 安装一次到某个 DeepSeek Harness profile
+# 1. 安装到一个 DeepSeek Harness profile——<name> 取 web（Web UI）或
+#   headless（一次性 CLI 运行）；各 profile 的插件互不共享
 dsh plugin --profile <name> add dsh-bridges
 
 # 2. 在已经为其他 agent 配置好的项目里启动 DeepSeek Harness
 cd my-claude-project        # 已有 .claude/ 资产
-dsh --profile <name> "list the skills available in your catalog"
+dsh --profile web                              # Web UI
+dsh --profile headless "list the skills available in your catalog"    # 或一次性 CLI 运行
 # → .claude 技能与命令注册为 /名字 技能，CLAUDE.md 被注入，
 #   项目中的 settings.json hooks 原样运行。
 ```

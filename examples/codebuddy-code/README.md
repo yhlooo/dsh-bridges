@@ -44,11 +44,11 @@ hook 脚本收到的 JSON 里，工具名是 **CodeBuddy Code 的名字**（`Bas
 
 ```sh
 # 1. 安装插件（repo 根目录，先 pnpm install && pnpm build）
-dsh plugin --profile <name> add .
+dsh plugin --profile <name> add .    # <name> = web（Web GUI）或 headless（一次性 CLI）
 
-# 2. 在本目录启动 DeepSeek Harness
+# 2. 在本目录启动 DeepSeek Harness Web GUI
 cd examples/codebuddy-code
-dsh --profile <name>
+dsh --profile web
 ```
 
 - **Skills / Commands**：让模型 `skill commit-message` 起草提交信息，

@@ -47,11 +47,11 @@ opencode 没有 hooks 文件格式，因此本示例不含 hooks——它属于 
 
 ```sh
 # 1. 安装插件（repo 根目录，先 pnpm install && pnpm build）
-dsh plugin --profile <name> add .
+dsh plugin --profile <name> add .    # <name> = web（Web GUI）或 headless（一次性 CLI）
 
-# 2. 在本目录启动 DeepSeek Harness
+# 2. 在本目录启动 DeepSeek Harness Web GUI
 cd examples/opencode
-dsh --profile <name>
+dsh --profile web
 ```
 
 - **Skills / Commands**：让模型 `skill api-doc-writer` 写接口文档，或

@@ -46,11 +46,11 @@ hook 原样可用。
 
 ```sh
 # 1. 安装插件（repo 根目录，先 pnpm install && pnpm build）
-dsh plugin --profile <name> add .
+dsh plugin --profile <name> add .    # <name> = web（Web GUI）或 headless（一次性 CLI）
 
-# 2. 在本目录启动 DeepSeek Harness
+# 2. 在本目录启动 DeepSeek Harness Web GUI
 cd examples/codex
-dsh --profile <name>
+dsh --profile web
 ```
 
 - **Skills**：让模型 `skill json-validator` 校验某个 JSON 文件；

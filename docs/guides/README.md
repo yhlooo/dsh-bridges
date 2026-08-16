@@ -9,7 +9,7 @@ hooks) with its limitations. For a quick start, see the
 
 ## Install
 
-Plugins install into a DeepSeek Harness profile with the profile plugin manager (pnpm):
+Plugins install into a DeepSeek Harness profile with the profile plugin manager (pnpm); `<name>` is `web` (the Web UI) or `headless` (one-shot CLI runs), and each profile installs its own plugins:
 
 ```sh
 # from a checkout of this repository (compile src/ → lib/ first):

@@ -14,11 +14,11 @@
 
 ```sh
 # 在仓库根安装插件（先 pnpm install && pnpm build）
-dsh plugin --profile <name> add .
+dsh plugin --profile <name> add .    # <name> = web（Web GUI）或 headless（一次性 CLI）
 
-# 进入任一示例目录，以它作为会话工作区启动
+# 进入任一示例目录，以它作为会话工作区启动 Web GUI
 cd examples/<tool>
-dsh --profile <name>
+dsh --profile web
 ```
 
 每个示例只含**项目级**资产；用户级资产（`~/.claude/`、
