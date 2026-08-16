@@ -30,6 +30,7 @@ import type { SkillCandidate, SkillDefinition, SkillLookupOptions, SkillProvider
 import { isSkillName } from '@deepseek-ai/dsh-skill'
 import type { FsAdapter } from '../../../fs-adapter.js'
 import type { BridgeLogger } from '../../../util.js'
+import { AgentDefinitionError, buildAgentSkillBody, parseAgentDefinition } from '../../../agent-definitions.js'
 import { capString, expandHome, stripMarkdownExtension } from '../../../util.js'
 import type { CodebuddySettingsLoader } from '../settings.js'
 import type { SkillOverrideState } from '../hooks/types.js'
@@ -44,7 +45,9 @@ export const PROVIDER_NAME = 'codebuddy-code'
  */
 const RANK_PROJECT_SKILLS = 125
 const RANK_PROJECT_COMMANDS = 130
+const RANK_PROJECT_AGENTS = 132
 const RANK_USER_SKILLS = 135
+const RANK_USER_AGENTS = 137
 const RANK_USER_COMMANDS = 140
 
 /** Cap on the composed routing description; CodeBuddy Code documents no listing limit, so the bridge keeps Claude Code's 1,536 characters as a safety bound. */
@@ -52,7 +55,7 @@ const MAX_DESCRIPTION_CHARS = 1536
 /** Recursion bound for nested command discovery. */
 const MAX_COMMAND_DEPTH = 8
 
-type RootKind = 'user-skills' | 'user-commands' | 'project-skills' | 'project-commands'
+type RootKind = 'user-skills' | 'user-commands' | 'user-agents' | 'project-skills' | 'project-commands' | 'project-agents'
 
 interface SkillRoot {
   kind: RootKind
@@ -65,7 +68,7 @@ interface CandidateLocator {
   rootKind: RootKind
   /** Directory name (skill bundle) or qualified command name (`group:name`). */
   entry: string
-  kind: 'bundle' | 'command'
+  kind: 'bundle' | 'command' | 'agent'
   /** Absolute path of the SKILL.md / command markdown file. */
   file: string
   /** The skillOverrides state resolved at discovery time. */
@@ -75,6 +78,8 @@ interface CandidateLocator {
 export interface SkillProviderConfig {
   userCodebuddyDir: string
   watch: boolean
+  /** Discover `.codebuddy/agents` / `~/.codebuddy/agents` subagent definitions. */
+  agents: boolean
 }
 
 /** Maximum distinct roots (plus settings files) that stay watched. */
@@ -108,12 +113,14 @@ export class CodebuddySkillProvider implements SkillProvider {
     const roots: SkillRoot[] = [
       { kind: 'user-skills', path: join(userCodebuddyDir, 'skills'), rank: RANK_USER_SKILLS },
       { kind: 'user-commands', path: join(userCodebuddyDir, 'commands'), rank: RANK_USER_COMMANDS },
+      ...(this.config.agents ? [{ kind: 'user-agents' as const, path: join(userCodebuddyDir, 'agents'), rank: RANK_USER_AGENTS }] : []),
     ]
     if (cwd) {
       const projectCodebuddyDir = join(cwd, '.codebuddy')
       roots.push(
         { kind: 'project-skills', path: join(projectCodebuddyDir, 'skills'), rank: RANK_PROJECT_SKILLS },
         { kind: 'project-commands', path: join(projectCodebuddyDir, 'commands'), rank: RANK_PROJECT_COMMANDS },
+        ...(this.config.agents ? [{ kind: 'project-agents' as const, path: join(projectCodebuddyDir, 'agents'), rank: RANK_PROJECT_AGENTS }] : []),
       )
     }
     return roots
@@ -126,9 +133,12 @@ export class CodebuddySkillProvider implements SkillProvider {
     let complete = true
     for (const root of roots) {
       if (options.signal?.aborted) return { candidates, complete: false }
-      const isSkills = root.kind.endsWith('-skills')
-      if (isSkills) {
+      if (root.kind.endsWith('-skills')) {
         const result = await this.listSkills(root, overrides, options, candidates)
+        complete = complete && result.complete
+        if (!result.continue) return { candidates, complete }
+      } else if (root.kind.endsWith('-agents')) {
+        const result = await this.listAgents(root, options, candidates)
         complete = complete && result.complete
         if (!result.continue) return { candidates, complete }
       } else {
@@ -232,6 +242,63 @@ export class CodebuddySkillProvider implements SkillProvider {
     return { complete: true, continue: true }
   }
 
+  /** Discover custom subagent definition files directly under an agents root. */
+  private async listAgents(
+    root: SkillRoot,
+    options: SkillLookupOptions,
+    candidates: SkillCandidate[],
+  ): Promise<{ complete: boolean; continue: boolean }> {
+    let entries
+    try {
+      entries = await this.fs.listDir(root.path, options.signal)
+    } catch (error) {
+      if (isAbort(error)) return { complete: false, continue: false }
+      if (isMissing(error)) return { complete: true, continue: true } // confirmed-absent root is a valid empty state
+      this.logger.warn(`codebuddy-code: cannot read agents root ${root.path}: ${errorMessage(error)}`)
+      return { complete: false, continue: true }
+    }
+    for (const entry of entries) {
+      if (options.signal?.aborted) return { complete: false, continue: false }
+      if (!entry.isFile || !entry.name.toLowerCase().endsWith('.md')) continue
+      const file = join(root.path, entry.name)
+      try {
+        const text = await this.fs.readText(file, options.signal)
+        candidates.push(this.summaryAgent(root, file, text))
+      } catch (error) {
+        if (isAbort(error)) return { complete: false, continue: false }
+        if (isMissing(error)) continue // vanished mid-scan
+        if (error instanceof AgentDefinitionError) {
+          this.logger.warn(`codebuddy-code: skipping malformed subagent ${file}: ${error.message}`)
+          continue
+        }
+        this.logger.warn(`codebuddy-code: cannot read subagent entry ${file}: ${errorMessage(error)}`)
+        return { complete: false, continue: true }
+      }
+    }
+    return { complete: true, continue: true }
+  }
+
+  /** Candidate summary for one custom subagent definition file. */
+  private summaryAgent(root: SkillRoot, file: string, text: string): SkillCandidate {
+    const definition = parseAgentDefinition(text)
+    if (!isSkillName(definition.name)) {
+      throw new AgentDefinitionError(
+        `subagent name ${JSON.stringify(definition.name)} is not kebab-case; DSH skills require kebab-case names`,
+      )
+    }
+    const locator: CandidateLocator = { root: root.path, rootKind: root.kind, entry: definition.name, kind: 'agent', file, override: 'on' }
+    return {
+      name: definition.name,
+      description: capString(definition.description, MAX_DESCRIPTION_CHARS),
+      invocation: { modelInvocable: true, userInvocable: true },
+      source: root.kind.startsWith('project') ? 'project-codebuddy' : 'user-codebuddy',
+      provider: PROVIDER_NAME,
+      rank: root.rank,
+      locator,
+      path: file,
+    }
+  }
+
   private async readOverrides(cwd: string | undefined, signal?: AbortSignal): Promise<ReadonlyMap<string, SkillOverrideState>> {
     if (signal?.aborted) return new Map()
     try {
@@ -296,6 +363,27 @@ export class CodebuddySkillProvider implements SkillProvider {
     } catch (error) {
       if (isAbort(error)) throw error
       return undefined // file disappeared: the skill is no longer loadable
+    }
+    if (locator.kind === 'agent') {
+      let definition
+      try {
+        definition = parseAgentDefinition(text)
+      } catch (error) {
+        if (error instanceof AgentDefinitionError) {
+          this.logger.warn(`codebuddy-code: cannot load malformed subagent ${locator.file}: ${error.message}`)
+          return undefined
+        }
+        throw error
+      }
+      return {
+        name: definition.name,
+        description: capString(definition.description, MAX_DESCRIPTION_CHARS),
+        invocation: { modelInvocable: true, userInvocable: true },
+        source: locator.rootKind.startsWith('project') ? 'project-codebuddy' : 'user-codebuddy',
+        provider: PROVIDER_NAME,
+        content: buildAgentSkillBody(definition, this.logger),
+        path: locator.file,
+      }
     }
     let parsed
     try {

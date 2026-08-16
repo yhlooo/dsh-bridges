@@ -23,6 +23,8 @@ export interface CodebuddyCodeConfig {
   enabled?: boolean
   /** Discover and register CodeBuddy Code skills and commands. */
   skills?: boolean
+  /** Discover `.codebuddy/agents` / `~/.codebuddy/agents` subagent definitions (as skills with a delegation spec). */
+  agents?: boolean
   /** Inject CODEBUDDY.md memory and always-apply rules at session start. */
   memory?: boolean
   /** Run CodeBuddy Code hooks from settings.json at DSH lifecycle seams. */
@@ -44,6 +46,7 @@ export interface CodebuddyCodeConfig {
 export const CODEBUDDY_CODE_DEFAULTS: Required<CodebuddyCodeConfig> = {
   enabled: true,
   skills: true,
+  agents: true,
   memory: true,
   hooks: true,
   permissions: true,
@@ -69,7 +72,7 @@ export function registerCodebuddyCodeBridge(ctx: Context, logger: BridgeLogger, 
       provider = new CodebuddySkillProvider(
         logger,
         fs,
-        { userCodebuddyDir: resolved.userCodebuddyDir, watch: resolved.watch },
+        { userCodebuddyDir: resolved.userCodebuddyDir, watch: resolved.watch, agents: resolved.agents },
         loader,
         control.invalidate,
       )
