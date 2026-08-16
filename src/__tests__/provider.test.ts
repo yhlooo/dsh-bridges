@@ -133,6 +133,68 @@ describe('ClaudeSkillProvider.list', () => {
   })
 })
 
+describe('ClaudeSkillProvider nested commands', () => {
+  it('maps a nested project command to a kebab-case group-name skill', async () => {
+    const files = new Map<string, string>([
+      [fx('proj', '.claude', 'commands', 'opsx', 'explore.md'), '---\ndescription: Explore\n---\nExplore body.\n'],
+    ])
+    const result = await makeProvider(files).list(options)
+    expect(result.candidates).toHaveLength(1)
+    const candidate = result.candidates[0]!
+    expect(candidate.name).toBe('opsx-explore')
+    expect(candidate.source).toBe('project-claude')
+    expect(candidate.rank).toBe(120)
+    expect(candidate.path).toBe(fx('proj', '.claude', 'commands', 'opsx', 'explore.md'))
+    expect(candidate.description).toBe('Explore')
+  })
+
+  it('maps user-level and multi-level nested commands', async () => {
+    const files = new Map<string, string>([
+      [fx('home', 'u', '.claude', 'commands', 'tools', 'check.md'), '---\ndescription: Check\n---\nRun checks.\n'],
+      [fx('proj', '.claude', 'commands', 'a', 'b', 'run.md'), '---\ndescription: Run\n---\nRun it.\n'],
+    ])
+    const result = await makeProvider(files).list(options)
+    const names = result.candidates.map((candidate) => candidate.name).sort()
+    expect(names).toEqual(['a-b-run', 'tools-check'])
+    const userCommand = result.candidates.find((candidate) => candidate.name === 'tools-check')!
+    expect(userCommand.source).toBe('user-claude')
+    expect(userCommand.rank).toBe(110)
+  })
+
+  it('skips nested command directories whose qualified name is not kebab-case', async () => {
+    const files = new Map<string, string>([
+      [fx('proj', '.claude', 'commands', 'opsX', 'explore.md'), '---\ndescription: x\n---\na\n'],
+      [fx('proj', '.claude', 'commands', 'good', 'run.md'), '---\ndescription: y\n---\nb\n'],
+    ])
+    const result = await makeProvider(files).list(options)
+    expect(result.candidates.map((candidate) => candidate.name)).toEqual(['good-run'])
+    expect(result.complete).toBe(true)
+  })
+
+  it('does not treat a SKILL.md inside a command group as a skill bundle', async () => {
+    const files = new Map<string, string>([
+      [fx('proj', '.claude', 'commands', 'opsx', 'SKILL.md'), '---\ndescription: skill\n---\nBody.\n'],
+      [fx('proj', '.claude', 'commands', 'opsx', 'explore.md'), '---\ndescription: Explore\n---\nExplore.\n'],
+    ])
+    const result = await makeProvider(files).list(options)
+    const names = result.candidates.map((candidate) => candidate.name)
+    expect(names).toContain('opsx-explore')
+    expect(names).not.toContain('opsx') // a command group is never a skill bundle
+  })
+
+  it('loads the body of a nested command through get', async () => {
+    const files = new Map<string, string>([
+      [fx('proj', '.claude', 'commands', 'opsx', 'explore.md'), '---\ndescription: Explore\n---\nExplore body.\n'],
+    ])
+    const provider = makeProvider(files)
+    const { candidates } = await provider.list(options)
+    const definition = await provider.get(candidates[0]!, options)
+    expect(definition?.name).toBe('opsx-explore')
+    expect(definition?.content).toBe('Explore body.\n')
+    expect(definition?.resourceBase).toEqual({ kind: 'directory', path: fx('proj', '.claude', 'commands') })
+  })
+})
+
 describe('ClaudeSkillProvider.get', () => {
   it('loads the current body and resource base for a bundle', async () => {
     const files = new Map<string, string>([

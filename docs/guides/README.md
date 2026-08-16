@@ -142,12 +142,15 @@ Reads the Claude Code skill locations and registers them on the DeepSeek Harness
 | :--- | :--- |
 | `~/.claude/skills/<name>/SKILL.md` (also flat `<name>.md`) | user-level skill |
 | `~/.claude/commands/<name>.md` | user-level command (a skill) |
+| `~/.claude/commands/<group>/<name>.md` | user-level command (a skill) named `group-name` |
 | `.claude/skills/<name>/SKILL.md` (also flat `<name>.md`) | project-level skill |
 | `.claude/commands/<name>.md` | project-level command (a skill) |
+| `.claude/commands/<group>/<name>.md` | project-level command (a skill) named `group-name` |
 
 Mapping rules:
 
 - The DeepSeek Harness skill name is the directory / file name (must be kebab-case; non-kebab names are skipped with a warning).
+- Nested command files are discovered recursively: the upstream slash command `/group:name` (e.g. `/opsx:explore` for `commands/opsx/explore.md`) maps onto the kebab-case skill name `group-name` (`opsx-explore`), because DeepSeek Harness skill names cannot contain `:`. A flat `group-name.md` and a nested `group/name.md` collide on the same skill name — the registry keeps whichever candidate it discovers first. Command directories are always command groups, never skill bundles, even when they contain a `SKILL.md`.
 - `description` + `when_to_use` become the skill description (combined and capped at Claude Code's 1,536-character listing limit; falls back to the first body paragraph when `description` is absent).
 - `disable-model-invocation` → the skill leaves the model catalog but stays user-invocable (`/name`).
 - `user-invocable: false` → hidden from human invocation, model-only.

@@ -138,12 +138,15 @@ dsh --profile <profile-name> --dump-config   # 应能看到 "dsh-bridges" 这一
 | :--- | :--- |
 | `~/.claude/skills/<name>/SKILL.md`（也支持扁平 `<name>.md`） | 用户级技能 |
 | `~/.claude/commands/<name>.md` | 用户级命令（即技能） |
+| `~/.claude/commands/<group>/<name>.md` | 用户级命令（即技能），技能名 `group-name` |
 | `.claude/skills/<name>/SKILL.md`（也支持扁平 `<name>.md`） | 项目级技能 |
 | `.claude/commands/<name>.md` | 项目级命令（即技能） |
+| `.claude/commands/<group>/<name>.md` | 项目级命令（即技能），技能名 `group-name` |
 
 映射规则：
 
 - DeepSeek Harness 技能名取目录名 / 文件名（必须 kebab-case；不合法的名字跳过并告警）。
+- 嵌套命令文件递归发现：上游斜杠命令 `/group:name`（如 `commands/opsx/explore.md` 对应 `/opsx:explore`）映射为 kebab-case 技能名 `group-name`（`opsx-explore`），因为 DeepSeek Harness 技能名不允许含 `:`。扁平的 `group-name.md` 与嵌套的 `group/name.md` 会落到同一个技能名上——注册表保留先发现的候选。命令目录一律按命令组处理，即使内含 `SKILL.md` 也不会被当作技能目录。
 - `description` + `when_to_use` 合并为技能描述（按 Claude Code 的 1,536 字符目录上限截断；`description` 缺省时回退到正文首段）。
 - `disable-model-invocation` → 该技能退出模型目录，但仍可用 `/名字` 调用。
 - `user-invocable: false` → 不面向人工调用，仅模型可用。
