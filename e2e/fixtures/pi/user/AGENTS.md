@@ -1,0 +1,2 @@
+# global agents
+Global rules.

@@ -212,6 +212,21 @@
 
 ## P2 · 低优先级
 
+- [ ] **pi 扩展事件总线**（`.pi/extensions/*.ts`、`~/.pi/agent/extensions/*.ts`）：
+  `tool_call` 拦截（`{block, reason?, terminate?}`）、`tool_result` 改写、
+  `project_trust` 决策、`before_provider_*` 等事件映射 dsh 接缝的可行性评估
+  （2026-08-16，pi 桥接遗留；等价于 opencode 插件 API 的 TypeScript 运行时，
+  guides 已记限制，先排后）。
+- [ ] **pi 包分发技能**：`package.json` 的 `pi.skills` / 包内 `skills/` 目录
+  （2026-08-16，pi 桥接遗留；依赖包安装解析，guides 已记限制）。
+- [ ] **pi `SYSTEM.md`**：整体替换系统提示 → 核心支持候选（会话级系统提示
+  覆盖接缝）；`APPEND_SYSTEM.md` 追加语义已降级映射为记忆注入
+  （2026-08-16，pi 桥接遗留，guides 已记限制）。
+- [ ] **环 C 上游探针支持非 npm 安装**：pi 无 npm 包（官方
+  `curl pi.dev/install | bash`，GitHub releases），`scripts/upstream-probe.mjs`
+  目前只支持 `npm i -g <pkg>@<pin>`——需为探针脚本增加下载安装模式后再把
+  pi 加入 `scripts/upstream-tools.json`（2026-08-16，pi 桥接遗留）。
+
 - [x] **claude-code**：Auto memory（`autoMemoryEnabled`/`autoMemoryDirectory`、
   `~/.claude/projects/<project>/memory/`；降级映射 = 注入 MEMORY.md 索引）。
   **部分实现**（2026-08-16）：显式 `autoMemoryDirectory` 的 `MEMORY.md`

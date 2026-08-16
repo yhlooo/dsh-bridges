@@ -1,0 +1,2 @@
+# proj agents
+Project rules.

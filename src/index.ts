@@ -26,6 +26,7 @@ import { registerClaudeCodeBridge, type ClaudeCodeConfig } from './agents/claude
 import { registerCodebuddyCodeBridge, type CodebuddyCodeConfig } from './agents/codebuddy-code/index.js'
 import { registerCodexBridge, type CodexConfig } from './agents/codex/index.js'
 import { registerOpencodeBridge, type OpencodeConfig } from './agents/opencode/index.js'
+import { registerPiBridge, type PiConfig } from './agents/pi/index.js'
 import { createFsAdapter, type FsAdapter } from './fs-adapter.js'
 import type { BridgeLogger } from './util.js'
 
@@ -93,6 +94,14 @@ export const Config = z.object({
     memoryMaxBytes: z.number().default(32_768),
     mcpToolCallTimeoutMs: z.number().default(120_000),
   }),
+  pi: z.object({
+    enabled: z.boolean().default(true),
+    skills: z.boolean().default(true),
+    memory: z.boolean().default(true),
+    userPiDir: z.string().default('~/.pi/agent'),
+    watch: z.boolean().default(true),
+    memoryMaxBytes: z.number().default(32_768),
+  }),
 })
 
 export interface BridgesConfig {
@@ -100,6 +109,7 @@ export interface BridgesConfig {
   codebuddyCode?: CodebuddyCodeConfig
   opencode?: OpencodeConfig
   codex?: CodexConfig
+  pi?: PiConfig
 }
 
 /**
@@ -112,6 +122,7 @@ export function registerBridgeSubsystems(ctx: Context, logger: BridgeLogger, fs:
   registerCodebuddyCodeBridge(ctx, logger, fs, config.codebuddyCode)
   registerOpencodeBridge(ctx, logger, fs, config.opencode)
   registerCodexBridge(ctx, logger, fs, config.codex)
+  registerPiBridge(ctx, logger, fs, config.pi)
 }
 
 export function apply(ctx: Context, config: BridgesConfig = {}): void {

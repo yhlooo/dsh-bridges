@@ -91,6 +91,13 @@ dsh --profile <profile-name> --dump-config   # 应能看到 "dsh-bridges" 这一
       maxHookOutputChars: 10000
       memoryMaxBytes: 32768
       mcpToolCallTimeoutMs: 120000
+    pi:
+      enabled: true                     # pi 桥接的总开关
+      skills: true                      # 发现 .pi / ~/.pi/agent 的 skills 与 prompt 模板
+      memory: true                      # 注入 AGENTS.md / CLAUDE.md 链与 APPEND_SYSTEM.md
+      userPiDir: '~/.pi/agent'          # 用户级 pi 配置目录（设置 PI_CODING_AGENT_DIR 时以它为准）
+      watch: true                       # 监听技能根目录、settings 文件与 trust.json
+      memoryMaxBytes: 32768
 ```
 
 ## Claude Code 桥接
@@ -440,3 +447,50 @@ DeepSeek Harness 核心自行加载工作区根 `AGENTS.md`。本桥接在会话
 - **Hooks**：`PermissionRequest`（DeepSeek Harness 没有"即将请求审批"的接缝）、`PreCompact`/`PostCompact`（无压缩前接缝；`compact` 会话来源会触发 SessionStart hooks 代替）、Codex 的 hook trust 审核流程（`/hooks`——桥接与其他桥接一致、无 trust 闸门运行）、后台 hook 输出在下个安全点投递、`systemMessage`/`suppressOutput` 仅用户通道、`additionalContextLimit` 溢出落盘（桥接按字符截断替代）、插件捆绑与托管 `requirements.toml` hooks、`transcript_path`（桥接没有真实转录文件）、`updatedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）。
 - **Rules / 配置**：`rules/*.rules`（实验性 Starlark DSL）、`notify`、`[agents.<name>]` 角色在 `description`/`config_file` 之外的选项（逐角色工具过滤、配置文件之外的 `model`、角色的权限闸门）、`requirements.toml`、profile 文件（`--profile`）、插件捆绑的 MCP 服务器（`plugins.<plugin>.mcp_servers`）、未信任项目门禁——仅支持显式 `projects["<path>"].trust_level = "untrusted"` 条目（现在会跳过项目 `.codex/` 层；桥接没有交互式信任流程，未列出的路径仍无条件读取）。
 - **其余配置**：`web_search`/`tools.web_search` 模式、`[features].*` 运行时开关（仅 `features.hooks` 被读取）、`[shell_environment_policy]`（仅作用于桥接自 spawn 的子进程——与 settings `env` 同一接缝）、`[apps]` 连接器、`[memories]`、`[history]`、`tool_output_token_limit`、`file_opener`、`[otel]`、`[desktop]`/`[tui]`、认证/通知/日志键——DeepSeek Harness 拥有这些层；模型/供应商选择（`model`、`review_model`、`model_provider`、`[model_providers]`、`model_reasoning_*`、`model_auto_compact_token_limit*`）为 host-plane，不在范围内。
+
+## pi 桥接
+
+pi（earendil-works 的 Rust 编码代理）没有 hooks 配置、没有权限规则系统、也没有 MCP 配置——它的 TypeScript 扩展事件总线才是这三者的等价物，而扩展不在本期范围（同 opencode 插件 API 的先例）。因此本桥接只覆盖两块：skills / prompt 模板与上下文文件记忆。
+
+### Skills 与 prompt 模板
+
+读取 pi 的资产位置并注册到 DeepSeek Harness 技能注册表（provider `pi`），出现在模型可见的技能目录中，可用 `/名称` 触发：
+
+| pi 位置 | 注册为 |
+| :--- | :--- |
+| `$PI_DIR/skills/<name>/SKILL.md`（递归发现；`$PI_DIR` = `PI_CODING_AGENT_DIR` 或 `~/.pi/agent`） | 用户级技能 |
+| `$PI_DIR/skills/<name>.md`（根级扁平文件） | 用户级技能 |
+| `.pi/skills/<name>/SKILL.md` 与扁平 `.md`（项目级，受信任门禁） | 项目级技能 |
+| `$PI_DIR/prompts/<name>.md` / `.pi/prompts/<name>.md`（非递归，项目级受信任门禁） | 技能（斜杠模板；`/名称` 手势触发） |
+| settings 的 `skills` / `prompts` 数组（文件或目录路径） | 按声明层归入用户/项目段 |
+
+映射规则：
+
+- 技能名取 frontmatter 的 `name`（pi 允许与目录名不同；缺省时回退到目录/文件名——pi 源码行为）。DeepSeek Harness 要求 kebab-case，不合规的名字跳过 + 告警（不转写）。
+- `description` 必填（pi 不加载没有它的技能；桥接跳过 + 告警），按 pi 的 1,024 字符上限截断。
+- `disable-model-invocation: true` → 技能离开模型目录但仍可 `/名称` 触发（上游是 `/skill:name`）；非法值告警并视为 false（pi 宽松语义）。
+- `metadata` 透传；`allowed-tools`（实验性）、`license`、`compatibility` 与未知字段忽略（记限制）。
+- 优先级遵循 pi 源码加载顺序：全局位置先于项目位置、同名冲突保留先发现者，因此**个人资产覆盖项目资产**；同级技能优先于同名 prompt 模板。DeepSeek Harness 原生技能（`.dsh/skills`、`.agents/skills`、运行时技能）在同名冲突时依然胜出——桥接注册在全局技能层，较近的 preset 层遮蔽它。
+- pi 也读取的 `.agents/skills` 位置**有意不重读**：DeepSeek Harness 自带的 filesystem provider 已覆盖 `.agents` 资产，重读会产生重复候选。
+- 项目 `.pi/skills`、`.pi/prompts` 与项目 `.pi/settings.json` 仅在项目受信任时加载。桥接按 pi 的非交互语义解析信任：`$PI_DIR/trust.json` 中对当前目录（或最近父目录）的已保存决策优先，否则回退到全局 `defaultProjectTrust`（默认 `ask` 与 `never` 跳过项目资源，`always` 信任——非交互会话没有提示，`ask` 视为不信任）。`project_trust` 扩展事件不桥接。
+- 已存在的技能根目录、settings 文件与 `trust.json` 被监听，改动无需重启即生效。
+
+### 上下文文件记忆
+
+DeepSeek Harness 自身已加载仓库根的 `AGENTS.md`。桥接在会话开始时额外注入（同样的 system-reminder 框架）：
+
+- `$PI_DIR/AGENTS.md`（全局，不受项目信任限制）
+- 从文件系统根向下走到工作目录的每层一个文件——每目录取第一个非空的 `AGENTS.override.md` > `AGENTS.md` > `AGENTS.MD` > `CLAUDE.md` > `CLAUDE.MD`（pi 源码确认的候选顺序；`AGENTS.override.md` 整体替代该目录的 `AGENTS.md`/`CLAUDE.md`）；按规范路径去重
+- `$PI_DIR/APPEND_SYSTEM.md`，然后是受信任项目的 `.pi/APPEND_SYSTEM.md`（pi 把两者追加到系统提示）
+
+仓库根的普通 `AGENTS.md` 与 DeepSeek Harness 已加载的文件一致时跳过，避免重复。预算 32 KiB：先丢更宽的全局文件，再截断最具体的段。
+
+### 限制
+
+尚未桥接（按子系统记录）：
+
+- **扩展**：`~/.pi/agent/extensions/*.ts` / `.pi/extensions/*.ts` 与扩展事件（`tool_call` 拦截、`tool_result` 改写、`project_trust`……）——等价于 opencode 插件 API 的 TypeScript 运行时，无对应 DeepSeek Harness 接缝。
+- **记忆**：`.pi/SYSTEM.md` / `$PI_DIR/SYSTEM.md`（整体替换系统提示——DeepSeek Harness 拥有系统提示）；`--no-context-files`、`--prompt-template` 等 CLI 开关是单次运行参数，无持久配置。
+- **Skills**：`allowed-tools`（实验性的预批准工具列表）、`license` / `compatibility` 展示字段、`enableSkillCommands`（DeepSeek Harness 的 `/名称` 手势始终可用；该设置仅读取用于文档对齐）、包（`package.json` 的 `pi.skills` / 包内 `skills/` 目录）、CLI `--skill` 路径、`.agents/skills` 根（改由 DeepSeek Harness 原生 provider 覆盖）。
+- **权限 / MCP / subagents**：pi 无内置（信任门禁与工具白名单即其全部安全面；MCP 与 subagent 靠扩展实现，扩展不在范围内）。
+- **信任**：交互式信任提示与 `project_trust` 扩展事件不可用，因此 `ask` 在 DeepSeek Harness 会话中解析为不信任（与 pi 自身的非交互行为一致）。

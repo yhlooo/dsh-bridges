@@ -1,0 +1,2 @@
+# proj claude
+Claude rules.
