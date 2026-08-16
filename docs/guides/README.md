@@ -370,6 +370,7 @@ Mapping rules:
 
 DeepSeek Harness's own loader reads the workspace-root `AGENTS.md`. The bridge additionally injects Codex's instruction chain at session start, in the same system-reminder framing:
 
+- `developer_instructions` from the most specific config layer (injected first, as Codex does)
 - `$CODEX_HOME/AGENTS.override.md` if present, else `$CODEX_HOME/AGENTS.md` (first non-empty wins; `CODEX_HOME` is honored)
 - one file per directory walking from the repository root down to the working directory: `AGENTS.override.md` > `AGENTS.md` > `project_doc_fallback_filenames`; files closer to the working directory come later and override earlier guidance
 - the root-level plain `AGENTS.md` is skipped (DeepSeek Harness already loads it); empty files are skipped; project accumulation stops at `project_doc_max_bytes` (32 KiB default)
@@ -416,6 +417,6 @@ Not bridged (recorded as limitations): `[sandbox_workspace_write]` `writable_roo
 Not bridged yet (documented per subsystem):
 
 - **Skills**: `agents/openai.yaml` metadata (`allow_implicit_invocation`, tool dependencies), plugin-bundled skills, symlinked skill folders (the bridge reads them through the filesystem, but does not resolve symlink identity), the curated plugin catalog.
-- **Memory**: `model_instructions_file`, Codex's 8,000-character initial-list budget (DeepSeek Harness applies its own catalog budgets).
+- **Memory**: `model_instructions_file` (replaces the built-in instructions — out of scope), Codex's 8,000-character initial-list budget (DeepSeek Harness applies its own catalog budgets).
 - **Hooks**: `PermissionRequest` (no DeepSeek Harness seam for "about to ask for approval"), `PreCompact`/`PostCompact` (no pre-compaction seam; the `compact` session-start source runs SessionStart hooks instead), Codex's hook trust-review flow (`/hooks` — the bridge runs hooks the way the other bridges do, without a trust gate), background-hook output delivery at the next safe point, `systemMessage`/`suppressOutput` user-only channels, `additionalContextLimit` spilling (the bridge caps context by characters instead), plugin-bundled and managed `requirements.toml` hooks, `transcript_path` (the bridge has no transcript file to point at), `updatedInput` rewriting (DeepSeek Harness freezes tool arguments before policy).
 - **Rules / config**: `rules/*.rules` (experimental Starlark DSL), `notify`, `[agents]` subagent roles, `requirements.toml`, profile files (`--profile`), and untrusted-project gating (project `.codex/` layers are read unconditionally — the bridge has no trust state).

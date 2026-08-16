@@ -173,7 +173,9 @@
 - [ ] **claude-code 记忆**：`CLAUDE.local.md`（根 + 目录层级，跟随 CLAUDE.md 发现
   规则）；向上层级 CLAUDE.md 发现 + `additionalDirectories` 记忆加载（现有限制表述
   只有含糊的 "nested CLAUDE.md files"，实现或明确化）。
-- [ ] **codex**：`developer_instructions`（会话注入，与 AGENTS.md 链同接缝）。
+- [x] **codex**：`developer_instructions`（会话注入，与 AGENTS.md 链同接缝）。
+  **已实现**（2026-08-15）：settings 解析（最具体层生效），memory 桥在
+  AGENTS.md 链之前注入（与上游顺序一致）。
 - [ ] **opencode**：`references` / 旧 `reference` 配置——本地 `path` → 注入或注册
   资源根；git `repository` → 网络，沿用"远程 instructions 不抓取"策略记限制。
 - [ ] **opencode**：`skills.paths` / `skills.urls` 配置键（paths → 并入技能发现根；

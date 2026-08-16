@@ -61,6 +61,8 @@ export interface LoadedCodexSettings {
   defaultPermissionsProfile?: string
   /** `[mcp_servers.<id>]` tables, most-specific layer per id. */
   mcpServers: ReadonlyMap<string, RawCodexMcpServer>
+  /** `developer_instructions` from the most specific layer that defines it. */
+  developerInstructions?: string
 }
 
 /** One `[mcp_servers.<id>]` table (raw, unvalidated fields). */
@@ -109,6 +111,7 @@ interface RawLayer {
   sandboxMode?: CodexSandboxMode
   defaultPermissionsProfile?: string
   mcpServers?: Map<string, RawCodexMcpServer>
+  developerInstructions?: string
 }
 
 /**
@@ -279,6 +282,7 @@ export class CodexSettingsLoader {
     let approvalPolicy: CodexApprovalPolicy | undefined
     let sandboxMode: CodexSandboxMode | undefined
     let defaultPermissionsProfile: string | undefined
+    let developerInstructions: string | undefined
     const mcpServers = new Map<string, RawCodexMcpServer>()
 
     for (const layer of layers) {
@@ -309,6 +313,7 @@ export class CodexSettingsLoader {
       if (layer.mcpServers !== undefined) {
         for (const [id, entry] of layer.mcpServers) mcpServers.set(id, entry)
       }
+      if (layer.developerInstructions !== undefined) developerInstructions = layer.developerInstructions
     }
 
     return {
@@ -322,6 +327,7 @@ export class CodexSettingsLoader {
       sandboxMode,
       defaultPermissionsProfile,
       mcpServers,
+      developerInstructions,
     }
   }
 }
@@ -368,6 +374,10 @@ function normalizeLayer(value: Record<string, unknown>, source: SettingsSource, 
   const defaultPermissions = value['default_permissions']
   if (typeof defaultPermissions === 'string' && defaultPermissions.trim() !== '') {
     layer.defaultPermissionsProfile = defaultPermissions
+  }
+  const developerInstructions = value['developer_instructions']
+  if (typeof developerInstructions === 'string' && developerInstructions.trim() !== '') {
+    layer.developerInstructions = developerInstructions.trim()
   }
   const mcpServers = value['mcp_servers']
   if (isPlainObject(mcpServers)) {
