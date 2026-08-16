@@ -10,6 +10,8 @@ import type { BridgeDirEntry, FsAdapter } from '../fs-adapter.js'
 import { AgentDefinitionError, parseAgentDefinition } from '../agent-definitions.js'
 import { CodexSettingsLoader } from '../agents/codex/settings.js'
 import { OpencodeSettingsLoader } from '../agents/opencode/settings.js'
+import { GeminiSkillProvider } from '../agents/gemini-cli/skills/provider.js'
+import { GeminiSettingsLoader } from '../agents/gemini-cli/settings.js'
 import { PiSkillProvider } from '../agents/pi/skills/provider.js'
 import { PiSettingsLoader } from '../agents/pi/settings.js'
 import { readJsonServerFiles } from '../mcp-bridge.js'
@@ -220,6 +222,61 @@ describe('pi: BOM / CRLF skills and broken settings fail soft', () => {
     const result = (await provider.list({ cwd: fx('proj') })) as { candidates: { name: string }[] }
     // Broken global settings fall back to defaults (ask → untrusted), so the
     // project skill stays gated; the user skill still loads.
+    expect(result.candidates.map((entry) => entry.name)).toEqual(['u-skill'])
+  })
+})
+
+describe('gemini-cli: BOM / CRLF skills and broken config fail soft', () => {
+  it('parses a BOM-prefixed SKILL.md with CRLF line endings', async () => {
+    const files = new Map<string, string>([
+      [fx('proj', '.gemini', 'skills', 'bom', 'SKILL.md'), '\uFEFF---\r\nname: bom-skill\r\ndescription: BOM skill\r\n---\r\nBody.\r\n'],
+    ])
+    const loader = new GeminiSettingsLoader(silent, new TreeFs(files), { userGeminiDir: fx('home', 'u', '.gemini') })
+    const provider = new GeminiSkillProvider(
+      silent,
+      new TreeFs(files),
+      { userGeminiDir: fx('home', 'u', '.gemini'), watch: false, agents: true },
+      loader,
+      () => {},
+    )
+    const result = (await provider.list({ cwd: fx('proj') })) as { candidates: { name: string }[] }
+    expect(result.candidates.map((entry) => entry.name)).toEqual(['bom-skill'])
+  })
+
+  it('skips malformed skills and commands without taking the bridge down', async () => {
+    const files = new Map<string, string>([
+      [fx('proj', '.gemini', 'skills', 'broken', 'SKILL.md'), '---\nname: [not yaml\n---\nBody.\n'],
+      [fx('proj', '.gemini', 'skills', 'good', 'SKILL.md'), '---\ndescription: good\n---\nBody.\n'],
+      [fx('proj', '.gemini', 'commands', 'bad.toml'), 'prompt = [broken\n'],
+      [fx('proj', '.gemini', 'commands', 'ok.toml'), 'prompt = "fine"\n'],
+    ])
+    const loader = new GeminiSettingsLoader(silent, new TreeFs(files), { userGeminiDir: fx('home', 'u', '.gemini') })
+    const provider = new GeminiSkillProvider(
+      silent,
+      new TreeFs(files),
+      { userGeminiDir: fx('home', 'u', '.gemini'), watch: false, agents: true },
+      loader,
+      () => {},
+    )
+    const result = (await provider.list({ cwd: fx('proj') })) as { candidates: { name: string }[] }
+    expect(result.candidates.map((entry) => entry.name).sort()).toEqual(['good', 'ok'])
+  })
+
+  it('ignores broken settings.json and policy TOML without losing assets', async () => {
+    const files = new Map<string, string>([
+      [fx('home', 'u', '.gemini', 'settings.json'), '{ broken'],
+      [fx('home', 'u', '.gemini', 'policies', 'bad.toml'), '[[rule]\ntoolName = [oops\n'],
+      [fx('home', 'u', '.gemini', 'skills', 'u-skill', 'SKILL.md'), '---\ndescription: d\n---\nBody.\n'],
+    ])
+    const loader = new GeminiSettingsLoader(silent, new TreeFs(files), { userGeminiDir: fx('home', 'u', '.gemini') })
+    const provider = new GeminiSkillProvider(
+      silent,
+      new TreeFs(files),
+      { userGeminiDir: fx('home', 'u', '.gemini'), watch: false, agents: true },
+      loader,
+      () => {},
+    )
+    const result = (await provider.list({ cwd: fx('proj') })) as { candidates: { name: string }[] }
     expect(result.candidates.map((entry) => entry.name)).toEqual(['u-skill'])
   })
 })

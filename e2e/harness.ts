@@ -61,6 +61,12 @@ export interface BootOptions {
    * disabled, keeping scenarios that do not involve pi deterministic.
    */
   readonly userPiDir?: string
+  /**
+   * When set, enables the Gemini CLI bridge with this directory as its
+   * `userGeminiDir` (isolated from the real `~/.gemini`); when absent the
+   * bridge stays disabled.
+   */
+  readonly userGeminiDir?: string
   /** Extra top-level plugin config, merged over the skeleton defaults. */
   readonly config?: Partial<BridgesConfig>
 }
@@ -92,6 +98,10 @@ export async function bootHarness(options: BootOptions): Promise<Harness> {
       options.userPiDir !== undefined
         ? { enabled: true, skills: true, memory: true, userPiDir: options.userPiDir, watch: false, ...options.config?.pi }
         : { enabled: false, ...options.config?.pi },
+    geminiCli:
+      options.userGeminiDir !== undefined
+        ? { enabled: true, userGeminiDir: options.userGeminiDir, watch: false, hookTimeoutMs: 5000, ...options.config?.geminiCli }
+        : { enabled: false, ...options.config?.geminiCli },
   }
   await ctx.plugin(bridges, config)
   const agent = new E2eAgent()

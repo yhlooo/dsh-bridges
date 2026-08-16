@@ -10,6 +10,7 @@
 | opencode | [`opencode/`](opencode/) | `.opencode/skills`、`.opencode/commands`、`opencode.jsonc` 的 JSON 命令与 `instructions`（单文件 + glob）、`AGENTS.md` 记忆 |
 | Codex | [`codex/`](codex/) | `.agents/skills`（含被 `config.toml` 禁用的技能）、AGENTS.md 指令链（嵌套目录）、`.codex/hooks.json` 与 `config.toml` hooks |
 | pi | [`pi/`](pi/) | `.pi/skills`（递归发现 + 支持文件）、`.pi/prompts` 模板、AGENTS.md 上下文文件链、项目信任门禁演示 |
+| Gemini CLI | [`gemini-cli/`](gemini-cli/) | `.gemini/skills`、`.gemini/commands`、`.gemini/agents`、GEMINI.md 链（含 `@` 导入）、BeforeTool hook 拒绝演示 |
 
 ## 通用步骤
 

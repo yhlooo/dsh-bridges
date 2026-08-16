@@ -20,11 +20,14 @@ import { OpencodeSkillProvider } from '../agents/opencode/skills/provider.js'
 import { OpencodeSettingsLoader } from '../agents/opencode/settings.js'
 import { CodexSkillProvider } from '../agents/codex/skills/provider.js'
 import { CodexSettingsLoader } from '../agents/codex/settings.js'
+import { GeminiSkillProvider } from '../agents/gemini-cli/skills/provider.js'
+import { GeminiSettingsLoader } from '../agents/gemini-cli/settings.js'
 import { PiSkillProvider } from '../agents/pi/skills/provider.js'
 import { PiSettingsLoader } from '../agents/pi/settings.js'
 import { claudeToolName } from '../agents/claude-code/hooks/names.js'
 import { codebuddyToolName } from '../agents/codebuddy-code/hooks/names.js'
 import { codexToolName } from '../agents/codex/hooks/names.js'
+import { geminiToolName } from '../agents/gemini-cli/hooks/names.js'
 
 const silent = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
 
@@ -232,6 +235,38 @@ describe('rank bands (golden table)', () => {
       expect(entry.rank).toBeLessThan(250)
     }
   })
+
+  it('gemini-cli ranks stay in 205–220 with workspace before user', async () => {
+    const files = new Map<string, string>([
+      [fx('home', 'u', '.gemini', 'skills', 'u-skill', 'SKILL.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('home', 'u', '.gemini', 'commands', 'u-cmd.toml'), 'prompt = "x"\n'],
+      [fx('home', 'u', '.gemini', 'agents', 'u-agent.md'), '---\nname: u-agent\ndescription: a\n---\nBody.\n'],
+      [fx('proj', '.gemini', 'skills', 'p-skill', 'SKILL.md'), '---\ndescription: a\n---\nBody.\n'],
+      [fx('proj', '.gemini', 'commands', 'p-cmd.toml'), 'prompt = "x"\n'],
+      [fx('proj', '.gemini', 'agents', 'p-agent.md'), '---\nname: p-agent\ndescription: a\n---\nBody.\n'],
+    ])
+    const loader = new GeminiSettingsLoader(silent, new TreeFs(files), { userGeminiDir: fx('home', 'u', '.gemini') })
+    const provider = new GeminiSkillProvider(
+      silent,
+      new TreeFs(files),
+      { userGeminiDir: fx('home', 'u', '.gemini'), watch: false, agents: true },
+      loader,
+      () => {},
+    )
+    const found = await candidates(provider)
+    const ranks = new Map(found.map((entry) => [entry.name, entry.rank]))
+    expect(ranks.get('p-skill')).toBe(205)
+    expect(ranks.get('p-agent')).toBe(206)
+    expect(ranks.get('p-cmd')).toBe(207)
+    expect(ranks.get('u-skill')).toBe(210)
+    expect(ranks.get('u-agent')).toBe(211)
+    expect(ranks.get('u-cmd')).toBe(212)
+    for (const entry of found) {
+      expect(entry.rank).toBeGreaterThanOrEqual(205)
+      expect(entry.rank).toBeLessThanOrEqual(220)
+      expect(entry.rank).toBeLessThan(250)
+    }
+  })
 })
 
 describe('hook tool-name translations (golden table)', () => {
@@ -278,5 +313,25 @@ describe('hook tool-name translations (golden table)', () => {
     }
     for (const [dsh, upstream] of Object.entries(table)) expect(codexToolName(dsh)).toBe(upstream)
     expect(codexToolName('mcp__server__tool')).toBe('mcp__server__tool')
+  })
+
+  it('gemini-cli maps every documented DSH tool to its upstream name', () => {
+    const table: Record<string, string> = {
+      bash: 'run_shell_command',
+      pwsh: 'run_shell_command',
+      read: 'read_file',
+      write: 'write_file',
+      edit: 'replace',
+      glob: 'list_directory',
+      grep: 'search_file_content',
+      web: 'web_fetch',
+      web_search: 'google_web_search',
+      ask_user_question: 'ask_user',
+      exit_plan_mode: 'exit_plan_mode',
+      todo_write: 'write_todos',
+      skill: 'activate_skill',
+    }
+    for (const [dsh, upstream] of Object.entries(table)) expect(geminiToolName(dsh)).toBe(upstream)
+    expect(geminiToolName('mcp_server_tool')).toBe('mcp_server_tool') // passthrough
   })
 })

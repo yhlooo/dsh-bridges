@@ -1,0 +1,2 @@
+description = "Reviews the working-tree diff for style, tests, and risk."
+prompt = "Review the diff and report issues grouped by severity."

@@ -1,0 +1,1 @@
+{"hooks":{"BeforeTool":[{"matcher":"run_shell_command","hooks":[{"type":"command","command":"node .gemini/hooks-block.cjs"}]}]}}

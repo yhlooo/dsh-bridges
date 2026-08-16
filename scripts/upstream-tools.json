@@ -14,5 +14,6 @@
     "probes": [{ "args": ["doctor"], "marker": "Configuration" }]
   },
   { "tool": "opencode", "bin": "opencode", "pkg": "opencode-ai", "pin": "1.18.18" },
-  { "tool": "codebuddy-code", "bin": "codebuddy", "pkg": "@tencent-ai/codebuddy-code", "pin": "2.137.0" }
+  { "tool": "codebuddy-code", "bin": "codebuddy", "pkg": "@tencent-ai/codebuddy-code", "pin": "2.137.0" },
+  { "tool": "gemini-cli", "bin": "gemini", "pkg": "@google/gemini-cli", "pin": "0.55.1" }
 ]

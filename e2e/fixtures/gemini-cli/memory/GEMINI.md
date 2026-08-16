@@ -1,0 +1,2 @@
+# proj gemini
+Project rules.

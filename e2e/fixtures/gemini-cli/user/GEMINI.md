@@ -1,0 +1,2 @@
+# global gemini
+Global rules.
