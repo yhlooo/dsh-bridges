@@ -18,6 +18,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { FsAdapter } from '../../fs-adapter.js'
 import type { BridgeLogger } from '../../util.js'
+import { createMcpBridge } from './mcp.js'
 import { registerMemory } from './memory.js'
 import { createPermissionsBridge } from './permissions.js'
 import { OpencodeSettingsLoader } from './settings.js'
@@ -32,6 +33,8 @@ export interface OpencodeConfig {
   memory?: boolean
   /** Enforce `permission` rules from opencode.json(c) at the tools seam. */
   permissions?: boolean
+  /** Bridge opencode.json(c) `mcp` servers into DSH tools. */
+  mcp?: boolean
   /** User-level opencode config directory (usually `~/.config/opencode`). */
   userOpencodeDir?: string
   /** User-level Claude Code directory for the CLAUDE.md compatibility fallback. */
@@ -42,6 +45,8 @@ export interface OpencodeConfig {
   watch?: boolean
   /** Cap on the rendered rules-memory block, in characters. */
   memoryMaxBytes?: number
+  /** Per-tool-call timeout for bridged MCP servers (ms). */
+  mcpToolCallTimeoutMs?: number
 }
 
 export const OPENCODE_DEFAULTS: Required<OpencodeConfig> = {
@@ -49,11 +54,13 @@ export const OPENCODE_DEFAULTS: Required<OpencodeConfig> = {
   skills: true,
   memory: true,
   permissions: true,
+  mcp: true,
   userOpencodeDir: '~/.config/opencode',
   userClaudeDir: '~/.claude',
   claudeCompat: true,
   watch: true,
   memoryMaxBytes: 32_768,
+  mcpToolCallTimeoutMs: 120_000,
 }
 
 /** Register every opencode bridge piece on the shared plugin context. */
@@ -97,5 +104,9 @@ export function registerOpencodeBridge(ctx: Context, logger: BridgeLogger, fs: F
 
   if (resolved.permissions) {
     createPermissionsBridge(ctx, logger, loader)
+  }
+
+  if (resolved.mcp) {
+    createMcpBridge(ctx, logger, fs, { toolCallTimeoutMs: resolved.mcpToolCallTimeoutMs }, loader)
   }
 }

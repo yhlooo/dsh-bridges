@@ -45,6 +45,18 @@ export interface LoadedOpencodeSettings {
   instructions: { entries: readonly string[]; baseDir: string }
   /** Effective `permission` rules; undefined when no config defines them. */
   permissions?: OpencodePermissionConfig
+  /** `mcp` servers, project overriding global per name. */
+  mcp: ReadonlyMap<string, OpencodeMcpEntry>
+}
+
+/** One `mcp.<name>` entry (local stdio or remote HTTP). */
+export interface OpencodeMcpEntry {
+  type: 'local' | 'remote'
+  command?: string[]
+  environment?: Record<string, string>
+  url?: string
+  headers?: Record<string, string>
+  enabled: boolean
 }
 
 export type OpencodeAction = 'allow' | 'ask' | 'deny'
@@ -157,6 +169,7 @@ export class OpencodeSettingsLoader {
     let projectCommands = new Map<string, OpencodeJsonCommand>()
     let instructions: { entries: readonly string[]; baseDir: string } | undefined
     const permissions = new Map<string, OpencodePermissionFamily>()
+    const mcp = new Map<string, OpencodeMcpEntry>()
     let defaultAction: OpencodeAction | undefined
     let permissionConfigured = false
     for (const { source, value } of parsed) {
@@ -170,6 +183,8 @@ export class OpencodeSettingsLoader {
         if (layerPermission.defaultAction !== undefined) defaultAction = layerPermission.defaultAction
         for (const [family, entry] of layerPermission.families) permissions.set(family, entry)
       }
+      const layerMcp = readMcp(value['mcp'], this.logger, source.path)
+      for (const [name, entry] of layerMcp) mcp.set(name, entry)
     }
     for (const [name, command] of projectCommands) commands.set(name, command)
 
@@ -183,6 +198,7 @@ export class OpencodeSettingsLoader {
             families: permissions,
           }
         : undefined,
+      mcp,
     }
   }
 }
@@ -253,6 +269,43 @@ function readJsonCommands(value: unknown, commands: Map<string, OpencodeJsonComm
 function readStringArray(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined
   return value.filter((entry): entry is string => typeof entry === 'string')
+}
+
+/** Parse the `mcp` object: `<name>: { type, command, environment, url, enabled }`. */
+function readMcp(value: unknown, logger: BridgeLogger, path: string): Map<string, OpencodeMcpEntry> {
+  const result = new Map<string, OpencodeMcpEntry>()
+  if (value === undefined) return result
+  if (!isPlainObject(value)) {
+    logger.warn(`opencode: ignoring malformed mcp field in ${path}: must be an object`)
+    return result
+  }
+  for (const [name, entry] of Object.entries(value)) {
+    if (!isPlainObject(entry)) continue
+    const type = entry['type']
+    if (type !== 'local' && type !== 'remote') continue
+    const command = Array.isArray(entry['command']) ? entry['command'].filter((part): part is string => typeof part === 'string') : typeof entry['command'] === 'string' ? [entry['command']] : undefined
+    const environment: Record<string, string> = {}
+    if (isPlainObject(entry['environment'])) {
+      for (const [key, envValue] of Object.entries(entry['environment'])) {
+        if (typeof envValue === 'string') environment[key] = envValue
+      }
+    }
+    const headers: Record<string, string> = {}
+    if (isPlainObject(entry['headers'])) {
+      for (const [key, headerValue] of Object.entries(entry['headers'])) {
+        if (typeof headerValue === 'string') headers[key] = headerValue
+      }
+    }
+    result.set(name, {
+      type,
+      command: command !== undefined && command.length > 0 ? command : undefined,
+      environment: Object.keys(environment).length > 0 ? environment : undefined,
+      url: typeof entry['url'] === 'string' && entry['url'].trim() !== '' ? entry['url'] : undefined,
+      headers: Object.keys(headers).length > 0 ? headers : undefined,
+      enabled: entry['enabled'] !== false,
+    })
+  }
+  return result
 }
 
 /**

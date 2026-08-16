@@ -1,0 +1,10 @@
+{
+  // Project-scoped MCP servers, bridged by dsh-bridges at session start
+  // (tools appear as mcp__codebuddy__filesystem__*).
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
+    }
+  }
+}

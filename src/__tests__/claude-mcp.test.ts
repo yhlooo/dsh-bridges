@@ -49,9 +49,9 @@ describe('normalizeServer', () => {
   })
 
   it('sanitizes server names into the dsh namespace', () => {
-    expect(sanitizeServerName('my.server')).toBe('claude__my_server')
-    expect(sanitizeServerName('')).toBeUndefined()
-    expect(sanitizeServerName('!@#$')).toBe('claude______')
+    expect(sanitizeServerName('my.server', 'claude')).toBe('claude__my_server')
+    expect(sanitizeServerName('', 'claude')).toBeUndefined()
+    expect(sanitizeServerName('!@#$', 'claude')).toBe('claude______')
   })
 })
 

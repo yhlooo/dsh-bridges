@@ -38,6 +38,15 @@ export interface LoadedCodebuddySettings {
   env: Readonly<Record<string, string>>
   skillOverrides: ReadonlyMap<string, SkillOverrideState>
   permissions: MergedPermissionConfig
+  /** Project `.mcp.json` server approval policy (merged across scopes). */
+  mcpjsonServers: McpJsonServerPolicy
+}
+
+/** Approval policy for project `.mcp.json` servers. */
+export interface McpJsonServerPolicy {
+  enableAll: boolean
+  enabled: ReadonlySet<string>
+  disabled: ReadonlySet<string>
 }
 
 interface SettingsSource {
@@ -51,6 +60,7 @@ interface RawSettings {
   env?: Record<string, string>
   skillOverrides?: Record<string, SkillOverrideState>
   permissions?: RawPermissionSettings
+  mcp?: RawMcpSettings
 }
 
 interface RawPermissionSettings {
@@ -61,6 +71,12 @@ interface RawPermissionSettings {
   additionalDirectories?: string[]
   disableBypassPermissionsMode?: string
   disableAutoMode?: string
+}
+
+interface RawMcpSettings {
+  enableAllProjectMcpServers?: boolean
+  enabledMcpjsonServers?: string[]
+  disabledMcpjsonServers?: string[]
 }
 
 export class CodebuddySettingsLoader {
@@ -146,6 +162,9 @@ export class CodebuddySettingsLoader {
     let defaultMode: string | undefined
     let disableBypassPermissionsMode: string | undefined
     let disableAutoMode: string | undefined
+    let enableAllProjectMcpServers = false
+    let enabledMcpjsonServers: Set<string> | undefined
+    let disabledMcpjsonServers = new Set<string>()
 
     for (const { settings } of parsed) {
       for (const [event, groups] of Object.entries(settings.hooks ?? {})) {
@@ -179,6 +198,12 @@ export class CodebuddySettingsLoader {
         if (permissions.disableBypassPermissionsMode !== undefined) disableBypassPermissionsMode = permissions.disableBypassPermissionsMode
         if (permissions.disableAutoMode !== undefined) disableAutoMode = permissions.disableAutoMode
       }
+      const mcp = settings.mcp
+      if (mcp !== undefined) {
+        if (mcp.enableAllProjectMcpServers !== undefined) enableAllProjectMcpServers = mcp.enableAllProjectMcpServers
+        if (mcp.enabledMcpjsonServers !== undefined) enabledMcpjsonServers = new Set(mcp.enabledMcpjsonServers)
+        if (mcp.disabledMcpjsonServers !== undefined) disabledMcpjsonServers = new Set(mcp.disabledMcpjsonServers)
+      }
     }
 
     return {
@@ -194,6 +219,11 @@ export class CodebuddySettingsLoader {
         disableBypassPermissionsMode: disableBypassPermissionsMode !== undefined,
         additionalDirectories: [...additionalDirectories],
       },
+      mcpjsonServers: {
+        enableAll: enableAllProjectMcpServers,
+        enabled: enabledMcpjsonServers ?? new Set(),
+        disabled: disabledMcpjsonServers,
+      },
     }
   }
 }
@@ -203,6 +233,7 @@ function normalizeSettings(value: Record<string, unknown>, logger: BridgeLogger,
     env: readEnv(value['env'], logger, path),
     disableAllHooks: typeof value['disableAllHooks'] === 'boolean' ? value['disableAllHooks'] : undefined,
     permissions: readPermissions(value['permissions'], logger, path),
+    mcp: readMcpSettings(value),
   }
   const hooks = value['hooks']
   if (hooks !== undefined && isPlainObject(hooks)) {
@@ -289,4 +320,14 @@ function readPermissions(value: unknown, logger: BridgeLogger, path: string): Ra
 function readStringArray(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined
   return value.filter((entry): entry is string => typeof entry === 'string')
+}
+
+function readMcpSettings(value: Record<string, unknown>): RawMcpSettings | undefined {
+  const result: RawMcpSettings = {
+    enableAllProjectMcpServers: typeof value['enableAllProjectMcpServers'] === 'boolean' ? value['enableAllProjectMcpServers'] : undefined,
+    enabledMcpjsonServers: readStringArray(value['enabledMcpjsonServers']),
+    disabledMcpjsonServers: readStringArray(value['disabledMcpjsonServers']),
+  }
+  if (result.enableAllProjectMcpServers === undefined && result.enabledMcpjsonServers === undefined && result.disabledMcpjsonServers === undefined) return undefined
+  return result
 }

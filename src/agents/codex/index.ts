@@ -17,6 +17,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { FsAdapter } from '../../fs-adapter.js'
 import type { BridgeLogger } from '../../util.js'
 import { createHookBridge } from './hooks/bridge.js'
+import { createMcpBridge } from './mcp.js'
 import { registerMemory } from './memory.js'
 import { createPermissionsBridge } from './permissions.js'
 import { CodexSettingsLoader } from './settings.js'
@@ -33,6 +34,8 @@ export interface CodexConfig {
   hooks?: boolean
   /** Apply config.toml `approval_policy` / `sandbox_mode` / `default_permissions` at session start. */
   permissions?: boolean
+  /** Bridge config.toml `[mcp_servers]` entries into DSH tools. */
+  mcp?: boolean
   /** User-level Codex directory (usually `~/.codex`; `CODEX_HOME` wins when set). */
   userCodexDir?: string
   /** User-level skills directory (Codex uses `~/.agents/skills`). */
@@ -45,6 +48,8 @@ export interface CodexConfig {
   maxHookOutputChars?: number
   /** Cap on the rendered AGENTS.md memory block, in characters. */
   memoryMaxBytes?: number
+  /** Per-tool-call timeout for bridged MCP servers (ms). */
+  mcpToolCallTimeoutMs?: number
 }
 
 export const CODEX_DEFAULTS: Required<CodexConfig> = {
@@ -53,12 +58,14 @@ export const CODEX_DEFAULTS: Required<CodexConfig> = {
   memory: true,
   hooks: true,
   permissions: true,
+  mcp: true,
   userCodexDir: '~/.codex',
   userSkillsDir: '~/.agents/skills',
   watch: true,
   hookTimeoutMs: 600_000,
   maxHookOutputChars: 10_000,
   memoryMaxBytes: 32_768,
+  mcpToolCallTimeoutMs: 120_000,
 }
 
 /** Register every Codex bridge piece on the shared plugin context. */
@@ -109,5 +116,9 @@ export function registerCodexBridge(ctx: Context, logger: BridgeLogger, fs: FsAd
 
   if (resolved.permissions) {
     createPermissionsBridge(ctx, logger, loader)
+  }
+
+  if (resolved.mcp) {
+    createMcpBridge(ctx, logger, fs, { toolCallTimeoutMs: resolved.mcpToolCallTimeoutMs }, loader)
   }
 }

@@ -21,3 +21,8 @@ enabled = false
 # approval_policy "never" maps to auto-approve while the rest map to ask.
 sandbox_mode = "workspace-write"
 approval_policy = "on-request"
+
+# MCP servers bridged as mcp__codex__<server>__<tool> tools (see README).
+[mcp_servers.filesystem]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem", "."]

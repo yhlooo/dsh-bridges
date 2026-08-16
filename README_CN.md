@@ -59,9 +59,9 @@ dsh --profile <name> "list the skills available in your catalog"
 | 工具 | Skills / commands | Memory | Hooks | Permissions | MCP |
 | :--- | :--- | :--- | :--- | :--- |
 | Claude Code | `.claude/skills`、`.claude/commands`、`.claude/agents`（含 `~/.claude`） | `.claude/CLAUDE.md`、`~/.claude/CLAUDE.md` | `settings.json` hooks（SessionStart、UserPromptSubmit、Pre/PostToolUse(+Failure)、Stop、SessionEnd） | `settings.json` permissions 规则（allow/ask/deny，含 Bash 前缀、路径、域名匹配） | `.mcp.json` + `~/.claude.json` MCP 服务器 |
-| CodeBuddy Code | `.codebuddy/skills`、`.codebuddy/commands`、`.codebuddy/agents`（含 `~/.codebuddy`） | `CODEBUDDY.md`、`~/.codebuddy/CODEBUDDY.md`、`.codebuddy/rules/` | `settings.json` hooks（SessionStart、UserPromptSubmit、Pre/PostToolUse(+Failure)、Stop、SessionEnd） | `settings.json` permissions 规则（allow/ask/deny：精确/前缀/glob Bash、大小写不敏感路径、MCP、Skill） | — |
-| opencode | `.opencode/skills`、`.opencode/commands`（含 `~/.config/opencode`）、`opencode.json` 的 `command.*` | `AGENTS.md`（含 `CLAUDE.md` 回退）、`instructions` 文件 | —（opencode 无 hooks 配置；其插件 API 不在范围内） | `opencode.json(c)` 的 `permission` 规则（家族分组、末条命中、`external_directory`、内置默认） | — |
-| Codex | `.agents/skills`（cwd → 仓库根）、`~/.agents/skills`、`/etc/codex/skills` | `~/.codex/AGENTS.md` + 逐目录 `AGENTS.md` 链 | `hooks.json` / `config.toml` hooks（SessionStart、SubagentStart、UserPromptSubmit、Pre/PostToolUse、Stop、SubagentStop、SessionEnd） | `config.toml` 审批/沙箱策略（`approval_policy`、`sandbox_mode`、内置 `default_permissions` 档案） | — |
+| CodeBuddy Code | `.codebuddy/skills`、`.codebuddy/commands`、`.codebuddy/agents`（含 `~/.codebuddy`） | `CODEBUDDY.md`、`~/.codebuddy/CODEBUDDY.md`、`.codebuddy/rules/` | `settings.json` hooks（SessionStart、UserPromptSubmit、Pre/PostToolUse(+Failure)、Stop、SessionEnd） | `settings.json` permissions 规则（allow/ask/deny：精确/前缀/glob Bash、大小写不敏感路径、MCP、Skill） | `.mcp.json` + `~/.codebuddy/.mcp.json` MCP 服务器 |
+| opencode | `.opencode/skills`、`.opencode/commands`（含 `~/.config/opencode`）、`opencode.json` 的 `command.*` | `AGENTS.md`（含 `CLAUDE.md` 回退）、`instructions` 文件 | —（opencode 无 hooks 配置；其插件 API 不在范围内） | `opencode.json(c)` 的 `permission` 规则（家族分组、末条命中、`external_directory`、内置默认） | `opencode.json(c)` 的 `mcp` 服务器 |
+| Codex | `.agents/skills`（cwd → 仓库根）、`~/.agents/skills`、`/etc/codex/skills` | `~/.codex/AGENTS.md` + 逐目录 `AGENTS.md` 链 | `hooks.json` / `config.toml` hooks（SessionStart、SubagentStart、UserPromptSubmit、Pre/PostToolUse、Stop、SubagentStop、SessionEnd） | `config.toml` 审批/沙箱策略（`approval_policy`、`sandbox_mode`、内置 `default_permissions` 档案） | `config.toml` 的 `[mcp_servers]` 条目 |
 
 ## 资源
 
