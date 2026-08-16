@@ -8,8 +8,10 @@
  *   (workspace) — directory skills, non-recursive (Gemini documents no nested
  *   skill directories)
  * - `~/.gemini/commands/<name>.toml` and `.gemini/commands/<name>.toml` —
- *   top-level files; nested paths yield namespaced `dir:name` commands that
- *   are not kebab-case and are skipped with a warning
+ *   nested subdirectories yield namespaced commands with the path separator
+ *   converted to `:` (`commands/git/commit.toml` → the `/git:commit` command);
+ *   DSH skills require kebab-case names, so the qualified name is mapped onto
+ *   `git-commit`
  * - `~/.gemini/agents/*.md` and `.gemini/agents/*.md` — subagent definitions
  *   bridged as delegation-spec skills (the shared `agent-definitions`
  *   pattern); `kind: remote` agents are skipped
@@ -52,6 +54,8 @@ const RANK_USER_COMMANDS = 212
 
 /** Gemini caps skill descriptions at 1,024 characters (Agent Skills standard). */
 const MAX_DESCRIPTION_CHARS = 1024
+/** Recursion bound for nested command discovery. */
+const MAX_NESTING_DEPTH = 8
 
 type RootKind = 'user-skills' | 'user-commands' | 'user-agents' | 'project-skills' | 'project-commands' | 'project-agents'
 
@@ -141,7 +145,9 @@ export class GeminiSkillProvider implements SkillProvider {
     let complete = true
     for (const root of roots) {
       if (options.signal?.aborted) return { candidates, complete: false }
-      const result = await this.listRoot(root, options, candidates, disabled)
+      const result = root.kind.endsWith('-commands')
+        ? await this.listCommands(root, options, candidates)
+        : await this.listRoot(root, options, candidates, disabled)
       complete = complete && result.complete
       if (!result.continue) return { candidates, complete }
     }
@@ -184,31 +190,6 @@ export class GeminiSkillProvider implements SkillProvider {
           this.logger.warn(`gemini-cli: cannot read skill entry under ${root.path}: ${errorMessage(error)}`)
           return { complete: false, continue: true }
         }
-      } else if (root.kind.endsWith('-commands')) {
-        if (!entry.isFile || !entry.name.toLowerCase().endsWith('.toml')) continue
-        // Nested command directories are namespaced with `:` upstream, which
-        // is not kebab-case; skip with a warning (no transliteration).
-        const name = stripTomlExtension(entry.name)
-        if (!isSkillName(name)) {
-          this.logger.warn(
-            `gemini-cli: skipping command ${root.path}/${entry.name}: nested namespaced commands (dir:name) are not kebab-case; DSH skills require kebab-case names`,
-          )
-          continue
-        }
-        try {
-          const file = join(root.path, entry.name)
-          const text = await this.fs.readText(file, options.signal)
-          candidates.push(this.commandSummary(root, name, file, text))
-        } catch (error) {
-          if (isAbort(error)) return { complete: false, continue: false }
-          if (isMissing(error)) continue
-          if (error instanceof FrontmatterError) {
-            this.logger.warn(`gemini-cli: skipping invalid command ${root.path}/${entry.name}: ${error.message}`)
-            continue
-          }
-          this.logger.warn(`gemini-cli: cannot read command entry under ${root.path}: ${errorMessage(error)}`)
-          return { complete: false, continue: true }
-        }
       } else {
         // agents
         if (!entry.isFile || !entry.name.toLowerCase().endsWith('.md')) continue
@@ -226,6 +207,74 @@ export class GeminiSkillProvider implements SkillProvider {
           this.logger.warn(`gemini-cli: cannot read agent entry under ${root.path}: ${errorMessage(error)}`)
           return { complete: false, continue: true }
         }
+      }
+    }
+    return { complete: true, continue: true }
+  }
+
+  /**
+   * Discover command `.toml` files recursively.
+   *
+   * Upstream, nested paths yield namespaced commands with the path separator
+   * converted to `:` (`commands/git/commit.toml` → the `/git:commit` command);
+   * DSH skills require kebab-case names, so the qualified name is mapped onto
+   * `git-commit`. Directories whose own qualified name is not kebab-case are
+   * skipped wholesale, since every file below them would yield an invalid
+   * skill name.
+   */
+  private async listCommands(
+    root: SkillRoot,
+    options: SkillLookupOptions,
+    candidates: SkillCandidate[],
+    depth = 0,
+    prefix = '',
+  ): Promise<{ complete: boolean; continue: boolean }> {
+    if (depth > MAX_NESTING_DEPTH) return { complete: true, continue: true }
+    const qualifiedPrefix = prefix.replace(/[/\\]+/g, ':')
+    if (prefix !== '' && !isSkillName(qualifiedPrefix.replace(/:/g, '-'))) {
+      this.logger.warn(
+        `gemini-cli: skipping command directory ${join(root.path, prefix)}: qualified name ${JSON.stringify(qualifiedPrefix)} is not kebab-case; DSH skills require kebab-case names`,
+      )
+      return { complete: true, continue: true }
+    }
+    let entries
+    try {
+      entries = await this.fs.listDir(prefix === '' ? root.path : join(root.path, prefix), options.signal)
+    } catch (error) {
+      if (isAbort(error)) return { complete: false, continue: false }
+      if (isMissing(error)) return { complete: true, continue: true }
+      this.logger.warn(`gemini-cli: cannot read command root ${root.path}: ${errorMessage(error)}`)
+      return { complete: false, continue: true }
+    }
+    for (const entry of entries) {
+      if (options.signal?.aborted) return { complete: false, continue: false }
+      if (entry.isDir) {
+        const result = await this.listCommands(root, options, candidates, depth + 1, join(prefix, entry.name))
+        if (!result.continue) return result
+        continue
+      }
+      if (!entry.isFile || !entry.name.toLowerCase().endsWith('.toml')) continue
+      const qualified = prefix === '' ? stripTomlExtension(entry.name) : `${qualifiedPrefix}:${stripTomlExtension(entry.name)}`
+      const name = qualified.replace(/:/g, '-')
+      const file = join(root.path, prefix, entry.name)
+      try {
+        const text = await this.fs.readText(file, options.signal)
+        if (!isSkillName(name)) {
+          this.logger.warn(
+            `gemini-cli: skipping command ${JSON.stringify(qualified)}: qualified name is not kebab-case; DSH skills require kebab-case names`,
+          )
+          continue
+        }
+        candidates.push(this.commandSummary(root, name, file, text))
+      } catch (error) {
+        if (isAbort(error)) return { complete: false, continue: false }
+        if (isMissing(error)) continue
+        if (error instanceof FrontmatterError) {
+          this.logger.warn(`gemini-cli: skipping invalid command ${root.path}/${entry.name}: ${error.message}`)
+          continue
+        }
+        this.logger.warn(`gemini-cli: cannot read command entry under ${root.path}: ${errorMessage(error)}`)
+        return { complete: false, continue: true }
       }
     }
     return { complete: true, continue: true }
@@ -398,7 +447,10 @@ export class GeminiSkillProvider implements SkillProvider {
     const watcher = watch(target.path, {
       persistent: true,
       ignoreInitial: true,
-      depth: target.kind === 'skills-dir' || target.kind === 'commands-dir' ? 2 : 1,
+      // Command roots traverse fully so nested namespaced command files are
+      // covered; skills stay non-recursive (bundle dir + SKILL.md) and agent
+      // roots are flat.
+      ...(target.kind === 'commands-dir' ? {} : { depth: target.kind === 'skills-dir' ? 2 : 1 }),
       atomic: true,
       awaitWriteFinish: { stabilityThreshold: WATCH_STABILITY_MS, pollInterval: 100 },
     })
@@ -443,8 +495,9 @@ function isRelevantWatchEvent(target: WatchTarget, event: string, path: string):
     return false
   }
   if (target.kind === 'commands-dir') {
-    if (depth === 1) return relative.toLowerCase().endsWith('.toml') || event === 'unlinkDir'
-    return false
+    // Nested command files: any directory change and any `.toml` at any depth.
+    if (event === 'addDir' || event === 'unlinkDir') return true
+    return relative.toLowerCase().endsWith('.toml')
   }
   // agents-dir: flat .md files
   if (depth === 1) return relative.toLowerCase().endsWith('.md')

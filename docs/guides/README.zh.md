@@ -536,12 +536,12 @@ DeepSeek Harness 自身已加载仓库根的 `AGENTS.md`。桥接在会话开始
 | Gemini CLI 位置 | 注册为 |
 | :--- | :--- |
 | `~/.gemini/skills/<name>/SKILL.md`（用户）与 `.gemini/skills/<name>/SKILL.md`（工作区） | 技能（目录型，非递归） |
-| `~/.gemini/commands/<name>.toml` / `.gemini/commands/<name>.toml` | 命令（技能；TOML 的 `prompt` 为正文） |
+| `~/.gemini/commands/<name>.toml` / `.gemini/commands/<name>.toml`（也支持嵌套 `<group>/<name>.toml`） | 命令（技能；TOML 的 `prompt` 为正文；嵌套：技能名 `group-name`） |
 | `~/.gemini/agents/*.md` / `.gemini/agents/*.md` | subagent 定义 → 委派规格技能 |
 
 映射规则：
 
-- 技能名取 frontmatter 的 `name`（缺省回退目录名）；DeepSeek Harness 要求 kebab-case。命令名来自文件名——嵌套路径产生 `dir:name` 命名空间命令，非 kebab-case，跳过 + 告警（不转写）。
+- 技能名取 frontmatter 的 `name`（缺省回退目录名）；DeepSeek Harness 要求 kebab-case。命令名来自文件路径：嵌套文件在上游是路径分隔符换成 `:` 的命名空间命令（`commands/git/commit.toml` → `/git:commit`），映射为 kebab-case 技能名 `git-commit`——DeepSeek Harness 技能名不允许含 `:`。限定名非 kebab-case 的目录整棵跳过。
 - 技能的 `description` 必填（fail closed）；命令的 `description` 可选（缺省取 prompt 首段）。
 - 优先级遵循 Gemini 的发现层级（内置 < 扩展 < 用户 < 工作区）：**工作区资产覆盖用户资产**，同级技能优先于同名命令。DeepSeek Harness 原生技能（`.dsh/skills`、`.agents/skills`、运行时技能）在同名冲突时依然胜出——桥接注册在全局技能层，较近的 preset 层遮蔽它。`.agents/skills` 别名位置有意不重读（DeepSeek Harness 自带 filesystem provider 已覆盖 `.agents` 资产）。
 - `skills.disabled` 名单与 `skills.enabled` 总开关来自 settings.json。

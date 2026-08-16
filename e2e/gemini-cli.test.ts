@@ -47,11 +47,14 @@ describe('e2e: gemini-cli bridge through the real registry', () => {
     expect(names).toContain('project-skill')
     expect(names).toContain('user-skill')
     expect(names).toContain('review')
+    expect(names).toContain('git-commit') // nested `commands/git/commit.toml` → `/git:commit` upstream
     expect(names).toContain('hello')
     expect(names).toContain('reviewer')
 
     const body = await harness.ctx.skills.get('review', { cwd: project!.dir })
     expect(body?.content).toContain('Review the diff.')
+    const nested = await harness.ctx.skills.get('git-commit', { cwd: project!.dir })
+    expect(nested?.content).toContain('Conventional Commits message.')
     const agent = await harness.ctx.skills.get('reviewer', { cwd: project!.dir })
     expect(agent?.content).toContain('Be careful.')
   })
