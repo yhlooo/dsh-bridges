@@ -19,9 +19,9 @@
 dsh plugin --profile <name> add dsh-bridges
 
 # 2. 在已经为其他 agent 配置好的项目里启动 DeepSeek Harness
-cd my-claude-project        # 已有 .claude/ 资产
-dsh --profile web                              # Web UI
-dsh --profile headless "list the skills available in your catalog"    # 或一次性 CLI 运行
+dsh --profile web                              # Web UI——在界面里把项目打开为会话工作区
+cd my-claude-project                           # 已有 .claude/ 资产
+dsh --profile headless "list the skills available in your catalog"   # 或在该项目里一次性 CLI 运行
 # → .claude 技能与命令注册为 /名字 技能，CLAUDE.md 被注入，
 #   项目中的 settings.json hooks 原样运行。
 ```

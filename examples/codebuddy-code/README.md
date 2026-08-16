@@ -46,8 +46,7 @@ hook 脚本收到的 JSON 里，工具名是 **CodeBuddy Code 的名字**（`Bas
 # 1. 安装插件（repo 根目录，先 pnpm install && pnpm build）
 dsh plugin --profile <name> add .    # <name> = web（Web GUI）或 headless（一次性 CLI）
 
-# 2. 在本目录启动 DeepSeek Harness Web GUI
-cd examples/codebuddy-code
+# 2. 启动 Web GUI，在界面里把 examples/codebuddy-code 打开为会话工作区
 dsh --profile web
 ```
 

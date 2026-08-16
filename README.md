@@ -19,9 +19,9 @@ A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin tha
 dsh plugin --profile <name> add dsh-bridges
 
 # 2. run DeepSeek Harness in a project already configured for another agent
-cd my-claude-project        # has .claude/ assets
-dsh --profile web                              # the Web UI
-dsh --profile headless "list the skills available in your catalog"    # or a one-shot CLI run
+dsh --profile web                              # the Web UI — open the project as its workspace
+cd my-claude-project                           # has .claude/ assets
+dsh --profile headless "list the skills available in your catalog"   # a one-shot CLI run in the project
 # → .claude skills and commands are registered as /name skills, CLAUDE.md is
 #   injected, and the project's settings.json hooks run unchanged.
 ```

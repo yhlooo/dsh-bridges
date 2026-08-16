@@ -49,8 +49,7 @@ opencode 没有 hooks 文件格式，因此本示例不含 hooks——它属于 
 # 1. 安装插件（repo 根目录，先 pnpm install && pnpm build）
 dsh plugin --profile <name> add .    # <name> = web（Web GUI）或 headless（一次性 CLI）
 
-# 2. 在本目录启动 DeepSeek Harness Web GUI
-cd examples/opencode
+# 2. 启动 Web GUI，在界面里把 examples/opencode 打开为会话工作区
 dsh --profile web
 ```
 

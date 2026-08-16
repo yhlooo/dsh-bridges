@@ -16,8 +16,7 @@
 # 在仓库根安装插件（先 pnpm install && pnpm build）
 dsh plugin --profile <name> add .    # <name> = web（Web GUI）或 headless（一次性 CLI）
 
-# 进入任一示例目录，以它作为会话工作区启动 Web GUI
-cd examples/<tool>
+# 启动 Web GUI（会话工作区在界面里选择，与启动目录无关）
 dsh --profile web
 ```
 
