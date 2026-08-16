@@ -120,14 +120,16 @@ export function matchOpencodePattern(
   else if (expanded === '$HOME' || expanded.startsWith('$HOME/'))
     expanded = join(context.home, expanded === '$HOME' ? '' : expanded.slice(6))
   if (kind === 'path') {
+    // Upstream patterns are POSIX-style; normalize win32 separators so the
+    // same rules match on every platform.
     if (isAbsolute(expanded)) {
       const absolute = isAbsolute(value) ? value : resolve(context.cwd, value)
-      return globMatch(expanded, absolute)
+      return globMatch(expanded.replaceAll('\\', '/'), absolute.replaceAll('\\', '/'))
     }
     const absolute = isAbsolute(value) ? value : resolve(context.cwd, value)
     const relativePath = relative(context.cwd, absolute)
     if (relativePath.startsWith('..')) return false // outside the working directory
-    return globMatch(expanded, relativePath)
+    return globMatch(expanded, relativePath.replaceAll('\\', '/'))
   }
   return globMatch(expanded, value)
 }

@@ -207,10 +207,15 @@ function resolveRulePath(specifier: string, context: RuleMatchContext): { absolu
   return { absolute: resolve(context.cwd, relative), projectRelative: true }
 }
 
+/** POSIX-style rule patterns must match win32 paths: compare with `/`. */
+function normalizePathSeparators(value: string): string {
+  return value.replaceAll('\\', '/')
+}
+
 function pathMatches(specifier: string, argPath: string, context: RuleMatchContext): boolean {
   const { absolute, projectRelative } = resolveRulePath(specifier, context)
   const arg = isAbsolute(argPath) ? argPath : resolve(context.cwd, argPath)
-  if (globMatch(absolute, arg)) return true
+  if (globMatch(normalizePathSeparators(absolute), normalizePathSeparators(arg))) return true
   return matchesAdditionalDirectories(specifier, arg, context, projectRelative, false)
 }
 
@@ -227,7 +232,7 @@ function codebuddyPathMatches(specifier: string, argPath: string, context: RuleM
     const base = basename(arg)
     const nameOnly = specifier.replace(/^\.\//, '')
     if (globToRegExp(nameOnly.toLowerCase(), 'i').test(base.toLowerCase())) return true
-  } else if (globToRegExp(absolute.toLowerCase(), 'i').test(arg.toLowerCase())) {
+  } else if (globToRegExp(normalizePathSeparators(absolute).toLowerCase(), 'i').test(normalizePathSeparators(arg).toLowerCase())) {
     return true
   }
   return matchesAdditionalDirectories(specifier, arg, context, projectRelative, true)
@@ -245,7 +250,9 @@ function matchesAdditionalDirectories(
   for (const dir of context.additionalDirectories) {
     const base = isAbsolute(dir) ? dir : resolve(context.cwd, dir)
     const pattern = resolve(base, relative)
-    const matched = caseInsensitive ? globToRegExp(pattern.toLowerCase(), 'i').test(arg.toLowerCase()) : globMatch(pattern, arg)
+    const matched = caseInsensitive
+      ? globToRegExp(normalizePathSeparators(pattern).toLowerCase(), 'i').test(normalizePathSeparators(arg).toLowerCase())
+      : globMatch(normalizePathSeparators(pattern), normalizePathSeparators(arg))
     if (matched) return true
   }
   return false

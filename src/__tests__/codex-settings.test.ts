@@ -67,12 +67,12 @@ describe('CodexSettingsLoader', () => {
     expect(trusted.byEvent.has('SessionStart')).toBe(true)
     expect(trusted.mcpServers.has('local')).toBe(true)
 
-    const proj = fx('proj').replaceAll('\\', '\\\\').replaceAll("'", "\\'")
+    const proj = fx('proj').replaceAll('\\', '\\\\')
     const untrustedFiles = new Map<string, string>([
       [fx('home', 'u', '.codex', 'config.toml'), ''],
       [
         fx('proj', '.codex', 'config.toml'),
-        `[hooks]\nSessionStart = [{ matcher = "startup", hooks = [{ type = "command", command = "x" }] }]\n[mcp_servers.local]\ncommand = "m"\n\n[projects.'${proj}']\ntrust_level = "untrusted"`,
+        `[hooks]\nSessionStart = [{ matcher = "startup", hooks = [{ type = "command", command = "x" }] }]\n[mcp_servers.local]\ncommand = "m"\n\n[projects."${proj}"]\ntrust_level = "untrusted"`,
       ],
     ])
     const gated = await makeLoader(untrustedFiles).load(fx('proj'))
