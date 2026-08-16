@@ -67,6 +67,12 @@ export interface BootOptions {
    * bridge stays disabled.
    */
   readonly userGeminiDir?: string
+  /**
+   * When set, enables the Cursor bridge with this directory as its
+   * `userCursorDir` (isolated from the real `~/.cursor`); when absent the
+   * bridge stays disabled.
+   */
+  readonly userCursorDir?: string
   /** Extra top-level plugin config, merged over the skeleton defaults. */
   readonly config?: Partial<BridgesConfig>
 }
@@ -102,6 +108,10 @@ export async function bootHarness(options: BootOptions): Promise<Harness> {
       options.userGeminiDir !== undefined
         ? { enabled: true, userGeminiDir: options.userGeminiDir, watch: false, hookTimeoutMs: 5000, ...options.config?.geminiCli }
         : { enabled: false, ...options.config?.geminiCli },
+    cursor:
+      options.userCursorDir !== undefined
+        ? { enabled: true, userCursorDir: options.userCursorDir, watch: false, hookTimeoutMs: 5000, ...options.config?.cursor }
+        : { enabled: false, ...options.config?.cursor },
   }
   await ctx.plugin(bridges, config)
   const agent = new E2eAgent()

@@ -1,0 +1,5 @@
+---
+description: TypeScript style
+alwaysApply: true
+---
+Prefer TypeScript for all new files. Keep functions small and tested.

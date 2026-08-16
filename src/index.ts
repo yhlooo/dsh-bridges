@@ -25,6 +25,7 @@ import z from '@deepseek-ai/schemastery'
 import { registerClaudeCodeBridge, type ClaudeCodeConfig } from './agents/claude-code/index.js'
 import { registerCodebuddyCodeBridge, type CodebuddyCodeConfig } from './agents/codebuddy-code/index.js'
 import { registerCodexBridge, type CodexConfig } from './agents/codex/index.js'
+import { registerCursorBridge, type CursorConfig } from './agents/cursor/index.js'
 import { registerGeminiCliBridge, type GeminiCliConfig } from './agents/gemini-cli/index.js'
 import { registerOpencodeBridge, type OpencodeConfig } from './agents/opencode/index.js'
 import { registerPiBridge, type PiConfig } from './agents/pi/index.js'
@@ -118,6 +119,21 @@ export const Config = z.object({
     memoryMaxBytes: z.number().default(32_768),
     mcpToolCallTimeoutMs: z.number().default(120_000),
   }),
+  cursor: z.object({
+    enabled: z.boolean().default(true),
+    skills: z.boolean().default(true),
+    agents: z.boolean().default(true),
+    memory: z.boolean().default(true),
+    hooks: z.boolean().default(true),
+    permissions: z.boolean().default(true),
+    mcp: z.boolean().default(true),
+    userCursorDir: z.string().default('~/.cursor'),
+    watch: z.boolean().default(true),
+    hookTimeoutMs: z.number().default(30_000),
+    maxHookOutputChars: z.number().default(10_000),
+    memoryMaxBytes: z.number().default(32_768),
+    mcpToolCallTimeoutMs: z.number().default(120_000),
+  }),
 })
 
 export interface BridgesConfig {
@@ -127,6 +143,7 @@ export interface BridgesConfig {
   codex?: CodexConfig
   pi?: PiConfig
   geminiCli?: GeminiCliConfig
+  cursor?: CursorConfig
 }
 
 /**
@@ -141,6 +158,7 @@ export function registerBridgeSubsystems(ctx: Context, logger: BridgeLogger, fs:
   registerCodexBridge(ctx, logger, fs, config.codex)
   registerPiBridge(ctx, logger, fs, config.pi)
   registerGeminiCliBridge(ctx, logger, fs, config.geminiCli)
+  registerCursorBridge(ctx, logger, fs, config.cursor)
 }
 
 export function apply(ctx: Context, config: BridgesConfig = {}): void {
