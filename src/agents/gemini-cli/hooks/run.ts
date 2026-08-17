@@ -105,14 +105,17 @@ async function executeHandler(handler: HookDef, run: HookRun, _logger: BridgeLog
 
   try {
     const outcome = await collectOutput(child, run.input)
+    // A timed-out / cancelled hook's partial output is discarded, never parsed
+    // into a decision (upstream drops the output on timeout).
+    const discarded = timedOut || cancelled
     return {
       ...base,
       exitCode: outcome.exitCode,
-      stdout: outcome.stdout,
+      stdout: discarded ? '' : outcome.stdout,
       stderr: outcome.stderr,
       timedOut,
       cancelled: cancelled || undefined,
-      ...parseHookStdout(outcome.stdout),
+      ...(discarded ? {} : parseHookStdout(outcome.stdout)),
     }
   } catch (error) {
     return { ...base, cancelled: cancelled || undefined, failedToStart: error instanceof Error ? error.message : String(error) }

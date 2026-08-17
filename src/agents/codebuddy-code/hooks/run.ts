@@ -138,6 +138,13 @@ async function runCommandHook(handler: CommandHook, run: HookRun, logger: Bridge
     try {
       const child = spawnCommand(handler, run)
       run.onSpawn?.(child)
+      // Async hooks still receive the JSON payload on stdin (upstream contract);
+      // drain stdout/stderr so a verbose background hook cannot deadlock on a
+      // full pipe buffer.
+      child.stdin?.on('error', () => {})
+      child.stdin?.end(JSON.stringify(run.input))
+      child.stdout?.resume()
+      child.stderr?.resume()
     } catch (error) {
       logger.debug(`codebuddy-code: async hook failed to start: ${error instanceof Error ? error.message : String(error)}`)
     }
@@ -180,15 +187,18 @@ async function runCommandHook(handler: CommandHook, run: HookRun, logger: Bridge
 
   try {
     const outcome = await collectOutput(child, run.input)
+    // A timed-out / cancelled hook's partial output is discarded, never parsed
+    // into a decision (upstream drops the output on timeout).
+    const discarded = timedOut || cancelled
     return {
       ...base,
       ran: true,
       exitCode: outcome.exitCode,
-      stdout: outcome.stdout,
+      stdout: discarded ? '' : outcome.stdout,
       stderr: outcome.stderr,
       timedOut,
       cancelled: cancelled || undefined,
-      ...parseHookStdout(outcome.stdout),
+      ...(discarded ? {} : parseHookStdout(outcome.stdout)),
     }
   } catch (error) {
     return { ...base, ran: true, cancelled: cancelled || undefined, failedToStart: error instanceof Error ? error.message : String(error) }

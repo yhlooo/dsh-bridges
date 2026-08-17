@@ -111,14 +111,14 @@ describe('runEventHooks (command hooks)', () => {
     expect(outcome!.plainText).toBe('context line')
   })
 
-  it('times out and fails open', async () => {
+  it('times out and discards partial output', async () => {
     const [outcome] = await run({
       groups: [
         {
           hooks: [
             {
               type: 'command',
-              command: 'node -e "setTimeout(()=>{},3000)"',
+              command: 'node -e "console.log(JSON.stringify({a:1}));setTimeout(function(){},3000)"',
               timeout: 1,
             },
           ],
@@ -128,6 +128,9 @@ describe('runEventHooks (command hooks)', () => {
     })
     expect(outcome!.timedOut).toBe(true)
     expect(outcome!.exitCode).toBeNull()
+    // Partial stdout must never become a decision after a timeout.
+    expect(outcome!.output).toBeNull()
+    expect(outcome!.stdout).toBe('')
   })
 
   it('runs async hooks detached without waiting', async () => {

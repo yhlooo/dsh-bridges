@@ -58,13 +58,22 @@ describe('gemini hook execution (real subprocesses)', () => {
     expect(outcomes[0]!.plainText).toBe('just some text')
   })
 
-  it('fails open on timeout', async () => {
+  it('fails open on timeout and discards partial output', async () => {
     // Short sleep: on Windows the kill hits the direct child only and the
     // surviving grandchild holds the pipes until it exits (pitfalls #25).
     const outcomes = await runEventHooks(
       {
         event: 'BeforeTool',
-        groups: [{ hooks: [{ type: 'command', command: `node -e "setTimeout(function(){process.exit(0)},400)"` }] }],
+        groups: [
+          {
+            hooks: [
+              {
+                type: 'command',
+                command: `node -e "console.log(JSON.stringify({decision:'deny',reason:'partial'}));setTimeout(function(){process.exit(0)},400)"`,
+              },
+            ],
+          },
+        ],
         matchedValue: 'x',
         input: {},
         cwd: process.cwd(),
@@ -74,6 +83,9 @@ describe('gemini hook execution (real subprocesses)', () => {
     )
     expect(outcomes[0]!.timedOut).toBe(true)
     expect(outcomes[0]!.exitCode).toBeNull()
+    // Partial stdout must never become a decision after a timeout.
+    expect(outcomes[0]!.output).toBeNull()
+    expect(outcomes[0]!.stdout).toBe('')
   })
 
   it('fails open on a hook that cannot start', async () => {
