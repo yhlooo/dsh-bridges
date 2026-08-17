@@ -223,7 +223,7 @@
   覆盖接缝）；`APPEND_SYSTEM.md` 追加语义已降级映射为记忆注入
   （2026-08-16，Pi 桥接遗留，guides 已记限制）。
 - [ ] **环 C 上游探针支持脚本安装（cursor）**：**Pi 部分已做**（2026-08-17，
-  commit 00b6080）：Pi 官方文档明确其以 npm 包分发
+  commit e7fdd92）：Pi 官方文档明确其以 npm 包分发
   （`@earendil-works/pi-coding-agent`，官方安装命令自带 `--ignore-scripts`），
   已按 pin 0.84.2 加入 `scripts/upstream-tools.json`，探针支持逐工具
   `npmArgs`。**cursor 仍待做**：Cursor CLI 无 npm 包、`cursor.com/install`
@@ -403,45 +403,45 @@
 - [x] **MCP 变更检测比较对象写错**：`src/mcp-bridge.ts` reconcile 用
   `JSON.stringify(next)`（含 name 包裹）对比 `running.config`（无包裹）恒不等 →
   每次 session-start/watcher 事件重启该工作区全部 MCP 服务器；应为 `next.config`
-  （2026-08-16 审察）。**已修复**（2026-08-17，commit 12810b5）：改为比较
+  （2026-08-16 审察）。**已修复**（2026-08-17，commit e85095c）：改为比较
   `next.config`，bridge-mcp 单测新增"未变更配置不重启"断言。
 - [x] **cursor handler 级 `matcher` 被丢弃**：`src/agents/cursor/settings.ts`
   normalizeHooks 把 handler 包成 `{matcher: undefined, hooks:[...]}`，上游
   hooks.md 明确 `matcher` 是 handler 级字段 → 带 matcher 的 guard hook 对全部
-  命令运行（2026-08-16 审察）。**已修复**（2026-08-17，commit 916e73d）：
+  命令运行（2026-08-16 审察）。**已修复**（2026-08-17，commit 7acf587）：
   每个 handler 的 `matcher` 保留在其分组上；cursor-settings 测试断言保留。
 - [x] **async hook 子进程 stdin 不写入、管道不排空**：claude/codebuddy/codex
   `hooks/run.ts` async 分支只 spawn（stdio 三个 pipe）→ 输出超管道缓冲（约 64KB）
   死锁；且上游 async hook 会收到 stdin JSON，桥接完全不发（2026-08-16 审察）。
-  **已修复**（2026-08-17，commit dc4911e）：async 分支写入并 end stdin JSON，
+  **已修复**（2026-08-17，commit 989bc95）：async 分支写入并 end stdin JSON，
   stdout/stderr `resume()` 排空；claude 单测新增"async hook 收到 stdin JSON"
   断言。
 - [x] **超时/取消 hook 的部分 stdout 仍被解析为决策**：`run.ts` 置
   timedOut/cancelled 但 bridge 只检查 ran/detached；上游语义为超时即丢弃输出
-  （2026-08-16 审察）。**已修复**（2026-08-17，commit dc4911e/916e73d）：
+  （2026-08-16 审察）。**已修复**（2026-08-17，commit 989bc95/7acf587）：
   五个 hooks/run.ts 在 timedOut/cancelled 时清空 stdout、不再 parse；各工具
   run 测试改为"超时丢弃部分输出"断言。
 - [x] **claude `permissionDecision: "defer"` 被映射为 deny**：上游优先级
   deny > defer > ask > allow，defer 意为"稍后恢复"；建议降级为 ask/放行 + 告警
-  （2026-08-16 审察）。**已修复**（2026-08-17，commit dc4911e）：改为映射
+  （2026-08-16 审察）。**已修复**（2026-08-17，commit 989bc95）：改为映射
   `ask`（审批，无恢复接缝），guides 中英已同步；对应测试改为断言 `ask`。
 - [ ] **`capString` 输出超出 maxChars 约 1.4 倍**：`src/util.ts` `tail =
   value.length - head`；应为 `tail = value.length - (maxChars - head -
   marker.length)` 并取整（2026-08-16 审察）。
 - [x] **cursor 用户级 hook 相对命令路径解析到项目目录**：`cursor/hooks/run.ts`
   统一 cwd = session cwd；上游用户 hook 从 `~/.cursor/` 运行（2026-08-16 审察）。
-  **已修复**（2026-08-17，commit 916e73d）：MatcherGroup 携带来源目录（用户
+  **已修复**（2026-08-17，commit 7acf587）：MatcherGroup 携带来源目录（用户
   hook = 用户配置目录、项目 hook = 会话工作目录），run.ts 按分组 cwd 执行；
   guides 中英已写明该解析规则。
 - [x] **OpenCode/gemini-cli stdio MCP `cwd` 硬编码 `process.cwd()`**（cursor 已
-  正确实现）（2026-08-16 审察）。**已修复**（2026-08-17，commit 12810b5）：
+  正确实现）（2026-08-16 审察）。**已修复**（2026-08-17，commit e85095c）：
   opencode/gemini 归一器接收 session cwd 作为 fallback；同批修复了共享
   `normalizeClaudeStyleEntry`（claude/codebuddy）与 codex 归一器的同款
   `process.cwd()` fallback，五个桥接统一为会话工作目录。
 - [x] **OpenCode 内置 `.env` 拒绝在 `*` 通配符对象形式下被替换**：
   `opencode/permissions.ts` evaluateFamily 规则选择逻辑；`{"*":{"*":"allow"}}`
   时读 `.env` 被放行（2026-08-16 审察）。**已修复**（2026-08-17，commit
-  53a1bed）：read 族在 wildcard 是唯一规则来源时追加内置 `.env` 保护规则
+  5b641a2）：read 族在 wildcard 是唯一规则来源时追加内置 `.env` 保护规则
   （last-match 语义保留 `.env.example` 放行）；opencode-permissions 测试新增
   `*` 通配符用例。
 - [x] **gemini `modes`/`interactive` 门控 deny 被丢弃**（fail-open；已记限制，
