@@ -425,9 +425,14 @@
   deny > defer > ask > allow，defer 意为"稍后恢复"；建议降级为 ask/放行 + 告警
   （2026-08-16 审察）。**已修复**（2026-08-17，commit 989bc95）：改为映射
   `ask`（审批，无恢复接缝），guides 中英已同步；对应测试改为断言 `ask`。
-- [ ] **`capString` 输出超出 maxChars 约 1.4 倍**：`src/util.ts` `tail =
+- [x] **`capString` 输出超出 maxChars 约 1.4 倍**：`src/util.ts` `tail =
   value.length - head`；应为 `tail = value.length - (maxChars - head -
   marker.length)` 并取整（2026-08-16 审察）。
+  **已修复**（2026-08-17，commit 95284c5）：head 取 `floor(maxChars * 0.7)`
+  并与 marker 一同计入预算（head 收窄至 head+marker 不超预算），tail 只拿
+  剩余空间；预算小到放不下 marker 时逐级降级措辞（`[N truncated]` → `...` →
+  无 marker），保证输出恒 ≤ maxChars。新增 `src/__tests__/util.test.ts`
+  断言任意 maxChars 下输出长度不超预算。
 - [x] **cursor 用户级 hook 相对命令路径解析到项目目录**：`cursor/hooks/run.ts`
   统一 cwd = session cwd；上游用户 hook 从 `~/.cursor/` 运行（2026-08-16 审察）。
   **已修复**（2026-08-17，commit 7acf587）：MatcherGroup 携带来源目录（用户
