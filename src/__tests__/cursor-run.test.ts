@@ -65,7 +65,14 @@ describe('cursor hook execution (real subprocesses)', () => {
           // Short sleep: on Windows the kill hits the direct child only and
           // the surviving grandchild holds the pipes until it exits.
           {
-            hooks: [{ type: 'command', command: `node -e "setTimeout(function(){process.exit(0)},400)"`, timeout: 0.1, failClosed: true }],
+            hooks: [
+              {
+                type: 'command',
+                command: `node -e "console.log(JSON.stringify({permission:'allow'}));setTimeout(function(){process.exit(0)},400)"`,
+                timeout: 0.1,
+                failClosed: true,
+              },
+            ],
           },
         ],
         matchedValue: 'Read',
@@ -79,6 +86,9 @@ describe('cursor hook execution (real subprocesses)', () => {
     expect(outcomes[0]!.stderr).toContain('blocked')
     expect(outcomes[1]!.timedOut).toBe(true)
     expect(outcomes[1]!.handler.failClosed).toBe(true)
+    // Partial stdout must never become a decision after a timeout.
+    expect(outcomes[1]!.output).toBeNull()
+    expect(outcomes[1]!.stdout).toBe('')
   })
 
   it('parses strict JSON stdout and treats non-JSON as plain text', () => {

@@ -62,6 +62,8 @@ export interface RawCursorMcpServer {
 interface SettingsSource {
   path: string
   kind: 'user' | 'project'
+  /** Directory hooks from this source run in (undefined = session working dir). */
+  hookDir?: string
 }
 
 interface RawLayer {
@@ -99,7 +101,7 @@ export class CursorSettingsLoader {
     const userDir = this.userDir()
     const sources: SettingsSource[] = [
       { path: join(userDir, 'cli-config.json'), kind: 'user' },
-      { path: join(userDir, 'hooks.json'), kind: 'user' },
+      { path: join(userDir, 'hooks.json'), kind: 'user', hookDir: userDir },
       { path: join(userDir, 'mcp.json'), kind: 'user' },
       { path: join(userDir, 'permissions.json'), kind: 'user' },
     ]
@@ -166,7 +168,7 @@ export class CursorSettingsLoader {
             seenHandlers.add(key)
             handlers.push(handler)
           }
-          if (handlers.length > 0) merged.push({ matcher: group.matcher, hooks: handlers })
+          if (handlers.length > 0) merged.push({ matcher: group.matcher, cwd: group.cwd, hooks: handlers })
         }
         byEvent.set(event, merged)
       }
@@ -215,7 +217,7 @@ export class CursorSettingsLoader {
     }
     const layer: RawLayer = {}
     if (base === 'hooks') {
-      layer.hooks = normalizeHooks(value['hooks'], this.logger, source.path)
+      layer.hooks = normalizeHooks(value['hooks'], this.logger, source.path, source.hookDir)
     }
     if (base === 'cli') {
       const permissions = value['permissions']
@@ -280,7 +282,7 @@ export class CursorSettingsLoader {
 }
 
 /** Normalize the `hooks` object into matcher groups. */
-function normalizeHooks(value: unknown, logger: BridgeLogger, path: string): Record<string, MatcherGroup[]> | undefined {
+function normalizeHooks(value: unknown, logger: BridgeLogger, path: string, hookDir?: string): Record<string, MatcherGroup[]> | undefined {
   if (value === undefined) return undefined
   if (!isPlainObject(value)) {
     logger.warn(`cursor: ignoring malformed hooks field in ${path}: must be an object`)
@@ -290,7 +292,7 @@ function normalizeHooks(value: unknown, logger: BridgeLogger, path: string): Rec
   for (const [event, handlers] of Object.entries(value)) {
     if (!Array.isArray(handlers)) continue
     const valid = handlers.filter(isValidHandler)
-    if (valid.length > 0) normalized[event] = valid.map((hooks) => ({ matcher: undefined, hooks: [hooks] }))
+    if (valid.length > 0) normalized[event] = valid.map((hooks) => ({ matcher: hooks.matcher, cwd: hookDir, hooks: [hooks] }))
   }
   return normalized
 }

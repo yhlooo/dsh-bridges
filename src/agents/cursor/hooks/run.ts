@@ -41,20 +41,20 @@ export interface HookRun {
 }
 
 export async function runEventHooks(run: HookRun, _logger: BridgeLogger): Promise<HookOutcome[]> {
-  const handlers: HookDef[] = []
+  const handlers: { handler: HookDef; cwd?: string }[] = []
   for (const group of run.groups) {
     if (!matchCursorMatcher(group.matcher, run.matchedValue)) continue
-    for (const handler of group.hooks) handlers.push(handler)
+    for (const handler of group.hooks) handlers.push({ handler, cwd: group.cwd })
   }
   if (handlers.length === 0) return []
   const outcomes: HookOutcome[] = []
-  for (const handler of handlers) {
-    outcomes.push(await executeHandler(handler, run, _logger))
+  for (const { handler, cwd } of handlers) {
+    outcomes.push(await executeHandler(handler, cwd ?? run.cwd, run, _logger))
   }
   return outcomes
 }
 
-async function executeHandler(handler: HookDef, run: HookRun, _logger: BridgeLogger): Promise<HookOutcome> {
+async function executeHandler(handler: HookDef, cwd: string, run: HookRun, _logger: BridgeLogger): Promise<HookOutcome> {
   const base: HookOutcome = {
     handler,
     ran: true,
@@ -67,7 +67,7 @@ async function executeHandler(handler: HookDef, run: HookRun, _logger: BridgeLog
   }
   let child: ChildProcess
   try {
-    child = spawnCommand(handler.command, run)
+    child = spawnCommand(handler.command, cwd)
   } catch (error) {
     return { ...base, failedToStart: error instanceof Error ? error.message : String(error) }
   }
@@ -101,14 +101,17 @@ async function executeHandler(handler: HookDef, run: HookRun, _logger: BridgeLog
 
   try {
     const outcome = await collectOutput(child, run.input)
+    // A timed-out / cancelled hook's partial output is discarded, never parsed
+    // into a decision (upstream drops the output on timeout).
+    const discarded = timedOut || cancelled
     return {
       ...base,
       exitCode: outcome.exitCode,
-      stdout: outcome.stdout,
+      stdout: discarded ? '' : outcome.stdout,
       stderr: outcome.stderr,
       timedOut,
       cancelled: cancelled || undefined,
-      ...parseHookStdout(outcome.stdout),
+      ...(discarded ? {} : parseHookStdout(outcome.stdout)),
     }
   } catch (error) {
     return { ...base, cancelled: cancelled || undefined, failedToStart: error instanceof Error ? error.message : String(error) }
@@ -118,10 +121,10 @@ async function executeHandler(handler: HookDef, run: HookRun, _logger: BridgeLog
   }
 }
 
-function spawnCommand(command: string, run: HookRun): ChildProcess {
+function spawnCommand(command: string, cwd: string): ChildProcess {
   const detached = process.platform !== 'win32'
   return spawn(command, {
-    cwd: run.cwd,
+    cwd,
     env: { ...process.env },
     stdio: ['pipe', 'pipe', 'pipe'],
     shell: true,
