@@ -39,6 +39,7 @@ export function normalizeGeminiServer(
   entry: RawGeminiMcpServer,
   toolCallTimeoutMs: number,
   logger: BridgeLogger,
+  sessionCwd?: string,
 ): DesiredServer | undefined {
   const serverName = sanitizeServerName(name, 'gemini')
   if (serverName === undefined) return undefined
@@ -66,7 +67,7 @@ export function normalizeGeminiServer(
   if (entry.command !== undefined) {
     const env: Record<string, string> = {}
     for (const [key, value] of Object.entries(entry.env ?? {})) env[key] = expandEnvReferences(value)
-    const cwd = entry.cwd !== undefined ? resolveRelative(entry.cwd, entry.baseDir) : process.cwd()
+    const cwd = entry.cwd !== undefined ? resolveRelative(entry.cwd, entry.baseDir) : (sessionCwd ?? process.cwd())
     return {
       name,
       config: {
@@ -100,7 +101,7 @@ export class GeminiMcpManager {
         for (const [name, entry] of settings.mcpServers) {
           if (settings.mcpExcluded.includes(name)) continue
           if (settings.mcpAllowed !== undefined && !settings.mcpAllowed.includes(name)) continue
-          const normalized = normalizeGeminiServer(name, entry, config.toolCallTimeoutMs, logger)
+          const normalized = normalizeGeminiServer(name, entry, config.toolCallTimeoutMs, logger, cwd)
           if (normalized !== undefined) user.set(name, normalized)
         }
         return { user, project: new Map() }

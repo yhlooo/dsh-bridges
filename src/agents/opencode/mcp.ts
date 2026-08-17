@@ -35,7 +35,12 @@ export interface OpencodeMcpConfig {
 }
 
 /** Normalize one `mcp.<name>` entry (exported for tests). */
-export function normalizeOpencodeServer(name: string, entry: OpencodeMcpEntry, toolCallTimeoutMs: number): DesiredServer | undefined {
+export function normalizeOpencodeServer(
+  name: string,
+  entry: OpencodeMcpEntry,
+  toolCallTimeoutMs: number,
+  sessionCwd?: string,
+): DesiredServer | undefined {
   if (!entry.enabled) return undefined
   const serverName = sanitizeServerName(name, 'opencode')
   if (serverName === undefined) return undefined
@@ -47,7 +52,7 @@ export function normalizeOpencodeServer(name: string, entry: OpencodeMcpEntry, t
     const env: Record<string, string> = {}
     for (const [key, value] of Object.entries(entry.environment ?? {})) env[key] = expandEnvReferences(value)
     const [command, ...args] = entry.command
-    return { name, config: { transport: 'stdio', ...base, command: command ?? '', args, env, cwd: process.cwd() } }
+    return { name, config: { transport: 'stdio', ...base, command: command ?? '', args, env, cwd: sessionCwd ?? process.cwd() } }
   }
   return undefined
 }
@@ -63,7 +68,7 @@ export class OpencodeMcpManager {
         const settings = await settingsLoader.load(cwd)
         const user = new Map<string, DesiredServer>()
         for (const [name, entry] of settings.mcp) {
-          const normalized = normalizeOpencodeServer(name, entry, config.toolCallTimeoutMs)
+          const normalized = normalizeOpencodeServer(name, entry, config.toolCallTimeoutMs, cwd)
           if (normalized !== undefined) user.set(name, normalized)
         }
         return { user, project: new Map() }

@@ -37,8 +37,8 @@ export interface ClaudeMcpConfig {
 }
 
 /** Normalize one `.mcp.json` / `~/.claude.json` entry (exported for tests). */
-export function normalizeServer(name: string, entry: Record<string, unknown>, toolCallTimeoutMs: number) {
-  return normalizeClaudeStyleEntry(name, entry, 'claude', toolCallTimeoutMs)
+export function normalizeServer(name: string, entry: Record<string, unknown>, toolCallTimeoutMs: number, sessionCwd?: string) {
+  return normalizeClaudeStyleEntry(name, entry, 'claude', toolCallTimeoutMs, undefined, sessionCwd)
 }
 
 export class ClaudeMcpManager {
@@ -46,8 +46,6 @@ export class ClaudeMcpManager {
 
   constructor(ctx: Context, logger: BridgeLogger, fs: FsAdapter, config: ClaudeMcpConfig, settingsLoader: SettingsLoader) {
     const userFile = join(dirname(expandHome(config.userClaudeDir)), '.claude.json')
-    const normalize = (name: string, entry: Record<string, unknown>, baseEnv?: Readonly<Record<string, string>>) =>
-      normalizeClaudeStyleEntry(name, entry, 'claude', config.toolCallTimeoutMs, baseEnv)
     const options: McpBridgeOptions = {
       prefix: 'claude',
       toolCallTimeoutMs: config.toolCallTimeoutMs,
@@ -55,9 +53,11 @@ export class ClaudeMcpManager {
         // settings.json `env` applies to every session and subprocess Claude
         // Code spawns; the bridge merges it under MCP server child env.
         const env = (await settingsLoader.load(cwd)).env
+        const normalize = (name: string, entry: Record<string, unknown>) =>
+          normalizeClaudeStyleEntry(name, entry, 'claude', config.toolCallTimeoutMs, env, cwd)
         return {
-          user: await readJsonServerFiles(fs, logger, [userFile], (name, entry) => normalize(name, entry, env)),
-          project: await readJsonServerFiles(fs, logger, [join(cwd, '.mcp.json')], (name, entry) => normalize(name, entry, env)),
+          user: await readJsonServerFiles(fs, logger, [userFile], normalize),
+          project: await readJsonServerFiles(fs, logger, [join(cwd, '.mcp.json')], normalize),
         }
       },
       readPolicy: async (cwd) => (await settingsLoader.load(cwd)).mcpjsonServers,

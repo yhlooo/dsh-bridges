@@ -41,7 +41,12 @@ export interface CodexMcpConfig {
 }
 
 /** Normalize one `[mcp_servers.<id>]` table (exported for tests). */
-export function normalizeCodexServer(name: string, entry: RawCodexMcpServer, toolCallTimeoutMs: number): DesiredServer | undefined {
+export function normalizeCodexServer(
+  name: string,
+  entry: RawCodexMcpServer,
+  toolCallTimeoutMs: number,
+  sessionCwd?: string,
+): DesiredServer | undefined {
   if (entry.enabled === false) return undefined
   const serverName = sanitizeServerName(name, 'codex')
   if (serverName === undefined) return undefined
@@ -63,7 +68,14 @@ export function normalizeCodexServer(name: string, entry: RawCodexMcpServer, too
     }
     return {
       name,
-      config: { transport: 'stdio', ...base, command: entry.command, args: entry.args ?? [], env, cwd: entry.cwd ?? process.cwd() },
+      config: {
+        transport: 'stdio',
+        ...base,
+        command: entry.command,
+        args: entry.args ?? [],
+        env,
+        cwd: entry.cwd ?? sessionCwd ?? process.cwd(),
+      },
     }
   }
   return undefined
@@ -81,7 +93,7 @@ export class CodexMcpManager {
         const project = new Map<string, DesiredServer>()
         const user = new Map<string, DesiredServer>()
         for (const [name, entry] of settings.mcpServers) {
-          const normalized = normalizeCodexServer(name, entry, config.toolCallTimeoutMs)
+          const normalized = normalizeCodexServer(name, entry, config.toolCallTimeoutMs, cwd)
           if (normalized === undefined) continue
           // The Codex loader does not track which layer defined a server;
           // the bridge treats every configured server as user-scope (always

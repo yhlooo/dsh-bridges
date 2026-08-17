@@ -84,7 +84,7 @@ export class McpManager {
     // Dispose removed / changed servers.
     for (const [name, running] of [...entry.servers]) {
       const next = desired.get(name)
-      if (next === undefined || JSON.stringify(next) !== JSON.stringify(running.config)) {
+      if (next === undefined || JSON.stringify(next.config) !== JSON.stringify(running.config)) {
         await this.disposeFiber(running.fiber)
         entry.servers.delete(name)
       }
@@ -234,6 +234,7 @@ export function normalizeClaudeStyleEntry(
   prefix: string,
   toolCallTimeoutMs: number,
   baseEnv?: Readonly<Record<string, string>>,
+  sessionCwd?: string,
 ): DesiredServer | undefined {
   const serverName = sanitizeServerName(name, prefix)
   if (serverName === undefined) return undefined
@@ -257,7 +258,7 @@ export function normalizeClaudeStyleEntry(
         if (typeof value === 'string') env[key] = expandEnvReferences(value)
       }
     }
-    const cwd = typeof entry['cwd'] === 'string' && entry['cwd'].trim() !== '' ? entry['cwd'] : process.cwd()
+    const cwd = typeof entry['cwd'] === 'string' && entry['cwd'].trim() !== '' ? entry['cwd'] : (sessionCwd ?? process.cwd())
     return { name, config: { transport: 'stdio', ...base, command: entry['command'], args, env, cwd } }
   }
   return undefined
