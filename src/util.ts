@@ -74,13 +74,20 @@ export function parseClaudeBoolean(value: unknown, fallback: boolean): boolean {
 
 /**
  * Cap a context-bound string the way Claude Code does for hook output:
- * overlong values are clipped around the middle with a marker.
+ * overlong values are clipped around the middle with a
+ * `... [N characters truncated] ...` marker. The result never exceeds
+ * `maxChars`: the head takes up to 70% of the budget and the tail gets
+ * whatever room the marker leaves (the marker wording itself is shortened
+ * when the budget is pathologically small).
  */
 export function capString(value: string, maxChars: number): string {
   if (value.length <= maxChars) return value
-  const marker = `... [${value.length - maxChars} characters truncated] ...`
-  const head = maxChars * 0.7
-  const tail = value.length - head
+  const truncated = value.length - maxChars
+  const candidates = [`... [${truncated} characters truncated] ...`, `... [${truncated} truncated] ...`, '...']
+  const marker = candidates.find((candidate) => candidate.length <= maxChars) ?? ''
+  const head = Math.max(0, Math.min(Math.floor(maxChars * 0.7), maxChars - marker.length))
+  const tailBudget = Math.max(0, maxChars - head - marker.length)
+  const tail = value.length - tailBudget
   return value.slice(0, head) + marker + value.slice(tail)
 }
 
