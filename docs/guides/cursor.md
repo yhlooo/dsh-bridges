@@ -80,11 +80,12 @@ Compatibility details:
 - Hooks key on Cursor tool names; the bridge translates: `bash`/`pwsh`→`Shell`, `read`→`Read`, `write`→`Write`, `edit`→`Edit`, `glob`→`Glob`, `grep`→`Grep`, `web`→`WebFetch`, `web_search`→`WebSearch`, `ask_user_question`→`AskUserQuestion`, `exit_plan_mode`→`ExitPlanMode`, `subagent`→`Task`, `todo_write`→`TodoWrite`; MCP tools keep their own name. Matchers and the `tool_name` payload use the translated name.
 - Matcher semantics: a regex tested unanchored against the hook-specific field (`Shell|Read|Write` for tool names, `curl|wget` containment for command text); `*` / empty matches all; unparseable patterns never match.
 - Exit codes follow Cursor: `0` uses the JSON output, `2` blocks (≡ `permission: "deny"`), anything else fails open — unless the handler sets `failClosed: true`, which turns crash/timeout/invalid-JSON into a block. Timeouts are per-handler (seconds; default 30).
+- Relative command paths resolve against the hook's source directory: project hooks run from the project root, user hooks from `~/.cursor` (the user config dir). A handler-level `matcher` scopes that handler to its matched field value.
 - Not bridged: prompt-type hooks (they need an LLM), `preCompact`, `afterAgentThought`, `workspaceOpen`, and the Tab hooks (IDE-only).
 
 ## Permissions
 
-Enforces the CLI permission tokens from `~/.cursor/cli-config.json` → `.cursor/cli.json` (`permissions.allow` / `permissions.deny`; the most specific layer wins each list) at the `tools/pre-execute` seam:
+Enforces the CLI permission tokens from `~/.cursor/cli-config.json` → `.cursor/cli.json` (`permissions.allow` / `permissions.deny`; the most specific layer replaces each list — Cursor's docs do not document how the global and project lists merge, so this replacement is the bridge's recorded interpretation) at the `tools/pre-execute` seam:
 
 - `Shell(commandBase)` — glob on the command's first token, plus `command:args` (the args part is globbed against the rest of the command line)
 - `Read(pathOrGlob)` / `Write(pathOrGlob)` — `**` / `*` / `?` globs against the file path; a token of one type never matches another tool

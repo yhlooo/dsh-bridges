@@ -78,11 +78,12 @@ subagent 定义、始终应用规则记忆、`hooks.json` 的 hooks、CLI 权限
 - hooks 以 Cursor 工具名为键，桥接做翻译：`bash`/`pwsh`→`Shell`、`read`→`Read`、`write`→`Write`、`edit`→`Edit`、`glob`→`Glob`、`grep`→`Grep`、`web`→`WebFetch`、`web_search`→`WebSearch`、`ask_user_question`→`AskUserQuestion`、`exit_plan_mode`→`ExitPlanMode`、`subagent`→`Task`、`todo_write`→`TodoWrite`；MCP 工具保留原名。matcher 与 `tool_name` 载荷用翻译后的名字。
 - matcher 语义：非锚定正则作用于事件对应字段（工具名用 `Shell|Read|Write`、命令文本用 `curl|wget` 包含匹配）；`*` / 空匹配全部；不可解析的模式永不匹配。
 - 退出码遵循 Cursor：`0` 使用 JSON 输出、`2` 阻断（≡ `permission: "deny"`）、其余放行——除非 handler 设了 `failClosed: true`（崩溃/超时/非法 JSON 转为阻断）。超时按 handler 配置（秒，默认 30）。
+- 相对命令路径按 hook 来源目录解析：项目 hooks 从项目根运行，用户 hooks 从 `~/.cursor`（用户配置目录）运行。handler 级 `matcher` 把该 handler 限定到其匹配的字段值。
 - 未桥接：prompt 型 hooks（需要 LLM）、`preCompact`、`afterAgentThought`、`workspaceOpen`、Tab hooks（IDE 专属）。
 
 ## Permissions
 
-在 `tools/pre-execute` 接缝执行 `~/.cursor/cli-config.json` → `.cursor/cli.json` 的 CLI 权限令牌（`permissions.allow` / `permissions.deny`；每份列表取最具体层）：
+在 `tools/pre-execute` 接缝执行 `~/.cursor/cli-config.json` → `.cursor/cli.json` 的 CLI 权限令牌（`permissions.allow` / `permissions.deny`；最具体层整体替换该列表——Cursor 官方文档未说明全局与项目列表的合并方式，此处替换是桥接记录在案的解读）：
 
 - `Shell(commandBase)` — 对命令首词做 glob，另有 `command:args`（args 部分对命令行其余部分做 glob）
 - `Read(pathOrGlob)` / `Write(pathOrGlob)` — 对文件路径做 `**` / `*` / `?` glob；一类令牌绝不匹配另一类工具

@@ -76,7 +76,7 @@ commands 与 subagent 定义、`CLAUDE.md` 记忆、`settings.json` 的 hooks �
 | :--- | :--- | :--- |
 | `SessionStart` | `agent/session-start` | `additionalContext`（及退出码 0 的纯文本 stdout）在首个提示词前注入 |
 | `UserPromptSubmit` | `agent/pre-step` | `decision: "block"` / 退出码 2 / `continue: false` 擦除提示词并展示原因；上下文追加到本步 |
-| `PreToolUse` | `tools/pre-execute` | `permissionDecision`：`deny` → 拒绝、`ask` → 走审批、`allow` → 放行并跳过后续权限检查（但 deny/ask 权限规则仍会评估，见 Permissions 小节）、`defer` → 拒绝（不支持）；退出码 2 → 以 stderr 拒绝；`additionalContext` 注入 |
+| `PreToolUse` | `tools/pre-execute` | `permissionDecision`：`deny` → 拒绝、`ask` → 走审批、`allow` → 放行并跳过后续权限检查（但 deny/ask 权限规则仍会评估，见 Permissions 小节）、`defer` → 走审批（上游语义为「暂停稍后恢复」，DeepSeek Harness 无恢复接缝，桥接以提示审批替代直接拒绝）；退出码 2 → 以 stderr 拒绝；`additionalContext` 注入 |
 | `PostToolUse` | `tools/post-execute` | `additionalContext` / `decision: "block"` 的 reason / 退出码 2 的 stderr → 结果旁注入上下文；`updatedToolOutput` 替换渲染内容 |
 | `PostToolUseFailure` | `tools/post-execute`（失败结果） | 同 PostToolUse |
 | `Stop` | `agent/turn-stopping` | `decision: "block"` / 退出码 2 / `additionalContext` 引导继续，最多连续 8 次（同 Claude Code 上限） |
@@ -106,7 +106,7 @@ commands 与 subagent 定义、`CLAUDE.md` 记忆、`settings.json` 的 hooks �
 - 规则应用到主会话与子代理的工具调用（同 Claude Code，权限设置被子代理继承）。
 - 未命中任何规则的调用保持原行为（走 DeepSeek Harness 审批栈）；`hooks: false` 时权限规则独立生效（`permissions` 与 `hooks` 开关互相独立）。
 
-未桥接（记录为限制）：`permissions.defaultMode` 与 `permissions.disableBypassPermissionsMode` 会被读取但不生效——DeepSeek Harness 拥有自己的审批模式，插件没有切换它的接缝；项目 `.claude/settings.json` 的 allow 规则在 Claude Code 中需要工作区信任才生效，桥接没有信任状态、一律生效（deny/ask 规则上游本就不受信任门禁影响）。
+未桥接（记录为限制）：`permissions.defaultMode` 与 `permissions.disableBypassPermissionsMode` 会被读取但不生效——DeepSeek Harness 拥有自己的审批模式，插件没有切换它的接缝；项目 `.claude/settings.json` 的 allow 规则在 Claude Code 中需要工作区信任才生效，桥接没有信任状态、一律生效（deny/ask 规则上游本就不受信任门禁影响）；`permissions.additionalDirectories` 与显式 `autoMemoryDirectory` 同样在无信任门禁下读取（两者仅读取固定文件名）。
 
 ## MCP 服务器
 
@@ -134,7 +134,7 @@ DeepSeek Harness 没有命名 subagent 注册表——技能指示模型按上�
 
 - **Skills**：工作区以下的嵌套 `.claude/skills/`（其限定名非 kebab-case）、企业 / managed 技能、插件技能、claude.ai 同步技能；`allowed-tools`/`disallowed-tools`、`model`、`effort`、`context: fork`/`agent`/`background`、`paths`、`shell` 以及正文中的 `$ARGUMENTS` 替换；仅展示用途的 frontmatter `name`/`argument-hint`/`arguments`/`license`/`compatibility` 与正文 `$name`/`${CLAUDE_SKILL_DIR}`/`${CLAUDE_SESSION_ID}` 替换；skill/agent frontmatter 里的 `hooks`。
 - **Memory**：`.claude/rules/*.md`、CLAUDE.md 的 `@import`、子目录级 `CLAUDE.md` 的懒加载（工作目录以上的层级与 `CLAUDE.local.md` 已桥接）、默认逐项目哈希目录下的 auto memory（显式 `autoMemoryDirectory` 已支持——其 `MEMORY.md` 会被注入）。
-- **Hooks**：`mcp_tool`、`prompt`、`agent` 三种 handler 类型；其余事件（`PreCompact`/`PostCompact`、`Notification`、`PermissionRequest`/`PermissionDenied`、`Setup`、`UserPromptExpansion`、`PostToolBatch`、`StopFailure`、`TeammateIdle`、`TaskCreated`/`TaskCompleted`、`Elicitation`/`ElicitationResult`、`WorktreeCreate`/`WorktreeRemove`、`ConfigChange`、`InstructionsLoaded`、`CwdChanged`、`FileChanged`、`DirectoryAdded`、`MessageDisplay`）；SessionStart 决策字段 `initialUserMessage`/`watchPaths`/`sessionTitle`/`reloadSkills`；`suppressOutput`/`systemMessage`/`terminalSequence` 仅用户通道；`CLAUDE_ENV_FILE`；`asyncRewake`；`updatedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）；`permissionDecision: "defer"`（映射为拒绝）。
+- **Hooks**：`mcp_tool`、`prompt`、`agent` 三种 handler 类型；其余事件（`PreCompact`/`PostCompact`、`Notification`、`PermissionRequest`/`PermissionDenied`、`Setup`、`UserPromptExpansion`、`PostToolBatch`、`StopFailure`、`TeammateIdle`、`TaskCreated`/`TaskCompleted`、`Elicitation`/`ElicitationResult`、`WorktreeCreate`/`WorktreeRemove`、`ConfigChange`、`InstructionsLoaded`、`CwdChanged`、`FileChanged`、`DirectoryAdded`、`MessageDisplay`）；SessionStart 决策字段 `initialUserMessage`/`watchPaths`/`sessionTitle`/`reloadSkills`；`suppressOutput`/`systemMessage`/`terminalSequence` 仅用户通道；`CLAUDE_ENV_FILE`；`asyncRewake`；`updatedInput` 改写（DeepSeek Harness 在策略执行前就冻结了工具参数）；`permissionDecision: "defer"`（映射为走审批——无恢复接缝）。
 - **MCP**：`managed-mcp.json` 与服务端托管的企业服务器、`~/.claude.json` 内的逐项目 `local` 作用域服务器、插件捆绑的 MCP 服务器、进程内 `type: "sdk"` 条目；SSE 服务器以 streamable-http 传输连接。
 - **Settings**：`model`（DeepSeek Harness 拥有模型路由）、`statusLine`/`statusline.json` 与 `plansDirectory`（CLI-UI / 临时状态）、托管/企业策略文件（`managed-settings.json`、`managed-mcp.json`）、`.worktreeinclude`/`keybindings.json`/`themes/`（无 DeepSeek Harness 对应物）。
 - **Plugins**：仅插件 *skills* 已桥接；插件捆绑的 agents、MCP 服务器、hooks（`hooks/hooks.json`）、output styles、commands、workflows 未桥接（插件装在 `~/.claude/plugins/`，需要 marketplace 运行时）。
