@@ -15,5 +15,12 @@
   },
   { "tool": "opencode", "bin": "opencode", "pkg": "opencode-ai", "pin": "1.18.18" },
   { "tool": "codebuddy-code", "bin": "codebuddy", "pkg": "@tencent-ai/codebuddy-code", "pin": "2.137.0" },
-  { "tool": "gemini-cli", "bin": "gemini", "pkg": "@google/gemini-cli", "pin": "0.55.1" }
+  { "tool": "gemini-cli", "bin": "gemini", "pkg": "@google/gemini-cli", "pin": "0.55.1" },
+  {
+    "tool": "pi",
+    "bin": "pi",
+    "pkg": "@earendil-works/pi-coding-agent",
+    "pin": "0.84.2",
+    "npmArgs": ["--ignore-scripts"]
+  }
 ]
