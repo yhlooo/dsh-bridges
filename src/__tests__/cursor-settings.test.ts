@@ -60,6 +60,13 @@ describe('cursor settings', () => {
     const loaded = await makeLoader(files).load(fx('proj'))
     const groups = loaded.byEvent.get('preToolUse') ?? []
     expect(groups.flatMap((group) => group.hooks)).toHaveLength(2)
+    // A handler-level matcher is preserved on its group (not dropped).
+    const scoped = groups.find((group) => group.hooks.some((hook) => hook.command === './other.sh'))
+    expect(scoped?.matcher).toBe('Shell')
+    expect(scoped?.cwd).toBeUndefined() // project hooks run in the session working dir
+    // User-level hooks run from the user config dir.
+    const user = groups.find((group) => group.hooks.some((hook) => hook.command === './audit.sh'))
+    expect(user?.cwd).toBe(USER_DIR)
   })
 
   it('parses JSONC config files (comments stripped)', async () => {

@@ -26,6 +26,8 @@ export type HookDef = CommandHook
 /** One matcher group (the settings loader wraps each handler in its own group). */
 export interface MatcherGroup {
   matcher?: string
+  /** Source directory hooks run from; undefined runs in the session working dir. */
+  cwd?: string
   hooks: HookDef[]
 }
 
