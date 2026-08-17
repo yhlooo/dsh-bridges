@@ -93,13 +93,17 @@ export function evaluateFamily(
 ): OpencodeAction | undefined {
   const entry = permissions.families.get(family)
   const wildcard = permissions.families.get('*')
-  const rules = entry?.rules.length
-    ? entry.rules
-    : wildcard?.rules.length
-      ? wildcard.rules
-      : family === 'read'
-        ? [...BUILTIN_READ_RULES]
-        : []
+  let rules: readonly (readonly [string, OpencodeAction])[]
+  if (entry?.rules.length) {
+    rules = entry.rules
+  } else if (wildcard?.rules.length) {
+    // A `*` wildcard family must not silently defeat opencode's built-in
+    // `.env` read protection: keep the built-in read rules (last-match wins)
+    // when the wildcard is the only rule source for the read family.
+    rules = family === 'read' ? [...wildcard.rules, ...BUILTIN_READ_RULES] : wildcard.rules
+  } else {
+    rules = family === 'read' ? [...BUILTIN_READ_RULES] : []
+  }
   let action: OpencodeAction | undefined
   if (value !== undefined) {
     for (const [pattern, ruleAction] of rules) {

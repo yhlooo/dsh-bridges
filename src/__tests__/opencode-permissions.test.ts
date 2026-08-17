@@ -101,6 +101,15 @@ describe('opencode permission evaluation', () => {
     expect(normal?.kind).toBe('allow')
   })
 
+  it('keeps the built-in .env read protection under a * wildcard family', async () => {
+    const denied = await evaluate({ '*': { '*': 'allow' } }, 'read', { file_path: fx('proj', '.env') })()
+    expect(denied?.kind).toBe('deny')
+    const example = await evaluate({ '*': { '*': 'allow' } }, 'read', { file_path: fx('proj', '.env.example') })()
+    expect(example?.kind).toBe('allow')
+    const normal = await evaluate({ '*': { '*': 'allow' } }, 'read', { file_path: fx('proj', 'src', 'a.ts') })()
+    expect(normal?.kind).toBe('allow')
+  })
+
   it('applies the string form to mapped tools', async () => {
     const result = await evaluate('ask', 'bash', { command: 'git status' })()
     expect(result?.kind).toBe('ask')
