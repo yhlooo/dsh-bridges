@@ -34,7 +34,7 @@
    （`inject: ['tools']`，`ctx.tools.register` 注册 `mcp__<serverName>__<tool>`
    工具，disposal 自动断开并注销）。cordis 的 `ctx.plugin(plugin, config)`
    支持运行时实例化、随 fiber teardown。→ **方案 B 可行**：各桥接子系统解析
-   上游 MCP 配置（`.mcp.json`/`~/.claude.json`/`[mcp_servers]`/opencode `mcp`），
+   上游 MCP 配置（`.mcp.json`/`~/.claude.json`/`[mcp_servers]`/OpenCode `mcp`），
    为每个服务器 `ctx.plugin()` 一个 mcp-client 实例。注意事项：`serverName`
    需按工具前缀保证全局唯一（如 `claude__github`）；插件需把 `tools` 加入
    `inject`；config 文件纳入现有 watcher。方案 A（dsh 核心文件型 MCP
@@ -56,7 +56,7 @@
    spawn 的 MCP 服务器子进程；模型 bash 调用无法注入 → 记限制 +
    核心支持候选（P1 项相应标注）。
 4. **共享规则引擎**：新建 `src/permissions/`：规则语法解析（claude/codebuddy/
-   opencode 三种语法 + codex 的 approval_policy 映射）、工具名翻译复用现有
+   OpenCode 三种语法 + codex 的 approval_policy 映射）、工具名翻译复用现有
    `hooks/names.ts` 映射表（提炼为共享），决策在 `tools/pre-execute` 与 hooks
    的 permissionDecision 协同（hooks 优先，与上游一致，实施时对照各工具
    hooks 文档确认）。**已落地**：`src/permissions/`（types/glob/fields/parse/
@@ -96,7 +96,7 @@
   + http_headers + bearer_token_env_var；command→stdio + env + env_vars
   白名单；`enabled=false` 跳过）。`auth`/`scopes`/`enabled_tools` 等与
   `required` 语义记限制（无逐工具过滤与凭据流程接缝）。
-- [x] **opencode**：`opencode.json` 的 `mcp` 段（local / remote / OAuth）。
+- [x] **OpenCode**：`opencode.json` 的 `mcp` 段（local / remote / OAuth）。
   **已实现**（2026-08-15）：settings 解析 `mcp` 对象（项目按名覆盖全局）；
   `src/agents/opencode/mcp.ts` 归一（`type:local` 的 command 数组 +
   environment → stdio；`type:remote` 的 url + headers → streamable-http；
@@ -141,8 +141,8 @@
   自定义权限档案读取不执行（均记限制，dsh 无逐会话可写根接缝）。示例与
   中英文档已同步；新增依赖 `dsh-sandbox-policy`/`dsh-user-approval`
   （dependencies）+ `dsh-sandbox`（devDependencies，仅类型）。
-- [x] **opencode**：`permission` 规则（已有"列为限制"文档，复用同一规则引擎实现）。
-  **已实现**（2026-08-15）：opencode 语义独立于 claude/codebuddy 的
+- [x] **OpenCode**：`permission` 规则（已有"列为限制"文档，复用同一规则引擎实现）。
+  **已实现**（2026-08-15）：OpenCode 语义独立于 claude/codebuddy 的
   `Tool(specifier)` 语法（家族分组 + 有序 pattern→action、**末条命中**、
   `~`/`$HOME` 展开、工作区相对路径、`external_directory` 守卫、内置
   `.env` 读取保护与宽松默认），实现于 `src/agents/opencode/permissions.ts`
@@ -167,11 +167,11 @@
 - [x] **codebuddy-code**：`.codebuddy/agents/*.md` + `~/.codebuddy/agents/*.md`
   （同名 frontmatter 集合）。**已实现**（2026-08-15，同 claude；rank
   project-agents(132) < user-agents(137)，项目覆盖用户）。
-- [x] **codex** `[agents]` 角色、**opencode** `agent` 自定义代理：均已列限制，
+- [x] **codex** `[agents]` 角色、**OpenCode** `agent` 自定义代理：均已列限制，
   实施时复用同一映射（接缝决策见"先决调研"）。
   **已实现**（2026-08-16，方案 B 委派规格技能）：codex `[agents.<name>]`
   （`description` + `config_file` TOML 正文 + `model` 键 →
-  `agentOptions.model`，rank 168）；opencode `agent.<id>`（`subagent`/`all`
+  `agentOptions.model`，rank 168）；OpenCode `agent.<id>`（`subagent`/`all`
   模式，`prompt` 内联或 `{file:}`、`model`，project 149 / user 159；
   `primary` 模式跳过）。逐角色工具过滤/权限闸门/`temperature` 记限制。
 
@@ -187,14 +187,14 @@
 - [x] **codex**：`developer_instructions`（会话注入，与 AGENTS.md 链同接缝）。
   **已实现**（2026-08-15）：settings 解析（最具体层生效），memory 桥在
   AGENTS.md 链之前注入（与上游顺序一致）。
-- [x] **opencode**：`references` / 旧 `reference` 配置——本地 `path` → 注入或注册
+- [x] **OpenCode**：`references` / 旧 `reference` 配置——本地 `path` → 注入或注册
   资源根；git `repository` → 网络，沿用"远程 instructions 不抓取"策略记限制。
   **已实现**（2026-08-15）：`src/agents/opencode/references.ts` 会话开始
   注入本地引用（`@alias` → 路径 + 描述）；git 仓库引用跳过 + 告警。
-- [x] **opencode**：`skills.paths` / `skills.urls` 配置键（paths → 并入技能发现根；
+- [x] **OpenCode**：`skills.paths` / `skills.urls` 配置键（paths → 并入技能发现根；
   urls → 网络，同上记限制）。**已实现**（2026-08-15）：settings 解析
   `skills.paths`（相对配置文件解析），provider 以 rank 146 根注册。
-- [x] **opencode**：`.opencode/skills` 向上走到 git root 的发现（monorepo 子目录
+- [x] **OpenCode**：`.opencode/skills` 向上走到 git root 的发现（monorepo 子目录
   下影响大）。**已实现**（2026-08-15）：provider 从 cwd 走到 git 根，
   每层 `.opencode/skills` 以同 rank 注册，越靠 cwd 候选越靠前。
 - [x] **claude-code / codebuddy-code**：settings `env` 会话级注入（codebuddy 当前
@@ -212,21 +212,21 @@
 
 ## P2 · 低优先级
 
-- [ ] **pi 扩展事件总线**（`.pi/extensions/*.ts`、`~/.pi/agent/extensions/*.ts`）：
+- [ ] **Pi 扩展事件总线**（`.pi/extensions/*.ts`、`~/.pi/agent/extensions/*.ts`）：
   `tool_call` 拦截（`{block, reason?, terminate?}`）、`tool_result` 改写、
   `project_trust` 决策、`before_provider_*` 等事件映射 dsh 接缝的可行性评估
-  （2026-08-16，pi 桥接遗留；等价于 opencode 插件 API 的 TypeScript 运行时，
+  （2026-08-16，Pi 桥接遗留；等价于 OpenCode 插件 API 的 TypeScript 运行时，
   guides 已记限制，先排后）。
-- [ ] **pi 包分发技能**：`package.json` 的 `pi.skills` / 包内 `skills/` 目录
-  （2026-08-16，pi 桥接遗留；依赖包安装解析，guides 已记限制）。
-- [ ] **pi `SYSTEM.md`**：整体替换系统提示 → 核心支持候选（会话级系统提示
+- [ ] **Pi 包分发技能**：`package.json` 的 `pi.skills` / 包内 `skills/` 目录
+  （2026-08-16，Pi 桥接遗留；依赖包安装解析，guides 已记限制）。
+- [ ] **Pi `SYSTEM.md`**：整体替换系统提示 → 核心支持候选（会话级系统提示
   覆盖接缝）；`APPEND_SYSTEM.md` 追加语义已降级映射为记忆注入
-  （2026-08-16，pi 桥接遗留，guides 已记限制）。
-- [ ] **环 C 上游探针支持非 npm 安装**：pi 与 Cursor CLI 均无 npm 包（官方
+  （2026-08-16，Pi 桥接遗留，guides 已记限制）。
+- [ ] **环 C 上游探针支持非 npm 安装**：Pi 与 Cursor CLI 均无 npm 包（官方
   `curl pi.dev/install | bash` / `curl cursor.com/install`，GitHub releases），
   `scripts/upstream-probe.mjs` 目前只支持 `npm i -g <pkg>@<pin>`——需为探针
-  脚本增加下载安装模式后再把 pi 与 cursor（二进制名 `agent`）加入
-  `scripts/upstream-tools.json`（2026-08-16，pi/cursor 桥接遗留）。
+  脚本增加下载安装模式后再把 Pi 与 cursor（二进制名 `agent`）加入
+  `scripts/upstream-tools.json`（2026-08-16，Pi/cursor 桥接遗留）。
 - [ ] **gemini-cli 工作区策略层**：上游 `.gemini/policies/` 因 issue #18186
   禁用，桥接同样不读；上游修复后补上（2026-08-16，gemini 桥接遗留，guides
   已记限制）。
@@ -239,7 +239,7 @@
 - [ ] **gemini-cli JIT 上下文加载**：工具访问目录时发现的 GEMINI.md 无法
   静态注入——核心支持候选（fs 观察钩子）（2026-08-16，gemini 桥接遗留）。
 - [ ] **gemini-cli extensions**：`gemini-extension.json` 打包的
-  commands/hooks/skills/agents/MCP/policies/themes（分发机制，同 pi 扩展
+  commands/hooks/skills/agents/MCP/policies/themes（分发机制，同 Pi 扩展
   先例，guides 已记限制）（2026-08-16，gemini 桥接遗留）。
 - [ ] **cursor 相关性规则**：`.cursor/rules` 中非 `alwaysApply` 的规则依赖
   语义检索，无静态映射——待 dsh 有相关性选择接缝后评估（2026-08-16，
@@ -268,7 +268,7 @@
   **已记限制**（2026-08-16：dsh 模型路由为 host-plane，无降级映射价值）。
 - [x] **各工具 `model` 路由**：claude/codebuddy settings `model`、codex
   `model`/`review_model`/`model_provider`/`[model_providers]`/`model_reasoning_*`/
-  `model_auto_compact_token_limit*`、opencode `model`/`small_model`/自定义
+  `model_auto_compact_token_limit*`、OpenCode `model`/`small_model`/自定义
   `provider`——dsh 模型路由为 host-plane，默认记 out-of-scope，评估降级映射。
   **已记限制**（2026-08-16：guides 四工具各自写明 out-of-scope，不实施）。
 - [x] **codex**：`web_search` / `tools.web_search`（disabled/cached/indexed/live）
@@ -290,7 +290,7 @@
   settings 加载器合并各层 `projects.<path>.trust_level`，cwd 显式
   `untrusted` 时跳过项目 `.codex/` 层（hooks/MCP/skills 配置等）；
   AGENTS.md 链不受影响（上游始终读取）；未列出路径维持无条件读取。
-- [x] **opencode**：`formatter`、`lsp`、`experimental.*`（含已文档化的 `policies`）。
+- [x] **OpenCode**：`formatter`、`lsp`、`experimental.*`（含已文档化的 `policies`）。
   **已记限制**（2026-08-16：dsh 拥有格式化/诊断/实验层，无文件格式桥接面）。
 - [x] **hooks 事件扩展**（可行性评估 + 实现可行子集）：`SubagentStart`/
   `SubagentStop` **已实现**（2026-08-15，claude + codebuddy）：
@@ -325,12 +325,12 @@
 - [x] **codebuddy-code**：`trustAll`/`trustedDirectories`（CLI 信任概念）、
   `apiKeyHelper`（自家后端认证）。**已记 out-of-scope**（2026-08-16：
   guides codebuddy Settings/模型路由限制行）。
-- [x] **opencode**：`share`/`autoshare`/`username`/`logLevel`/`layout`/
+- [x] **OpenCode**：`share`/`autoshare`/`username`/`logLevel`/`layout`/
   `tool_output`/`enterprise`/`server`/`shell`/`watcher`/`snapshot`/`compaction`/
   `attachment.image`/`autoupdate`/`disabled_providers`/`enabled_providers`/
   `default_agent`/`subagent_depth`；`.opencode/themes/`、`tui.json`/
   `OPENCODE_TUI_CONFIG`、`keybinds`、`.opencode/modes/`。
-  **已记 out-of-scope**（2026-08-16：guides opencode CLI/UI 限制行）。
+  **已记 out-of-scope**（2026-08-16：guides OpenCode CLI/UI 限制行）。
 - [x] **codex**：`[otel]`、`[desktop]`/`[tui]`、auth/notice/logging 键
   （`chatgpt_base_url`/`forced_login_method`/`check_for_update_on_startup`/
   `[feedback]`/`[analytics]`/`[notice]`/`log_dir`/`sqlite_home`…）、schema-only 键
@@ -382,8 +382,8 @@
 - [x] **cursor/gemini-cli hook 输出未转义 `</system-reminder>`**（注入逃逸）：
   两个 hooks/bridge 的三处消息构造补 `escapeReminderClose`，e2e 新增
   hooks-escape fixture 覆盖。commit a6b027e。
-- [x] **opencode 权限桥对未映射 DSH 工具强制 allow**（`?? 'allow'` 覆盖 Harness
-  审批）：改为无 opencode 家族的工具一律返回 undefined 交还审批；guides 中英同步。
+- [x] **OpenCode 权限桥对未映射 DSH 工具强制 allow**（`?? 'allow'` 覆盖 Harness
+  审批）：改为无 OpenCode 家族的工具一律返回 undefined 交还审批；guides 中英同步。
   commit fd9f6d3。
 - [x] **cursor `Mcp(server:tool)` 匹配失效**：运行时名 `mcp__cursor__<server>__<tool>`
   被误解析；`splitMcp` 剥除 `cursor__` 命名空间，测试改用真实运行时名。
@@ -420,9 +420,9 @@
   marker.length)` 并取整（2026-08-16 审察）。
 - [ ] **cursor 用户级 hook 相对命令路径解析到项目目录**：`cursor/hooks/run.ts`
   统一 cwd = session cwd；上游用户 hook 从 `~/.cursor/` 运行（2026-08-16 审察）。
-- [ ] **opencode/gemini-cli stdio MCP `cwd` 硬编码 `process.cwd()`**（cursor 已
+- [ ] **OpenCode/gemini-cli stdio MCP `cwd` 硬编码 `process.cwd()`**（cursor 已
   正确实现）（2026-08-16 审察）。
-- [ ] **opencode 内置 `.env` 拒绝在 `*` 通配符对象形式下被替换**：
+- [ ] **OpenCode 内置 `.env` 拒绝在 `*` 通配符对象形式下被替换**：
   `opencode/permissions.ts` evaluateFamily 规则选择逻辑；`{"*":{"*":"allow"}}`
   时读 `.env` 被放行（2026-08-16 审察）。
 - [ ] **gemini `modes`/`interactive` 门控 deny 被丢弃**（fail-open；已记限制，
@@ -452,24 +452,28 @@
   （2026-08-16 审察）。
 - [ ] `escapeReminderClose` 只转义闭合标签（开标签可伪造外观）；`expandHome`
   不支持 `~user` 且未记录：`src/util.ts`（2026-08-16 审察）。
-- [ ] opencode `expandGlob` 的 `**` 只展开一层；项目层 JSON/JSONC 命令后者覆盖
+- [ ] OpenCode `expandGlob` 的 `**` 只展开一层；项目层 JSON/JSONC 命令后者覆盖
   前者（用户层是累积）：`src/agents/opencode/`（2026-08-16 审察）。
-- [ ] pi `resolveTrust` 目录键未规范化（fail-closed，过度保守）：
+- [ ] Pi `resolveTrust` 目录键未规范化（fail-closed，过度保守）：
   `src/agents/pi/settings.ts`（2026-08-16 审察）。
-- [ ] Windows 下 `relativeLabel` 反斜杠拼接失效（codex/opencode/cursor/
-  gemini/pi，展示问题）（2026-08-16 审察）。
+- [ ] Windows 下 `relativeLabel` 反斜杠拼接失效（codex/OpenCode/cursor/
+  gemini/Pi，展示问题）（2026-08-16 审察）。
 - [ ] 符号链接可穿出技能根：`src/fs-adapter.ts` NodeFsAdapter 用 stat 跟随
   symlink（2026-08-16 审察）。
 - [ ] `void provider?.dispose()` 未 await（各桥 index.ts）（2026-08-16 审察）。
 - [ ] cursor `userDir()` 未实现注释声称的 `XDG_CONFIG_HOME` 覆盖：
   `src/agents/cursor/settings.ts`（2026-08-16 审察）。
-- [ ] gemini `expandEnvReferences` 不支持 `${VAR:-default}` 与注释不符；opencode
+- [ ] gemini `expandEnvReferences` 不支持 `${VAR:-default}` 与注释不符；OpenCode
   MCP 未对 command/args 做 env 展开（2026-08-16 审察）。
 - [ ] 事件 handler `void` 派发 + `loader.load` 在 try 外，存在理论未处理拒绝风险
   （claude/codebuddy/codex hooks/bridge.ts）（2026-08-16 审察）。
-- [ ] opencode `web`(WebFetch) 映射到 websearch 族且按 query 取值（映射不准）：
+- [ ] OpenCode `web`(WebFetch) 映射到 websearch 族且按 query 取值（映射不准）：
   `src/agents/opencode/permissions.ts`（2026-08-16 审察）。
 - [ ] CI 依赖的 GH Actions（checkout/setup-node/pnpm/action-setup@v4）出现
   Node 20 运行时弃用注解，跟进上游升级（2026-08-16 审察）。
 - [ ] `examples/` 下 8 个 README 仅中文，英文用户从根 README 进入存在语言断层
   （2026-08-16 文档重构）。
+- [ ] 开发文档正文中其余工具仍用全小写连字符简写（claude-code、codebuddy-code、
+  codex、gemini-cli、cursor），与 AGENTS.md 新定的官方大小写约定（Claude Code、
+  CodeBuddy Code、Codex、Gemini CLI、Cursor）不一致，待统一（2026-08-17
+  大小写修正；opencode/pi 已改）。

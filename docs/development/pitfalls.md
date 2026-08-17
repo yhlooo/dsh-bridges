@@ -1,6 +1,6 @@
 # 踩坑记录
 
-claude-code、codebuddy-code、opencode、codex、pi、gemini-cli、cursor 各桥接真实踩过的坑，按"现象 → 原因 → 正确写法"记录。实现中报错先来这里找；解决新坑后补一条。
+claude-code、codebuddy-code、OpenCode、codex、Pi、gemini-cli、cursor 各桥接真实踩过的坑，按"现象 → 原因 → 正确写法"记录。实现中报错先来这里找；解决新坑后补一条。
 
 ## 1. patch 新行报 `patch: entry "x" not found`
 
@@ -155,13 +155,13 @@ codebuddy-code 复用 claude-code 的骨架时，以下四处语义不同，照�
 
 **正确做法**：零开销验证用 `HOME=/tmp/cleanhome dsh --profile headless ...` 隔离 HOME；冒烟用完的用户级 fixture（`~/.codebuddy` 等）要及时清理，否则会污染后续所有项目的目录。
 
-## 18. opencode 的技能名规则比 DSH 的 kebab-case 更严
+## 18. OpenCode 的技能名规则比 DSH 的 kebab-case 更严
 
-DSH 的 `isSkillName`（kebab-case）允许下划线；opencode 的规则是 `^[a-z0-9]+(-[a-z0-9]+)*$`（仅小写字母数字 + 单连字符），且 frontmatter `name` 必须与目录名**逐字一致**、`description` 必填（1–1024 字符）。接 opencode 时两套校验都要做：先 `isSkillName`（DSH 要求）、再 opencode 正则，`name` 不一致 / `description` 缺失按"跳过 + warn"处理（opencode 的排查规则即 fail-closed），不要像 claude-code 那样回退正文首段。
+DSH 的 `isSkillName`（kebab-case）允许下划线；OpenCode 的规则是 `^[a-z0-9]+(-[a-z0-9]+)*$`（仅小写字母数字 + 单连字符），且 frontmatter `name` 必须与目录名**逐字一致**、`description` 必填（1–1024 字符）。接 OpenCode 时两套校验都要做：先 `isSkillName`（DSH 要求）、再 OpenCode 正则，`name` 不一致 / `description` 缺失按"跳过 + warn"处理（OpenCode 的排查规则即 fail-closed），不要像 claude-code 那样回退正文首段。
 
 ## 19. 同一配置源里"合并后集合 + 层级来源"要一起存，否则重复注册
 
-opencode 的 JSON 命令在 provider 里按"用户层根 / 项目层根"两次遍历时，如果 loader 只暴露**合并后**的 `command` map，每个命令会被注册两次（rank 147 与 157 各一份）。正确做法：loader 同时返回合并 map 与**项目层子集**（`projectCommands`），用户根只遍历"不在项目层"的条目。凡是"按层排序的根 + 合并覆盖语义"的组合都要警惕这个坑。
+OpenCode 的 JSON 命令在 provider 里按"用户层根 / 项目层根"两次遍历时，如果 loader 只暴露**合并后**的 `command` map，每个命令会被注册两次（rank 147 与 157 各一份）。正确做法：loader 同时返回合并 map 与**项目层子集**（`projectCommands`），用户根只遍历"不在项目层"的条目。凡是"按层排序的根 + 合并覆盖语义"的组合都要警惕这个坑。
 
 ## 20. Codex 的 project 配置层是 root→cwd 的整条链，不是只有 cwd
 
@@ -173,7 +173,7 @@ Codex 的用户技能固定是 `$HOME/.agents/skills`（与 `~/.codex`、`CODEX_
 
 ## 22. 记忆去重要用"路径级"判断，别用内容比对
 
-opencode / codex 的规则文件去重：DSH 核心已加载的只有**工作区根**的 `AGENTS.md` 与 `CLAUDE.md`（即 session cwd 下的这两个文件）。判断"该不该注入"要按**路径**（找到的项目规则文件 === `cwd/AGENTS.md` / `cwd/CLAUDE.md` 就跳过），而不是按内容比对——内容比对会把"父目录规则恰好与根文件同文"误判为重复而漏注入（父目录文件 DSH 并没有加载）。
+OpenCode / codex 的规则文件去重：DSH 核心已加载的只有**工作区根**的 `AGENTS.md` 与 `CLAUDE.md`（即 session cwd 下的这两个文件）。判断"该不该注入"要按**路径**（找到的项目规则文件 === `cwd/AGENTS.md` / `cwd/CLAUDE.md` 就跳过），而不是按内容比对——内容比对会把"父目录规则恰好与根文件同文"误判为重复而漏注入（父目录文件 DSH 并没有加载）。
 
 ## 23. teardown 只 kill 直接子进程会留下孤儿孙进程
 
@@ -217,7 +217,7 @@ opencode / codex 的规则文件去重：DSH 核心已加载的只有**工作区
 
 **现象**：Windows CI 上 codebuddy-memory 测试红：label 是 `D:\home\u\.codebuddy/CODEBUDDY.md`（混合分隔符），与 `fx(...)` 期望值不等。
 
-**原因**：`` `${userDir}/CODEBUDDY.md` `` 模板串在 win32 上拼出 `/` 与 `\` 混用；这些 label 会进注入正文、用户可见。四个桥的 user 层 label（claude/codebuddy/opencode/codex 各一处）都有此模式。
+**原因**：`` `${userDir}/CODEBUDDY.md` `` 模板串在 win32 上拼出 `/` 与 `\` 混用；这些 label 会进注入正文、用户可见。四个桥的 user 层 label（claude/codebuddy/OpenCode/codex 各一处）都有此模式。
 
 **正确写法**：绝对路径 label 一律 `join(dir, 'NAME.md')`（或直接复用已 join 好的变量）。相对展示名（如 `.codebuddy/CODEBUDDY.md`）是有意为之，保持原样。
 
@@ -231,13 +231,13 @@ opencode / codex 的规则文件去重：DSH 核心已加载的只有**工作区
 项目 agents / custom / 用户 dsh / 用户 agents）这些**精确点**；已有四段
 （105–120、125–140、145–160、165–175）都恰好落在整百点之间，新段必须照做。
 
-**正确写法**：新段避开 200/300：pi 180–195、gemini-cli 205–220、cursor
+**正确写法**：新段避开 200/300：Pi 180–195、gemini-cli 205–220、cursor
 225–240，全部小于运行时技能 250。段分配与理由同步进 contract golden 表、
 guides 映射表与 dsh-integration-surface.md 三处。
 
-## 29. pi 记忆链的「根 AGENTS.md 去重」依赖 git 根探测，无 git 根时 cwd 即根
+## 29. Pi 记忆链的「根 AGENTS.md 去重」依赖 git 根探测，无 git 根时 cwd 即根
 
-**现象**：pi 记忆测试里无 `.git` 标记的 fixture 中，cwd 的 `AGENTS.md` 被当作
+**现象**：Pi 记忆测试里无 `.git` 标记的 fixture 中，cwd 的 `AGENTS.md` 被当作
 「dsh 已加载的根文件」跳过，测试期望「cwd 文件应注入」而红。
 
 **原因**：桥接沿用 codex 的去重先例——dsh 核心加载的是「仓库根」的
@@ -247,13 +247,13 @@ guides 映射表与 dsh-integration-surface.md 三处。
 **正确写法**：测试/文档明确这一语义（无 git 根时 cwd 的 AGENTS.md 视为核心已
 加载、跳过）；要断言链路注入，fixture 必须带 `.git` 标记并把 cwd 放在子目录。
 
-## 30. pi 的宽松 frontmatter 与 DSH 的 fail-closed 惯例要逐字段对齐
+## 30. Pi 的宽松 frontmatter 与 DSH 的 fail-closed 惯例要逐字段对齐
 
-**现象**：pi 对技能校验「多数违规仅告警、仍加载」（name 可异于目录名、非法
+**现象**：Pi 对技能校验「多数违规仅告警、仍加载」（name 可异于目录名、非法
 布尔仅告警），只有「缺 description」不加载；照抄 claude 的 fail-closed 布尔
-解析会丢弃 pi 本会加载的技能。
+解析会丢弃 Pi 本会加载的技能。
 
-**原因**：上游语义决定 fail-open/fail-closed——pi 是宽松实现，claude 是严格
+**原因**：上游语义决定 fail-open/fail-closed——Pi 是宽松实现，claude 是严格
 实现（AGENTS.md 教训：失败策略按协议走，不要自行"更安全"）。
 
 **正确写法**：`disable-model-invocation` 非法值 → 告警 + 视为 false；name
@@ -262,13 +262,13 @@ guides 映射表与 dsh-integration-surface.md 三处。
 
 ## 31. 新工具的"宽松/严格"要按各自上游逐条对齐，别沿用上一家的习惯
 
-**现象**：三连发 pi / gemini-cli / cursor 时，习惯性地把 pi 的宽松语义
+**现象**：三连发 Pi / gemini-cli / cursor 时，习惯性地把 Pi 的宽松语义
 （name 可异于目录名、非法布尔仅告警）套到 cursor 上，cursor 技能
 frontmatter 测试按"回退目录名"写——但 Cursor 上游要求 name **必须等于**
 目录名（fail closed）；反向也成立：gemini 的"应与目录名一致"是软约束、
 policy-engine.md 的 tier 示例数字与表格 off-by-one，照抄文档示例会错。
 
-**原因**：三个工具都实现 Agent Skills 标准，但容忍度不同：pi 显式宽松
+**原因**：三个工具都实现 Agent Skills 标准，但容忍度不同：Pi 显式宽松
 （"warning about most violations but remaining lenient"）、gemini 文档
 模糊（"should match"）、cursor 显式严格（"must use the .mdc extension"、
 name 必填且等于目录名）。调研报告的措辞强度（must/should/未说明）就是
@@ -276,8 +276,8 @@ name 必填且等于目录名）。调研报告的措辞强度（must/should/未
 
 **正确写法**：每个新工具在 `skills/parse.ts` 的头部注释里写明"哪条来自
 上游哪个措辞、宽松还是 fail-closed"；cursor 用 name 必须等于目录名（
-fail closed），pi 用回退（宽松），gemini 用回退 + warn。同名冲突同理：
-pi = 先发现者胜（源码确认）、gemini = 工作区层覆盖用户层（rank 表达）、
+fail closed），Pi 用回退（宽松），gemini 用回退 + warn。同名冲突同理：
+Pi = 先发现者胜（源码确认）、gemini = 工作区层覆盖用户层（rank 表达）、
 cursor = 项目 > 用户（rank 表达）。
 
 ## 32. Cursor 的 `.cursor/rules` 以仓库根为锚，matcher 是包含匹配
@@ -309,12 +309,12 @@ User=4、Admin=5），工作区层因此也不读（上游 issue #18186）。
 
 ## 34. e2e fixture 里的 `.git/HEAD` 标记不会被 git 跟踪，必须运行时创建
 
-**现象**：pi/cursor 的记忆 e2e 本地全绿、CI 干净 checkout 全红——pi 断言
+**现象**：Pi/cursor 的记忆 e2e 本地全绿、CI 干净 checkout 全红——Pi 断言
 `Sub rules.` 缺失、cursor 规则注入 waitFor 超时。
 
 **原因**：git 从不跟踪路径中含 `.git` 组件的文件（`git add` 静默忽略），
 所以 fixture 里的 `.git/HEAD` 仓库标记只存在于本地工作树；CI checkout 里
-缺失 → `findRepositoryRoot` 回退为 cwd → pi 把 cwd 的 AGENTS.md 当成"核心
+缺失 → `findRepositoryRoot` 回退为 cwd → Pi 把 cwd 的 AGENTS.md 当成"核心
 已加载"去重、cursor 的 rules 目录锚到子目录而找不到。
 
 **正确写法**：fixture 目录不提交任何 `.git` 内容；需要仓库根标记的测试在

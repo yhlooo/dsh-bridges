@@ -58,8 +58,8 @@ All bridges share the rules below; tool pages note only deviations.
 | :--- | :--- | :--- |
 | Claude Code | `.claude/` skills, commands, and subagents; `CLAUDE.md` memory; `settings.json` hooks and permission rules; MCP servers | [`claude-code`](claude-code.md) · [中文](claude-code.zh.md) |
 | CodeBuddy Code | `.codebuddy/` skills, commands, and subagents; `CODEBUDDY.md` memory and rules; `settings.json` hooks and permission rules; MCP servers | [`codebuddy-code`](codebuddy-code.md) · [中文](codebuddy-code.zh.md) |
-| opencode | `.opencode/` skills and commands (incl. JSON commands); `AGENTS.md` and `instructions` memory; `opencode.json(c)` permission rules; MCP servers | [`opencode`](opencode.md) · [中文](opencode.zh.md) |
+| OpenCode | `.opencode/` skills and commands (incl. JSON commands); `AGENTS.md` and `instructions` memory; `opencode.json(c)` permission rules; MCP servers | [`opencode`](opencode.md) · [中文](opencode.zh.md) |
 | Codex | `.agents/` skills; `AGENTS.md` instruction chain; `hooks.json` / `config.toml` hooks; approval/sandbox policy; `[mcp_servers]` entries | [`codex`](codex.md) · [中文](codex.zh.md) |
-| pi | `.pi/` skills and prompt templates; context-file memory | [`pi`](pi.md) · [中文](pi.zh.md) |
+| Pi | `.pi/` skills and prompt templates; context-file memory | [`pi`](pi.md) · [中文](pi.zh.md) |
 | Gemini CLI | `.gemini/` skills, commands, and subagents; `GEMINI.md` memory; `settings.json` hooks and `mcpServers`; policy rules | [`gemini-cli`](gemini-cli.md) · [中文](gemini-cli.zh.md) |
 | Cursor | `.cursor/` skills and subagents; rules memory; `hooks.json` hooks; CLI permission rules; MCP servers | [`cursor`](cursor.md) · [中文](cursor.zh.md) |

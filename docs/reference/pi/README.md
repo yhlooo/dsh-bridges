@@ -1,8 +1,8 @@
-# pi 参考资料
+# Pi 参考资料
 
-来源：<https://github.com/earendil-works/pi>（badlogic/earendil 的 pi coding agent，即 pi.dev，官方仓库 main 分支；文档位于 `packages/coding-agent/docs/`）。抓取日期 2026-08-16 (UTC)，原文未改动。各文件头部注明各自的原始 raw URL。
+来源：<https://github.com/earendil-works/pi>（badlogic/earendil 的 Pi coding agent，即 pi.dev，官方仓库 main 分支；文档位于 `packages/coding-agent/docs/`）。抓取日期 2026-08-16 (UTC)，原文未改动。各文件头部注明各自的原始 raw URL。
 
-> 说明：pi 的配置模型与 Claude Code / Codex 不同——**没有独立的 commands.md / memory.md / hooks.md / mcp.md / agents.md，也没有 `PI.md`**。全仓库 grep 确认：记忆文件是 `AGENTS.md`/`CLAUDE.md`（+`SYSTEM.md`/`APPEND_SYSTEM.md`），命令是斜杠模板 + 扩展命令，hooks 是扩展事件总线，`settings.json` 无 `mcp`/`hooks`/`permissions`/`commands`/`agents` 配置键（源码 `Settings` 接口亦无）。对应能力分别落在 `skills.md`（技能）、`prompt-templates.md`（斜杠模板，相当于命令）、`usage.md`+`quickstart.md`（AGENTS.md 记忆/上下文文件）、`extensions.md`（TypeScript 扩展 + 事件总线，相当于 hooks/tools/subagent）、`security.md`+`settings.md`（信任与工具开关）。MCP 与 sub-agent **无内置实现**，靠扩展/包实现（见 `usage.md` 设计原则一节）。`.agents/skills/` 是共享**技能**目录（遵循 open Agent Skills 标准），不是 sub-agent 定义目录。
+> 说明：Pi 的配置模型与 Claude Code / Codex 不同——**没有独立的 commands.md / memory.md / hooks.md / mcp.md / agents.md，也没有 `PI.md`**。全仓库 grep 确认：记忆文件是 `AGENTS.md`/`CLAUDE.md`（+`SYSTEM.md`/`APPEND_SYSTEM.md`），命令是斜杠模板 + 扩展命令，hooks 是扩展事件总线，`settings.json` 无 `mcp`/`hooks`/`permissions`/`commands`/`agents` 配置键（源码 `Settings` 接口亦无）。对应能力分别落在 `skills.md`（技能）、`prompt-templates.md`（斜杠模板，相当于命令）、`usage.md`+`quickstart.md`（AGENTS.md 记忆/上下文文件）、`extensions.md`（TypeScript 扩展 + 事件总线，相当于 hooks/tools/subagent）、`security.md`+`settings.md`（信任与工具开关）。MCP 与 sub-agent **无内置实现**，靠扩展/包实现（见 `usage.md` 设计原则一节）。`.agents/skills/` 是共享**技能**目录（遵循 open Agent Skills 标准），不是 sub-agent 定义目录。
 
 ## 文件清单
 
@@ -16,7 +16,7 @@
 | [settings.md](settings.md) | **settings.json 完整参考**：位置、所有配置键、资源键、项目覆盖合并 |
 | [extensions.md](extensions.md) | **扩展规范**：扩展位置、事件总线（hooks）、自定义工具、命令、sub-agent 示例 |
 | [prompt-templates.md](prompt-templates.md) | **斜杠模板（命令）规范**：位置、frontmatter、参数替换 |
-| [packages.md](packages.md) | **pi 包**：npm/git/本地源、`pi` manifest、约定目录、去重 |
+| [packages.md](packages.md) | **Pi 包**：npm/git/本地源、`pi` manifest、约定目录、去重 |
 | [security.md](security.md) | 项目信任、无内置沙箱、安全边界 |
 | [environment-variables.md](environment-variables.md) | 环境变量（含 `PI_CODING_AGENT_DIR` 配置目录覆盖） |
 | [sessions.md](sessions.md) | 会话管理、分支、树导航 |
@@ -105,6 +105,6 @@
 - **扩展（extensions）**：`.ts` 模块，注册工具/命令/事件/自定义 UI（extensions.md）。
 - **斜杠模板（prompts）**：见上文。
 - **主题（themes）**：`themes.md`（本目录未收录，非桥接重点）。
-- **pi 包（packages）**：npm/git/本地路径，`package.json` 的 `pi` 键或约定目录 `extensions/` `skills/` `prompts/` `themes/` 分发（packages.md）。
+- **Pi 包（packages）**：npm/git/本地路径，`package.json` 的 `pi` 键或约定目录 `extensions/` `skills/` `prompts/` `themes/` 分发（packages.md）。
 - **MCP**：无内置，靠扩展/包实现（usage.md）。
 - **sub-agent**：无内置；示例 `subagent/` 用 `registerTool` + `exec` 派生（extensions.md「Examples Reference」）；SDK 可 spawn sub-agent（sdk.md）。

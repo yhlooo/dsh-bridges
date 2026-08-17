@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本文件是本仓库协作编码智能体的共享记忆（dsh、Claude Code、Codex、opencode、
+本文件是本仓库协作编码智能体的共享记忆（dsh、Claude Code、Codex、OpenCode、
 CodeBuddy……）。在本仓库的所有工作中请遵守以下约定。
 
 ## 插件约定
@@ -29,7 +29,7 @@ CodeBuddy……）。在本仓库的所有工作中请遵守以下约定。
   codex 165–175、pi 180–195、gemini-cli 205–220、cursor 225–240；段分配避开
   filesystem provider 的整百点，详见 `docs/development/dsh-integration-surface.md`）；
   同层内 rank 越小越优先，段内资产遵循上游工具的优先级（Claude Code：个人 >
-  项目；CodeBuddy Code / opencode / Codex：项目 > 用户；pi：个人 > 项目；
+  项目；CodeBuddy Code / OpenCode / Codex：项目 > 用户；Pi：个人 > 项目；
   gemini-cli：工作区 > 用户；cursor：项目 > 用户），且技能优先于同级同名命令。
 - 每个桥接的技能 provider 都注册在**全局**技能层，因此 preset 层的 DeepSeek
   Harness 原生技能（`.dsh/skills`、`.agents/skills`、运行时技能）通过层序在
@@ -61,6 +61,12 @@ CodeBuddy……）。在本仓库的所有工作中请遵守以下约定。
 - 正文中一律写全称 **DeepSeek Harness**——绝不用 `dsh`/`DSH`。仅在标识符场合
   保留短写：CLI 命令（`dsh plugin`、`dsh --profile`）、包名 `dsh-bridges`、
   配置键（`dsh.profile.bundles`）、路径（`.dsh/skills`）。
+- 上游工具名按官方写法大小写：**Claude Code**、**CodeBuddy Code**、
+  **OpenCode**、**Codex**、**Pi**、**Gemini CLI**、**Cursor**（正文中指代工具
+  时用此写法，依据各自官方文档正文：opencode.ai 文档用 OpenCode、pi 文档用
+  Pi）。标识符保持小写：CLI 命令（`opencode`、`pi`）、路径（`.opencode/`、
+  `.pi/`、`~/.pi/agent`）、provider 名（`opencode`、`pi`）、配置键
+  （`opencode:`、`pi:`）、包名（`pi.skills`）。
 - 文档描述的行为必须与代码一致。曾坑过我们的例子：dsh 的 todo 工具叫
   `todo_write`，所以 hook 名称映射表必须映射 `todo_write`→`TodoWrite`——
   `todo` 条目匹配不到任何东西。

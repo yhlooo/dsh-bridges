@@ -8,7 +8,7 @@
 
 | 维度 | 含义 | 错了的后果 |
 | :--- | :--- | :--- |
-| **上游行为符合性** | 桥接后的发现、解析、hook 语义与 claude-code / codebuddy-code / opencode / codex 原版一致 | 用户项目在 dsh 里行为漂移，且很难察觉（"为什么我的 hook 没拦住"） |
+| **上游行为符合性** | 桥接后的发现、解析、hook 语义与 claude-code / codebuddy-code / OpenCode / codex 原版一致 | 用户项目在 dsh 里行为漂移，且很难察觉（"为什么我的 hook 没拦住"） |
 | **dsh 接缝契约符合性** | skill provider 契约、rank 段、层序、事件监听、消息注入、fiber 可逆 teardown | 挂载后静默失效、同名冲突、热更新后残留副作用 |
 | **对抗性输入健壮性** | 项目文件是任意用户内容（损坏的 TOML/YAML、符号链接、嵌套仓库），hook 本质是执行 shell 命令 | 崩溃、挂起、孤儿进程、输出泄漏 |
 
@@ -27,7 +27,7 @@
 | L2 文件系统级 | 技能发现、settings 加载、记忆合并 | 已有雏形 | 用真实磁盘 fixture（见 §3）替代手写 Map |
 | L3 真实进程 | hook 命令执行契约 | 已有雏形 | 补：信号/进程组回收断言、stdin JSON 载荷断言、环境变量、输出上限、Windows 分支 |
 | L4 真实 dsh 集成 | composition + bridges bundle + 假模型 | 已建（34 例，7 类场景齐） | 见 [e2e-testing.md](e2e-testing.md) 环 A |
-| L5 真实上游 CLI 兼容性 | 与真实 claude/codebuddy/opencode/codex 输出对齐 | 哨兵已建 | 见 [e2e-testing.md](e2e-testing.md) 环 C（固定版本 + weekly 漂移报警 + doctor 探针；深层行为对标保留人工） |
+| L5 真实上游 CLI 兼容性 | 与真实 claude/codebuddy/OpenCode/codex 输出对齐 | 哨兵已建 | 见 [e2e-testing.md](e2e-testing.md) 环 C（固定版本 + weekly 漂移报警 + doctor 探针；深层行为对标保留人工） |
 | L6 打包冒烟 | `npm pack` 产物安装进干净项目并真实加载 | 已建 | 见 [e2e-testing.md](e2e-testing.md) 环 B（`pnpm smoke`，真实 dsh CLI + scratch profile） |
 | L7 手动 E2E | 发布前逐项过一遍 docs/guides 功能表 | 已有习惯 | 固化为发布清单 |
 
@@ -36,7 +36,7 @@ L1–L3 是"对不对"的主力防线；L4–L6 守住单元测试覆盖不到�
 ## 3. 关键测试资产
 
 1. **统一 fixture 库**：每个工具一套完整真实项目布局（多根目录、向上扫描、settings 全格式、skills、memory、hooks），测试直接跑在真实磁盘 fixture 上。与 `examples/` 合流或明确分层，防止两套样例漂移。
-2. **契约快照（golden 表）**：把散落代码里的语义表变成单一事实来源——rank 段（claude 105–120、codebuddy 125–140、opencode 145–160、codex 165–175）、hook 事件-决策矩阵、hook 名称映射（`todo_write`→`TodoWrite` 那类教训）——用常量表驱动代码，测试断言表本身，文档表格交叉引用，一处改动三处可见。
+2. **契约快照（golden 表）**：把散落代码里的语义表变成单一事实来源——rank 段（claude 105–120、codebuddy 125–140、OpenCode 145–160、codex 165–175）、hook 事件-决策矩阵、hook 名称映射（`todo_write`→`TodoWrite` 那类教训）——用常量表驱动代码，测试断言表本身，文档表格交叉引用，一处改动三处可见。
 3. **对抗性输入语料**：BOM/CRLF、损坏 TOML/YAML/JSONC、符号链接、嵌套 git 仓库、超大文件、无效 UTF-8——统一放在一个 fixture 集里，所有解析器共享。
 
 ## 4. 高风险主题专项（按投入优先级）

@@ -9,7 +9,7 @@ English | [中文](README_CN.md)
 [![npm downloads](https://img.shields.io/npm/dm/dsh-bridges)](https://www.npmjs.com/package/dsh-bridges)
 [![license](https://img.shields.io/github/license/yhlooo/dsh-bridges)](LICENSE)
 
-A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin that bridges projects already configured for Claude Code, CodeBuddy Code, opencode, Codex, pi, Gemini CLI, or Cursor into DeepSeek Harness, so existing skills, commands, memory, and hooks continue to work without any migration.
+A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin that bridges projects already configured for Claude Code, CodeBuddy Code, OpenCode, Codex, Pi, Gemini CLI, or Cursor into DeepSeek Harness, so existing skills, commands, memory, and hooks continue to work without any migration.
 
 ## Quick start
 
@@ -39,7 +39,7 @@ Complete example projects for each agent tool are available in [`examples/`](exa
 Assets are discovered per session workspace, from project and user-level locations. All bridges are enabled by default and can be configured or disabled from any patch layer:
 
 ```yaml
-# example: disable the pi bridge
+# example: disable the Pi bridge
 - id: bridges
   config:
     pi:
@@ -50,9 +50,9 @@ Assets are discovered per session workspace, from project and user-level locatio
 | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
 | Claude Code | ✓ | ✓ | ✓ | ✓ | ✓ | [`claude-code`](docs/guides/claude-code.md) |
 | CodeBuddy Code | ✓ | ✓ | ✓ | ✓ | ✓ | [`codebuddy-code`](docs/guides/codebuddy-code.md) |
-| opencode | ✓ | ✓ | — | ✓ | ✓ | [`opencode`](docs/guides/opencode.md) |
+| OpenCode | ✓ | ✓ | — | ✓ | ✓ | [`opencode`](docs/guides/opencode.md) |
 | Codex | ✓ | ✓ | ✓ | ✓ | ✓ | [`codex`](docs/guides/codex.md) |
-| pi | ✓ | ✓ | — | — | — | [`pi`](docs/guides/pi.md) |
+| Pi | ✓ | ✓ | — | — | — | [`pi`](docs/guides/pi.md) |
 | Gemini CLI | ✓ | ✓ | ✓ | ✓ | ✓ | [`gemini-cli`](docs/guides/gemini-cli.md) |
 | Cursor | ✓ | ✓ | ✓ | ✓ | ✓ | [`cursor`](docs/guides/cursor.md) |
 

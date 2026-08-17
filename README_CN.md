@@ -9,7 +9,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/dsh-bridges)](https://www.npmjs.com/package/dsh-bridges)
 [![license](https://img.shields.io/github/license/yhlooo/dsh-bridges)](LICENSE)
 
-一个 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 插件：把已经为 Claude Code、CodeBuddy Code、opencode、Codex、pi、Gemini CLI、Cursor 配置好的项目桥接进 DeepSeek Harness——skills、commands、记忆、hooks 无需迁移即可继续生效。
+一个 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 插件：把已经为 Claude Code、CodeBuddy Code、OpenCode、Codex、Pi、Gemini CLI、Cursor 配置好的项目桥接进 DeepSeek Harness——skills、commands、记忆、hooks 无需迁移即可继续生效。
 
 ## 快速上手
 
@@ -40,7 +40,7 @@ dsh --profile headless "list the skills available in your catalog"
 资产按会话工作区发现（项目级与用户级目录）。所有桥接默认启用，可在任意 patch 层逐一调整或禁用：
 
 ```yaml
-# 示例：禁用 pi 桥接
+# 示例：禁用 Pi 桥接
 - id: bridges
   config:
     pi:
@@ -51,9 +51,9 @@ dsh --profile headless "list the skills available in your catalog"
 | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
 | Claude Code | ✓ | ✓ | ✓ | ✓ | ✓ | [`claude-code`](docs/guides/claude-code.zh.md) |
 | CodeBuddy Code | ✓ | ✓ | ✓ | ✓ | ✓ | [`codebuddy-code`](docs/guides/codebuddy-code.zh.md) |
-| opencode | ✓ | ✓ | — | ✓ | ✓ | [`opencode`](docs/guides/opencode.zh.md) |
+| OpenCode | ✓ | ✓ | — | ✓ | ✓ | [`opencode`](docs/guides/opencode.zh.md) |
 | Codex | ✓ | ✓ | ✓ | ✓ | ✓ | [`codex`](docs/guides/codex.zh.md) |
-| pi | ✓ | ✓ | — | — | — | [`pi`](docs/guides/pi.zh.md) |
+| Pi | ✓ | ✓ | — | — | — | [`pi`](docs/guides/pi.zh.md) |
 | Gemini CLI | ✓ | ✓ | ✓ | ✓ | ✓ | [`gemini-cli`](docs/guides/gemini-cli.zh.md) |
 | Cursor | ✓ | ✓ | ✓ | ✓ | ✓ | [`cursor`](docs/guides/cursor.zh.md) |
 

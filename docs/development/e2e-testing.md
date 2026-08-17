@@ -43,7 +43,7 @@ devDependencies 已备齐全套 `@deepseek-ai/dsh-*`，可以在测试里启动�
 
 上游 CLI 的**深层行为**（真实 agent 会话、hook 载荷、权限流）需要凭据，无法无感自动化；已落地的哨兵层（`.github/workflows/conformance.yml`，weekly + 手动，`pnpm probe:upstream`）覆盖自动化可行的部分：
 
-- **安装与可运行性**：CI 安装固定版本（`scripts/upstream-tools.json` 里的 pin）的 claude / codex / opencode / codebuddy 四个 CLI，断言 `--version` 与 pin 一致。
+- **安装与可运行性**：CI 安装固定版本（`scripts/upstream-tools.json` 里的 pin）的 claude / codex / OpenCode / codebuddy 四个 CLI，断言 `--version` 与 pin 一致。
 - **离线健康探针**：`claude doctor`、`codex doctor`（在 `examples/codex` 上跑），按**稳定输出标记**断言而非退出码（doctor 的退出码受 auth/网络状态影响，不可靠）。
 - **版本漂移报警**：`npm view <pkg> version` 与 pin 比对，任何上游发布新版本即让 scheduled job 变红，报告里附评审清单（diff `docs/reference/<tool>/` → 重跑 e2e → bump pin）。
 - **保留人工的部分**：双跑同一 fixture（真实 CLI vs 我们的桥）的行为对标仍按需人工执行——上游发布后由漂移报警触发，见报告的 checklist。

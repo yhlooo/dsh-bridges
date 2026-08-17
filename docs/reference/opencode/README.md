@@ -1,4 +1,4 @@
-# opencode 参考资料
+# OpenCode 参考资料
 
 来源：<https://opencode.ai/docs>（官方文档 markdown 版本，英文）。抓取日期 2026-08-15 (UTC)，原文未改动。
 

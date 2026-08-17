@@ -56,8 +56,8 @@ dsh --profile <profile-name> --dump-config   # 应能看到 "dsh-bridges" 这一
 | :--- | :--- | :--- |
 | Claude Code | `.claude/` 的 skills、commands 与 subagents；`CLAUDE.md` 记忆；`settings.json` 的 hooks 与权限规则；MCP 服务器 | [`claude-code`](claude-code.zh.md) · [English](claude-code.md) |
 | CodeBuddy Code | `.codebuddy/` 的 skills、commands 与 subagents；`CODEBUDDY.md` 记忆与规则；`settings.json` 的 hooks 与权限规则；MCP 服务器 | [`codebuddy-code`](codebuddy-code.zh.md) · [English](codebuddy-code.md) |
-| opencode | `.opencode/` 的 skills 与 commands（含 JSON 命令）；`AGENTS.md` 与 `instructions` 记忆；`opencode.json(c)` 权限规则；MCP 服务器 | [`opencode`](opencode.zh.md) · [English](opencode.md) |
+| OpenCode | `.opencode/` 的 skills 与 commands（含 JSON 命令）；`AGENTS.md` 与 `instructions` 记忆；`opencode.json(c)` 权限规则；MCP 服务器 | [`opencode`](opencode.zh.md) · [English](opencode.md) |
 | Codex | `.agents/` skills；`AGENTS.md` 指令链；`hooks.json` / `config.toml` 的 hooks；审批 / 沙箱策略；`[mcp_servers]` 条目 | [`codex`](codex.zh.md) · [English](codex.md) |
-| pi | `.pi/` 的 skills 与 prompt 模板；上下文文件记忆 | [`pi`](pi.zh.md) · [English](pi.md) |
+| Pi | `.pi/` 的 skills 与 prompt 模板；上下文文件记忆 | [`pi`](pi.zh.md) · [English](pi.md) |
 | Gemini CLI | `.gemini/` 的 skills、commands 与 subagents；`GEMINI.md` 记忆；`settings.json` 的 hooks 与 `mcpServers`；策略规则 | [`gemini-cli`](gemini-cli.zh.md) · [English](gemini-cli.md) |
 | Cursor | `.cursor/` 的 skills 与 subagents；规则记忆；`hooks.json` 的 hooks；CLI 权限规则；MCP 服务器 | [`cursor`](cursor.zh.md) · [English](cursor.md) |

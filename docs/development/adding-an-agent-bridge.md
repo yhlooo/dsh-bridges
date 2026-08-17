@@ -1,6 +1,6 @@
 # 在本项目中添加 / 适配一个 agent 工具
 
-本指南记录如何在 dsh-bridges 里接入一个新的 agent 工具，让 dsh 读取并注册该工具的项目资产（skills / commands / 记忆 / hooks / permissions / MCP 等）。claude-code 是第一个按此流程完成的实例，codebuddy-code 是第二个（其与 Claude 同名机制相反的语义差异记录在 [pitfalls.md](pitfalls.md) 第 16 条），opencode 是第三个（无 hooks 配置；插件 API 记为限制，pitfalls 第 18–19、22 条），codex 是第四个（TOML 配置 + 多层级 hooks，pitfalls 第 20–21 条），pi 是第五个（宽松 frontmatter + 信任门禁、无 hooks/权限/MCP，pitfalls 第 29–30 条），gemini-cli 是第六个（Policy Engine TOML 权限 + GEMINI.md `@` 导入 + 毫秒级 hook 超时，pitfalls 第 31 条），cursor 是第七个（技能 name 必须等于目录名 + `.cursor/rules` 以仓库根为锚 + matcher 包含匹配，pitfalls 第 31 条），文中以它们的实现为参考答案。
+本指南记录如何在 dsh-bridges 里接入一个新的 agent 工具，让 dsh 读取并注册该工具的项目资产（skills / commands / 记忆 / hooks / permissions / MCP 等）。claude-code 是第一个按此流程完成的实例，codebuddy-code 是第二个（其与 Claude 同名机制相反的语义差异记录在 [pitfalls.md](pitfalls.md) 第 16 条），OpenCode 是第三个（无 hooks 配置；插件 API 记为限制，pitfalls 第 18–19、22 条），codex 是第四个（TOML 配置 + 多层级 hooks，pitfalls 第 20–21 条），Pi 是第五个（宽松 frontmatter + 信任门禁、无 hooks/权限/MCP，pitfalls 第 29–30 条），gemini-cli 是第六个（Policy Engine TOML 权限 + GEMINI.md `@` 导入 + 毫秒级 hook 超时，pitfalls 第 31 条），cursor 是第七个（技能 name 必须等于目录名 + `.cursor/rules` 以仓库根为锚 + matcher 包含匹配，pitfalls 第 31 条），文中以它们的实现为参考答案。
 
 ## 前置知识
 
@@ -57,7 +57,7 @@
 
 - 每个工具注册**一个** provider（名 = 工具名，如 `claude-code`），实现 `list()`（发现 + 摘要）与 `get()`（按需加载正文）。契约见 [dsh-integration-surface.md](dsh-integration-surface.md#skills-注册表)。
 - **命名**：DSH 技能名必须是 kebab-case（`isSkillName`），上游允许的非法名（camelCase 等）**跳过 + warn**，不要私自转写。
-- **rank 段分配**：每个工具独占一段（claude 105–120、codebuddy 125–140、opencode 145–160、codex 165–175），段内再按**上游语义**细分（claude：个人 < 项目；codebuddy / opencode：项目 < 用户；codex：项目 < 用户 < 系统——上游优先级不同，段内顺序要跟着上游走，别照抄别的工具）。rank 越小越优先；段之间谁优先由你的设计决定并在 `docs/guides/` 写明。运行时技能 rank=250、bundled=600，别碰。
+- **rank 段分配**：每个工具独占一段（claude 105–120、codebuddy 125–140、OpenCode 145–160、codex 165–175），段内再按**上游语义**细分（claude：个人 < 项目；codebuddy / OpenCode：项目 < 用户；codex：项目 < 用户 < 系统——上游优先级不同，段内顺序要跟着上游走，别照抄别的工具）。rank 越小越优先；段之间谁优先由你的设计决定并在 `docs/guides/` 写明。运行时技能 rank=250、bundled=600，别碰。
 - **invocation policy 映射**：`disable-model-invocation` → `modelInvocable` 取反；`user-invocable` → `userInvocable`；非法布尔值**丢弃整个技能 + warn**（fail closed）。
 - **description**：上游的 `description` + 触发条件字段合并，按上游的截断长度截断；缺省时回退正文首段（claude 的行为）。
 - **resourceBase**：目录型技能给 `{ kind: 'directory', path }`，支撑文件随正文按需解析。
@@ -89,7 +89,7 @@
 - **fail-open**：hook 超时 / 启动失败 / 被取消 → 放行（上游命令类 hook 的语义）；只有上游明确规定 fail-closed 的才拦截。
 - **工具名翻译**：上游工具名（`Bash`、`Edit`…）与 DSH（`bash`、`edit`…）不同，matcher、`if` 规则、hook 的 `tool_name` 载荷都用**上游名字**（翻译表见 `src/agents/claude-code/hooks/names.ts`），这样上游写好的 hook 脚本原样可用。
 - **多层级配置合并**：settings 按"宽 → 具体"叠加合并，相同 handler 去重（JSON 序列化比较），禁用开关取最具体层定义的值；`if` 过滤器只在工具事件上生效。**同一批 settings 文件被多个子块读取时（如 codebuddy 的 hooks 与 skills 的 `skillOverrides`），把加载器做成子系统级共享实例**（按路径 stamp 缓存），避免两份缓存与两份解析。
-- 映射决策**写进 `docs/guides/` 的映射表**（claude / codebuddy / opencode / codex 的指南都有完整表格），这是阶段五验收的依据。
+- 映射决策**写进 `docs/guides/` 的映射表**（claude / codebuddy / OpenCode / codex 的指南都有完整表格），这是阶段五验收的依据。
 
 ---
 
