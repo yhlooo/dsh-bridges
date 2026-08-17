@@ -1,9 +1,21 @@
+import { readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { parseHookStdout, runEventHooks } from '../agents/claude-code/hooks/run.js'
 import { resolveBlockDecision, resolvePreToolUse } from '../agents/claude-code/hooks/bridge.js'
 import type { HookOutcome, MatcherGroup } from '../agents/claude-code/hooks/types.js'
 
 const silent = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
+
+async function waitFor(predicate: () => Promise<boolean>, timeoutMs = 5000): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  for (;;) {
+    if (await predicate()) return
+    if (Date.now() >= deadline) throw new Error('waitFor timed out')
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  }
+}
 
 function run(options: { groups: MatcherGroup[]; timeoutMs?: number; env?: Record<string, string> } = { groups: [] }) {
   return runEventHooks(
@@ -113,13 +125,30 @@ describe('runEventHooks (command hooks)', () => {
     expect(outcome!.output?.stopReason).toBe('halted')
   })
 
-  it('times out and fails open', async () => {
+  it('times out and discards partial output', async () => {
     const [outcome] = await run({
-      groups: [{ hooks: [{ type: 'command', command: 'node', args: ['-e', 'setTimeout(()=>{},5000)'] }] }],
+      groups: [
+        {
+          hooks: [
+            {
+              type: 'command',
+              command: 'node',
+              args: [
+                '-e',
+                'process.stdout.write(JSON.stringify({hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny"}}));setTimeout(()=>{},5000)',
+              ],
+            },
+          ],
+        },
+      ],
       timeoutMs: 300,
     })
     expect(outcome!.timedOut).toBe(true)
     expect(outcome!.exitCode).toBeNull()
+    // Partial stdout must never become a decision after a timeout.
+    expect(outcome!.output).toBeNull()
+    expect(outcome!.plainText).toBeNull()
+    expect(outcome!.stdout).toBe('')
   })
 
   it('filters by matcher and if', async () => {
@@ -141,6 +170,41 @@ describe('runEventHooks (command hooks)', () => {
     })
     expect(outcome!.ran).toBe(true)
     expect(outcome!.detached).toBe(true)
+  })
+
+  it('writes the stdin JSON to detached async handlers', async () => {
+    const marker = join(tmpdir(), `dsh-async-hook-${process.pid}-${Date.now()}.json`)
+    try {
+      const [outcome] = await run({
+        groups: [
+          {
+            hooks: [
+              {
+                type: 'command',
+                command: 'node',
+                args: [
+                  '-e',
+                  `let d="";process.stdin.on("data",c=>d+=c).on("end",()=>require("fs").writeFileSync(${JSON.stringify(marker)},d))`,
+                ],
+                async: true,
+              },
+            ],
+          },
+        ],
+      })
+      expect(outcome!.ran).toBe(true)
+      expect(outcome!.detached).toBe(true)
+      // Async hooks receive the same stdin payload as synchronous hooks.
+      await waitFor(async () => {
+        try {
+          return (JSON.parse(await readFile(marker, 'utf8')) as { tool_name?: string }).tool_name === 'Bash'
+        } catch {
+          return false
+        }
+      })
+    } finally {
+      await rm(marker, { force: true })
+    }
   })
 
   it('reports handlers that failed to start', async () => {
@@ -212,12 +276,12 @@ describe('decision resolvers', () => {
     expect(deny).toEqual({ kind: 'deny', reason: 'danger' })
   })
 
-  it('maps defer to deny with an explanation', () => {
+  it('maps defer to ask (no DSH resume seam)', () => {
     const decision = resolvePreToolUse(
       [{ ...base, output: { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'defer' } } }],
       1000,
     )
-    expect(decision.kind).toBe('deny')
+    expect(decision.kind).toBe('ask')
   })
 
   it('maps ask', () => {

@@ -141,13 +141,29 @@ describe('runEventHooks (command hooks)', () => {
     expect(outcome!.output?.stopReason).toBe('halted')
   })
 
-  it('times out and fails open', async () => {
+  it('times out and discards partial output', async () => {
     const [outcome] = await run({
-      groups: [{ hooks: [{ type: 'command', command: 'node', args: ['-e', 'setTimeout(()=>{},5000)'] }] }],
+      groups: [
+        {
+          hooks: [
+            {
+              type: 'command',
+              command: 'node',
+              args: [
+                '-e',
+                'process.stdout.write(JSON.stringify({hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny"}}));setTimeout(()=>{},5000)',
+              ],
+            },
+          ],
+        },
+      ],
       timeoutMs: 300,
     })
     expect(outcome!.timedOut).toBe(true)
     expect(outcome!.exitCode).toBeNull()
+    // Partial stdout must never become a decision after a timeout.
+    expect(outcome!.output).toBeNull()
+    expect(outcome!.stdout).toBe('')
   })
 
   it('filters by matcher and if', async () => {

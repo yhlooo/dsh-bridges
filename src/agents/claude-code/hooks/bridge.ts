@@ -323,6 +323,8 @@ export { composePreToolDecision } from '../../../permissions/compose.js'
 
 export function resolvePreToolUse(outcomes: readonly HookOutcome[], maxChars: number): PreToolUseResolution {
   // Precedence: deny > defer > ask > allow; timeouts and failures fail open.
+  // `defer` (pause and resume later) has no DSH seam, so it maps to `ask` —
+  // the closest prompt-equivalent — instead of an outright deny.
   let ask: { kind: 'ask'; reason?: string } | undefined
   let allow = false
   for (const outcome of outcomes) {
@@ -343,10 +345,10 @@ export function resolvePreToolUse(outcomes: readonly HookOutcome[], maxChars: nu
     }
     if (decision === 'defer') {
       return {
-        kind: 'deny',
+        kind: 'ask',
         reason: firstNonEmpty(
           specific?.permissionDecisionReason,
-          `tool call deferred by a Claude Code hook; defer is not supported by the dsh bridge`,
+          `tool call deferred by a Claude Code hook; defer is mapped to approval by the dsh bridge`,
         ),
       }
     }
