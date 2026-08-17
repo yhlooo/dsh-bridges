@@ -38,7 +38,7 @@ const problems = []
 const rows = []
 
 for (const tool of tools) {
-  const installed = capture('npm', ['i', '-g', `${tool.pkg}@${tool.pin}`])
+  const installed = capture('npm', ['i', '-g', `${tool.pkg}@${tool.pin}`, ...(tool.npmArgs ?? [])])
   if (!installed.ok) {
     problems.push(`${tool.tool}: install failed: ${installed.stdout}`)
     rows.push({ tool: tool.tool, pinned: tool.pin, installed: 'install failed', latest: '-', probes: '-' })
