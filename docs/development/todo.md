@@ -222,11 +222,13 @@
 - [ ] **Pi `SYSTEM.md`**：整体替换系统提示 → 核心支持候选（会话级系统提示
   覆盖接缝）；`APPEND_SYSTEM.md` 追加语义已降级映射为记忆注入
   （2026-08-16，Pi 桥接遗留，guides 已记限制）。
-- [ ] **环 C 上游探针支持非 npm 安装**：Pi 与 Cursor CLI 均无 npm 包（官方
-  `curl pi.dev/install | bash` / `curl cursor.com/install`，GitHub releases），
-  `scripts/upstream-probe.mjs` 目前只支持 `npm i -g <pkg>@<pin>`——需为探针
-  脚本增加下载安装模式后再把 Pi 与 cursor（二进制名 `agent`）加入
-  `scripts/upstream-tools.json`（2026-08-16，Pi/cursor 桥接遗留）。
+- [ ] **环 C 上游探针支持脚本安装（cursor）**：**Pi 部分已做**（2026-08-17，
+  commit 00b6080）：Pi 官方文档明确其以 npm 包分发
+  （`@earendil-works/pi-coding-agent`，官方安装命令自带 `--ignore-scripts`），
+  已按 pin 0.84.2 加入 `scripts/upstream-tools.json`，探针支持逐工具
+  `npmArgs`。**cursor 仍待做**：Cursor CLI 无 npm 包、`cursor.com/install`
+  无 pin 机制且未确认其 GitHub release 二进制地址，需为探针增加脚本下载安装
+  模式（二进制名 `agent`）后再纳入（2026-08-16，cursor 桥接遗留）。
 - [ ] **gemini-cli 工作区策略层**：上游 `.gemini/policies/` 因 issue #18186
   禁用，桥接同样不读；上游修复后补上（2026-08-16，gemini 桥接遗留，guides
   已记限制）。
@@ -398,43 +400,70 @@
 
 ### 中危（待办）
 
-- [ ] **MCP 变更检测比较对象写错**：`src/mcp-bridge.ts` reconcile 用
+- [x] **MCP 变更检测比较对象写错**：`src/mcp-bridge.ts` reconcile 用
   `JSON.stringify(next)`（含 name 包裹）对比 `running.config`（无包裹）恒不等 →
   每次 session-start/watcher 事件重启该工作区全部 MCP 服务器；应为 `next.config`
-  （2026-08-16 审察）。
-- [ ] **cursor handler 级 `matcher` 被丢弃**：`src/agents/cursor/settings.ts`
+  （2026-08-16 审察）。**已修复**（2026-08-17，commit 12810b5）：改为比较
+  `next.config`，bridge-mcp 单测新增"未变更配置不重启"断言。
+- [x] **cursor handler 级 `matcher` 被丢弃**：`src/agents/cursor/settings.ts`
   normalizeHooks 把 handler 包成 `{matcher: undefined, hooks:[...]}`，上游
   hooks.md 明确 `matcher` 是 handler 级字段 → 带 matcher 的 guard hook 对全部
-  命令运行（2026-08-16 审察）。
-- [ ] **async hook 子进程 stdin 不写入、管道不排空**：claude/codebuddy/codex
+  命令运行（2026-08-16 审察）。**已修复**（2026-08-17，commit 916e73d）：
+  每个 handler 的 `matcher` 保留在其分组上；cursor-settings 测试断言保留。
+- [x] **async hook 子进程 stdin 不写入、管道不排空**：claude/codebuddy/codex
   `hooks/run.ts` async 分支只 spawn（stdio 三个 pipe）→ 输出超管道缓冲（约 64KB）
   死锁；且上游 async hook 会收到 stdin JSON，桥接完全不发（2026-08-16 审察）。
-- [ ] **超时/取消 hook 的部分 stdout 仍被解析为决策**：`run.ts` 置
+  **已修复**（2026-08-17，commit dc4911e）：async 分支写入并 end stdin JSON，
+  stdout/stderr `resume()` 排空；claude 单测新增"async hook 收到 stdin JSON"
+  断言。
+- [x] **超时/取消 hook 的部分 stdout 仍被解析为决策**：`run.ts` 置
   timedOut/cancelled 但 bridge 只检查 ran/detached；上游语义为超时即丢弃输出
-  （2026-08-16 审察）。
-- [ ] **claude `permissionDecision: "defer"` 被映射为 deny**：上游优先级
+  （2026-08-16 审察）。**已修复**（2026-08-17，commit dc4911e/916e73d）：
+  五个 hooks/run.ts 在 timedOut/cancelled 时清空 stdout、不再 parse；各工具
+  run 测试改为"超时丢弃部分输出"断言。
+- [x] **claude `permissionDecision: "defer"` 被映射为 deny**：上游优先级
   deny > defer > ask > allow，defer 意为"稍后恢复"；建议降级为 ask/放行 + 告警
-  （2026-08-16 审察）。
+  （2026-08-16 审察）。**已修复**（2026-08-17，commit dc4911e）：改为映射
+  `ask`（审批，无恢复接缝），guides 中英已同步；对应测试改为断言 `ask`。
 - [ ] **`capString` 输出超出 maxChars 约 1.4 倍**：`src/util.ts` `tail =
   value.length - head`；应为 `tail = value.length - (maxChars - head -
   marker.length)` 并取整（2026-08-16 审察）。
-- [ ] **cursor 用户级 hook 相对命令路径解析到项目目录**：`cursor/hooks/run.ts`
+- [x] **cursor 用户级 hook 相对命令路径解析到项目目录**：`cursor/hooks/run.ts`
   统一 cwd = session cwd；上游用户 hook 从 `~/.cursor/` 运行（2026-08-16 审察）。
-- [ ] **OpenCode/gemini-cli stdio MCP `cwd` 硬编码 `process.cwd()`**（cursor 已
-  正确实现）（2026-08-16 审察）。
-- [ ] **OpenCode 内置 `.env` 拒绝在 `*` 通配符对象形式下被替换**：
+  **已修复**（2026-08-17，commit 916e73d）：MatcherGroup 携带来源目录（用户
+  hook = 用户配置目录、项目 hook = 会话工作目录），run.ts 按分组 cwd 执行；
+  guides 中英已写明该解析规则。
+- [x] **OpenCode/gemini-cli stdio MCP `cwd` 硬编码 `process.cwd()`**（cursor 已
+  正确实现）（2026-08-16 审察）。**已修复**（2026-08-17，commit 12810b5）：
+  opencode/gemini 归一器接收 session cwd 作为 fallback；同批修复了共享
+  `normalizeClaudeStyleEntry`（claude/codebuddy）与 codex 归一器的同款
+  `process.cwd()` fallback，五个桥接统一为会话工作目录。
+- [x] **OpenCode 内置 `.env` 拒绝在 `*` 通配符对象形式下被替换**：
   `opencode/permissions.ts` evaluateFamily 规则选择逻辑；`{"*":{"*":"allow"}}`
-  时读 `.env` 被放行（2026-08-16 审察）。
-- [ ] **gemini `modes`/`interactive` 门控 deny 被丢弃**（fail-open；已记限制，
-  建议核对上游方向并显式化）（2026-08-16 审察）。
-- [ ] **cursor `cli.json`/`cli-config.json` 权限列表整体替换而非合并**：需核实
-  Cursor 上游合并语义后再定（2026-08-16 审察）。
-- [ ] **claude `additionalDirectories`/`autoMemoryDirectory` 无项目信任门禁**：
+  时读 `.env` 被放行（2026-08-16 审察）。**已修复**（2026-08-17，commit
+  53a1bed）：read 族在 wildcard 是唯一规则来源时追加内置 `.env` 保护规则
+  （last-match 语义保留 `.env.example` 放行）；opencode-permissions 测试新增
+  `*` 通配符用例。
+- [x] **gemini `modes`/`interactive` 门控 deny 被丢弃**（fail-open；已记限制，
+  建议核对上游方向并显式化）（2026-08-16 审察）。**已核实**（2026-08-17）：
+  headless 会话下 `interactive: true` 与 `modes` 门控规则在上游本就 inactive，
+  跳过是正确行为；gemini guides 已显式记录（"modes-gated rules are inactive"），
+  无需改代码。
+- [x] **cursor `cli.json`/`cli-config.json` 权限列表整体替换而非合并**：需核实
+  Cursor 上游合并语义后再定（2026-08-16 审察）。**已核实**（2026-08-17）：
+  Cursor 官方文档（cli-reference-permissions.md / cli-reference-configuration.md）
+  未记载全局与项目列表的合并方式；guides 中英已把"最具体层整体替换"标注为
+  桥接记录在案的解读，待上游明确后再核对。
+- [x] **claude `additionalDirectories`/`autoMemoryDirectory` 无项目信任门禁**：
   上游项目级设置需工作区信任；桥接无条件读取（固定文件名，风险低于任意文件，
-  但应评估信任门禁）（2026-08-16 审察）。
-- [ ] **`if` 规则解析失败 fail-open**（claude/codebuddy matcher）：与上游
+  但应评估信任门禁）（2026-08-16 审察）。**决策：记限制**（2026-08-17）：
+  两者仅读取固定文件名，不加门禁；guides 中英已在 Permissions/Settings 限制行
+  写明。
+- [x] **`if` 规则解析失败 fail-open**（claude/codebuddy matcher）：与上游
   best-effort 契约一致且已文档化，但与 AGENTS.md「fail closed」约定存在张力——
-  在 guides 显式记录该例外或改为 fail-closed（2026-08-16 审察）。
+  在 guides 显式记录该例外或改为 fail-closed（2026-08-16 审察）。**已核实**
+  （2026-08-17）：claude/codebuddy guides 均已显式记录该例外（"matching …
+  best-effort contract" / "fail open"），保持与上游一致的 fail-open，不改代码。
 
 ### 低危（待办）
 
