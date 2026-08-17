@@ -40,7 +40,7 @@ opencode 桥接如何将 opencode 的资产桥接进来。
 | `AGENTS.md`（向上到 git 根最近的） | 注入；cwd 层的 `AGENTS.md` 是 DeepSeek Harness 已加载文件，跳过 |
 
 opencode 没有 hooks 文件格式，因此本示例不含 hooks——它属于 opencode
-插件 API 的范畴，不在桥接范围内（见[使用指南](../../docs/guides/README.zh.md)
+插件 API 的范畴，不在桥接范围内（见 [opencode 指南](../../docs/guides/opencode.zh.md)
 「限制」小节）。
 
 ## 如何验证

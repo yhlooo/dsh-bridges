@@ -32,7 +32,7 @@ docs/reference/
 │   ├── skills.md / commands.md / rules.md / config.md / agents-config.md
 │   ├── permissions.md / plugins.md / custom-tools.md / tools.md
 │   └── references.md / mcp-servers.md
-└── deepseek-harness/          # DSH 侧资料（来自本地安装的 @deepseek-ai/dsh 包）
+└── deepseek-harness/          # DeepSeek Harness 侧资料（来自本地安装的 @deepseek-ai/dsh 包）
     ├── README.md / README.zh.md
     └── agent-presets/         # agent preset 结构与 skills 示例
 ```

@@ -67,8 +67,12 @@ CodeBuddy……）。在本仓库的所有工作中请遵守以下约定。
 
 ### docs/ 布局
 
-- `docs/guides/` — 面向用户的使用指南。英文在 `README.md`，中文在
-  `README.zh.md`；`.zh.md` 后缀标记中文版本。
+- `docs/guides/` — 面向用户的使用指南。入口索引在 `README.md`（英文）与
+  `README.zh.md`（中文）：安装与验证、公共行为、逐工具索引；每个桥接一个独立
+  页面 `<tool>.md`（中文版 `<tool>.zh.md`），页内结构统一为「配置块 →
+  skills/commands → 记忆 → hooks → 权限 → MCP → 子代理 → 限制」，各桥接共有的
+  规则（原生技能遮蔽、32 KiB 记忆预算、热更新、fail-open）只写在索引页的
+  "Common behaviors / 公共行为"，工具页用一句话引用，不重复铺陈。
 - `docs/reference/` — 各桥接目标的官方上游文档，保持原文不改动。
 - `docs/development/` — 贡献者指南（中文），包括新增桥接的清单。
 - `docs/development/todo.md` — **待办与特性补全计划**：所有"需要做但不立即做"的
@@ -78,10 +82,11 @@ CodeBuddy……）。在本仓库的所有工作中请遵守以下约定。
 ### 新增桥接按此顺序更新文档
 
 1. `docs/reference/<tool>/` — 先收集官方上游规范。
-2. `docs/guides/` — 加入该工具的小节（skills/commands、记忆、hooks、限制）与
-   其配置块，中英两版。
-3. 根 README（两版语言）— 状态 callout、支持的 agent 工具表行、guides/
-   reference 链接。
+2. `docs/guides/` — 为该工具新增独立页面 `<tool>.md` / `<tool>.zh.md`
+   （skills/commands、记忆、hooks、限制与配置块），并在 `README.md` /
+   `README.zh.md` 索引页登记一行（一句话概述 + 链接）。
+3. 根 README（两版语言）— 状态 callout、支持矩阵表行（✓/—，链接到该工具
+   指南页）、guides/reference 链接。
 4. 本轮未做 / 待做的遗留事项写入 `docs/development/todo.md` 并保持更新。
 
 ## Git 提交约定

@@ -9,7 +9,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/dsh-bridges)](https://www.npmjs.com/package/dsh-bridges)
 [![license](https://img.shields.io/github/license/yhlooo/dsh-bridges)](LICENSE)
 
-一个 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 插件：把已经为 Claude Code、CodeBuddy Code、opencode、Codex、pi、Gemini CLI、Cursor 配置好的项目桥接进 DeepSeek Harness——skills、commands、记忆、hooks 无需任何迁移即可继续生效。
+一个 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 插件：把已经为 Claude Code、CodeBuddy Code、opencode、Codex、pi、Gemini CLI、Cursor 配置好的项目桥接进 DeepSeek Harness——skills、commands、记忆、hooks 无需迁移即可继续生效。
 
 ## 快速上手
 
@@ -33,49 +33,33 @@ dsh --profile headless "list the skills available in your catalog"
 从本仓库源码安装（需先编译）：`pnpm install && pnpm build && dsh plugin --profile <profile-name> add .`
 
 每个受支持的 agent 工具在 [`examples/`](examples/) 下各有一个完整示例项目
-（`claude-code`、`codebuddy-code`、`opencode`、`codex`、`pi`、`gemini-cli`、`cursor`）；以示例目录作为会话
-工作区打开，即可观察其 skills、memory 与 hooks 的桥接效果。
+（`claude-code`、`codebuddy-code`、`opencode`、`codex`、`pi`、`gemini-cli`、`cursor`）；以示例目录作为会话工作区打开，即可观察其 skills、memory 与 hooks 的桥接效果。
 
-所有桥接默认启用，并可通过 patch 层逐一调整或禁用：
+## 支持矩阵
+
+资产按会话工作区发现（项目级与用户级目录）。所有桥接默认启用，可在任意 patch 层逐一调整或禁用：
 
 ```yaml
+# 示例：禁用 pi 桥接
 - id: bridges
   config:
-    claudeCode:
-      enabled: true     # 本桥接总开关
-      skills: true      # .claude 技能与命令
-      memory: true      # CLAUDE.md 记忆
-      hooks: true       # settings.json hooks
-      permissions: true # settings.json 权限规则（allow/ask/deny）
+    pi:
+      enabled: false
 ```
 
-各桥接的完整配置与行为说明：[`docs/guides/`](docs/guides/README.zh.md)
-
-## 桥接了什么
-
-| 项目里已有的资产 | DeepSeek Harness 提供的桥接 |
-| :--- | :--- |
-| `.claude/` `.codebuddy/` `.opencode/` `.agents/` `.pi/` `.gemini/` `.cursor/` 技能与命令 | 模型技能目录 + `/名字` 调用 |
-| `CLAUDE.md`、`CODEBUDDY.md`、`AGENTS.md`、`GEMINI.md` 链与规则 | 会话开始时的记忆注入 |
-| `settings.json`、`hooks.json`、`config.toml` hooks | 同样的 hooks 运行在 DeepSeek Harness 生命周期 |
-| `settings.json` 的 `permissions` 规则、策略文件、CLI 规则 | 同样的 allow/ask/deny 决策作用于工具调用 |
-| `.mcp.json`、`config.toml`、`opencode.json`、`mcp.json` 的 MCP 服务器 | 桥接的 MCP 工具 |
-
-## 支持的 agent 工具
-
-| 工具 | Skills / commands | Memory | Hooks | Permissions | MCP |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| Claude Code | `.claude/skills`、`.claude/commands`、`.claude/agents`（含 `~/.claude`） | `.claude/CLAUDE.md`、`~/.claude/CLAUDE.md` | `settings.json` hooks（SessionStart、UserPromptSubmit、Pre/PostToolUse(+Failure)、Stop、SessionEnd） | `settings.json` permissions 规则（allow/ask/deny，含 Bash 前缀、路径、域名匹配） | `.mcp.json` + `~/.claude.json` MCP 服务器 |
-| CodeBuddy Code | `.codebuddy/skills`、`.codebuddy/commands`、`.codebuddy/agents`（含 `~/.codebuddy`） | `CODEBUDDY.md`、`~/.codebuddy/CODEBUDDY.md`、`.codebuddy/rules/` | `settings.json` hooks（SessionStart、UserPromptSubmit、Pre/PostToolUse(+Failure)、Stop、SessionEnd） | `settings.json` permissions 规则（allow/ask/deny：精确/前缀/glob Bash、大小写不敏感路径、MCP、Skill） | `.mcp.json` + `~/.codebuddy/.mcp.json` MCP 服务器 |
-| opencode | `.opencode/skills`、`.opencode/commands`（含 `~/.config/opencode`）、`opencode.json` 的 `command.*` | `AGENTS.md`（含 `CLAUDE.md` 回退）、`instructions` 文件 | —（opencode 无 hooks 配置；其插件 API 不在范围内） | `opencode.json(c)` 的 `permission` 规则（家族分组、末条命中、`external_directory`、内置默认） | `opencode.json(c)` 的 `mcp` 服务器 |
-| Codex | `.agents/skills`（cwd → 仓库根）、`~/.agents/skills`、`/etc/codex/skills` | `~/.codex/AGENTS.md` + 逐目录 `AGENTS.md` 链 | `hooks.json` / `config.toml` hooks（SessionStart、SubagentStart、UserPromptSubmit、Pre/PostToolUse、Stop、SubagentStop、SessionEnd） | `config.toml` 审批/沙箱策略（`approval_policy`、`sandbox_mode`、内置 `default_permissions` 档案） | `config.toml` 的 `[mcp_servers]` 条目 |
-| pi | `.pi/skills`、`.pi/prompts`（含 `~/.pi/agent`；项目级受信任门禁） | `AGENTS.md` / `CLAUDE.md` 链 + `APPEND_SYSTEM.md` | —（pi 无 hooks 配置；扩展事件总线不在范围内） | —（pi 无权限规则系统） | —（pi 无 MCP 配置） |
-| Gemini CLI | `.gemini/skills`、`.gemini/commands`、`.gemini/agents`（含 `~/.gemini`） | `GEMINI.md` 链（含 `@` 导入） | `settings.json` hooks（SessionStart、BeforeAgent、AfterAgent、Before/AfterTool、SessionEnd） | `~/.gemini/policies/*.toml` 规则（用户层，allow/deny/ask_user） | `settings.json` 的 `mcpServers` |
-| Cursor | `.cursor/skills`、`.cursor/agents`（含 `~/.cursor`） | `.cursor/rules/*.mdc`（alwaysApply）+ 子目录 `AGENTS.md` | `hooks.json` hooks（sessionStart、beforeSubmitPrompt、pre/postToolUse、stop、subagent 事件、beforeShellExecution……） | `cli.json` / `cli-config.json` 的 `Shell()`/`Read()`/`Write()`/`WebFetch()`/`Mcp()` 规则（deny > allow） | `.cursor/mcp.json` + `~/.cursor/mcp.json` |
+| 工具 | Skills / commands | 记忆 | Hooks | 权限 | MCP | 指南 |
+| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| Claude Code | ✓ | ✓ | ✓ | ✓ | ✓ | [`claude-code`](docs/guides/claude-code.zh.md) |
+| CodeBuddy Code | ✓ | ✓ | ✓ | ✓ | ✓ | [`codebuddy-code`](docs/guides/codebuddy-code.zh.md) |
+| opencode | ✓ | ✓ | — | ✓ | ✓ | [`opencode`](docs/guides/opencode.zh.md) |
+| Codex | ✓ | ✓ | ✓ | ✓ | ✓ | [`codex`](docs/guides/codex.zh.md) |
+| pi | ✓ | ✓ | — | — | — | [`pi`](docs/guides/pi.zh.md) |
+| Gemini CLI | ✓ | ✓ | ✓ | ✓ | ✓ | [`gemini-cli`](docs/guides/gemini-cli.zh.md) |
+| Cursor | ✓ | ✓ | ✓ | ✓ | ✓ | [`cursor`](docs/guides/cursor.zh.md) |
 
 ## 资源
 
+- 使用指南（安装与验证、公共行为、逐工具深入）：[`docs/guides/`](docs/guides/README.zh.md)
 - 每个桥接目标一个示例项目：[`examples/`](examples/)
-- 使用指南（各桥接细节、完整配置参考、尚未桥接的部分）：[`docs/guides/`](docs/guides/README.zh.md)
-- 各桥接目标的参考资料（官方上游规范）：[`docs/reference/`](docs/reference/)
-- 贡献者文档（如何新增一个 agent 工具、集成面、踩坑）：[`docs/development/`](docs/development/)
+- 各桥接目标的上游参考资料（官方规范）：[`docs/reference/`](docs/reference/)
+- 贡献者文档：[`docs/development/`](docs/development/)

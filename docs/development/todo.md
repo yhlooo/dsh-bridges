@@ -16,8 +16,8 @@
   调研任务而非直接实现。
 - 依赖 dsh 核心支持的条目标注「**需核心支持**」，同时记录降级方案；上游 issue /
   讨论链接贴在条目内。
-- 文档改动（guides 中英两版、根 README 两版、reference 副本）与代码实现同步进行，
-  遵守 AGENTS.md 的文档约定。
+- 文档改动（guides 索引与各工具页中英两版、根 README 两版、reference 副本）与
+  代码实现同步进行，遵守 AGENTS.md 的文档约定。
 
 ## 先决调研（阻塞映射设计的 dsh 接缝问题）
 
@@ -471,3 +471,5 @@
   `src/agents/opencode/permissions.ts`（2026-08-16 审察）。
 - [ ] CI 依赖的 GH Actions（checkout/setup-node/pnpm/action-setup@v4）出现
   Node 20 运行时弃用注解，跟进上游升级（2026-08-16 审察）。
+- [ ] `examples/` 下 8 个 README 仅中文，英文用户从根 README 进入存在语言断层
+  （2026-08-16 文档重构）。

@@ -34,46 +34,31 @@ To install from a checkout of this repository, build it first: `pnpm install && 
 
 Complete example projects for each agent tool are available in [`examples/`](examples/) (`claude-code`, `codebuddy-code`, `opencode`, `codex`, `pi`, `gemini-cli`, `cursor`); open one as the session workspace to observe its skills, memory, and hooks being bridged.
 
-All bridges are enabled by default and can be configured or disabled individually from any patch layer:
+## Support matrix
+
+Assets are discovered per session workspace, from project and user-level locations. All bridges are enabled by default and can be configured or disabled from any patch layer:
 
 ```yaml
+# example: disable the pi bridge
 - id: bridges
   config:
-    claudeCode:
-      enabled: true     # master switch for this bridge
-      skills: true      # .claude skills and commands
-      memory: true      # CLAUDE.md memory
-      hooks: true       # settings.json hooks
-      permissions: true # settings.json permission rules (allow/ask/deny)
+    pi:
+      enabled: false
 ```
 
-Full per-bridge configuration and behavior: [`docs/guides/`](docs/guides/README.md)
-
-## What it bridges
-
-| Assets already in your project | What DeepSeek Harness provides |
-| :--- | :--- |
-| `.claude/` `.codebuddy/` `.opencode/` `.agents/` `.pi/` `.gemini/` `.cursor/` skills and commands | model skill catalog + `/name` invocation |
-| `CLAUDE.md`, `CODEBUDDY.md`, `AGENTS.md`, `GEMINI.md` chains and rules | session-start memory injection |
-| `settings.json`, `hooks.json`, `config.toml` hooks | the same hooks at DeepSeek Harness lifecycles |
-| `settings.json` `permissions` rules, policy files, CLI rules | the same allow/ask/deny decisions on tool calls |
-| `.mcp.json`, `config.toml`, `opencode.json`, `mcp.json` MCP servers | bridged MCP tools |
-
-## Supported agents
-
-| Agent | Skills / commands | Memory | Hooks | Permissions | MCP |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| Claude Code | `.claude/skills`, `.claude/commands`, `.claude/agents` (+ `~/.claude`) | `.claude/CLAUDE.md`, `~/.claude/CLAUDE.md` | `settings.json` hooks (SessionStart, UserPromptSubmit, Pre/PostToolUse(+Failure), Stop, SessionEnd) | `settings.json` permission rules (allow/ask/deny: Bash prefixes, paths, domains) | `.mcp.json` + `~/.claude.json` MCP servers |
-| CodeBuddy Code | `.codebuddy/skills`, `.codebuddy/commands`, `.codebuddy/agents` (+ `~/.codebuddy`) | `CODEBUDDY.md`, `~/.codebuddy/CODEBUDDY.md`, `.codebuddy/rules/` | `settings.json` hooks (SessionStart, UserPromptSubmit, Pre/PostToolUse(+Failure), Stop, SessionEnd) | `settings.json` permission rules (allow/ask/deny: exact/prefix/glob Bash, case-insensitive paths, MCP, Skill) | `.mcp.json` + `~/.codebuddy/.mcp.json` MCP servers |
-| opencode | `.opencode/skills`, `.opencode/commands` (+ `~/.config/opencode`), `command.*` in `opencode.json` | `AGENTS.md` (+ `CLAUDE.md` fallback), `instructions` files | — (opencode has no hooks config; its plugin API is out of scope) | `permission` rules from `opencode.json(c)` (families, last-match-wins patterns, `external_directory`, built-in defaults) | `opencode.json(c)` `mcp` servers |
-| Codex | `.agents/skills` (cwd → repo root), `~/.agents/skills`, `/etc/codex/skills` | `~/.codex/AGENTS.md` + per-directory `AGENTS.md` chain | `hooks.json` / `config.toml` hooks (SessionStart, SubagentStart, UserPromptSubmit, Pre/PostToolUse, Stop, SubagentStop, SessionEnd) | `config.toml` approval/sandbox policy (`approval_policy`, `sandbox_mode`, built-in `default_permissions` profiles) | `config.toml` `[mcp_servers]` entries |
-| pi | `.pi/skills`, `.pi/prompts` (+ `~/.pi/agent`; project assets are trust-gated) | `AGENTS.md` / `CLAUDE.md` chain + `APPEND_SYSTEM.md` | — (pi has no hooks config; its extension event bus is out of scope) | — (pi has no permission-rule system) | — (pi has no MCP config) |
-| Gemini CLI | `.gemini/skills`, `.gemini/commands`, `.gemini/agents` (+ `~/.gemini`) | `GEMINI.md` chain (with `@` imports) | `settings.json` hooks (SessionStart, BeforeAgent, AfterAgent, Before/AfterTool, SessionEnd) | `~/.gemini/policies/*.toml` rules (user tier, allow/deny/ask_user) | `settings.json` `mcpServers` |
-| Cursor | `.cursor/skills`, `.cursor/agents` (+ `~/.cursor`) | `.cursor/rules/*.mdc` (alwaysApply) + subdirectory `AGENTS.md` | `hooks.json` hooks (sessionStart, beforeSubmitPrompt, pre/postToolUse, stop, subagent events, beforeShellExecution, …) | `cli.json` / `cli-config.json` `Shell()`/`Read()`/`Write()`/`WebFetch()`/`Mcp()` rules (deny > allow) | `.cursor/mcp.json` + `~/.cursor/mcp.json` |
+| Agent tool | Skills / commands | Memory | Hooks | Permissions | MCP | Guide |
+| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| Claude Code | ✓ | ✓ | ✓ | ✓ | ✓ | [`claude-code`](docs/guides/claude-code.md) |
+| CodeBuddy Code | ✓ | ✓ | ✓ | ✓ | ✓ | [`codebuddy-code`](docs/guides/codebuddy-code.md) |
+| opencode | ✓ | ✓ | — | ✓ | ✓ | [`opencode`](docs/guides/opencode.md) |
+| Codex | ✓ | ✓ | ✓ | ✓ | ✓ | [`codex`](docs/guides/codex.md) |
+| pi | ✓ | ✓ | — | — | — | [`pi`](docs/guides/pi.md) |
+| Gemini CLI | ✓ | ✓ | ✓ | ✓ | ✓ | [`gemini-cli`](docs/guides/gemini-cli.md) |
+| Cursor | ✓ | ✓ | ✓ | ✓ | ✓ | [`cursor`](docs/guides/cursor.md) |
 
 ## Resources
 
+- Usage guide (install and verify, shared behaviors, per-tool deep dives): [`docs/guides/`](docs/guides/README.md)
 - Example projects, one per bridged agent tool: [`examples/`](examples/)
-- Usage guide (per-bridge details, full config reference, what is not bridged yet): [`docs/guides/`](docs/guides/README.md)
-- Bridge-target reference materials (official upstream specs): [`docs/reference/`](docs/reference/)
-- Contributor documentation (how to add a new agent tool, integration surface, pitfalls): [`docs/development/`](docs/development/)
+- Upstream reference material (official specs): [`docs/reference/`](docs/reference/)
+- Contributor documentation: [`docs/development/`](docs/development/)
