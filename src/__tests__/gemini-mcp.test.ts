@@ -36,4 +36,9 @@ describe('gemini MCP normalization', () => {
     )!
     expect((normalized.config as { cwd?: string }).cwd).toBe(fx('proj', '.gemini', 'servers'))
   })
+
+  it('falls back to the session cwd when the entry has none', () => {
+    const normalized = normalizeGeminiServer('db', { ...base, command: 'x' }, 120_000, silent, fx('proj'))!
+    expect((normalized.config as { cwd?: string }).cwd).toBe(fx('proj'))
+  })
 })

@@ -115,6 +115,11 @@ describe('codex MCP', () => {
     expect(http?.config.transport).toBe('streamable-http')
     expect(normalizeCodexServer('off', { command: 'x', enabled: false }, 120_000)).toBeUndefined()
   })
+
+  it('falls back to the session cwd for stdio entries without one', () => {
+    const stdio = normalizeCodexServer('github', { command: 'gh-mcp', args: ['serve'] }, 120_000, fx('proj'))
+    if (stdio?.config.transport === 'stdio') expect(stdio.config.cwd).toBe(fx('proj'))
+  })
 })
 
 describe('opencode MCP', () => {
@@ -145,6 +150,11 @@ describe('opencode MCP', () => {
     expect(remote?.config.transport).toBe('streamable-http')
     expect(normalizeOpencodeServer('off', { type: 'local', command: ['x'], enabled: false }, 120_000)).toBeUndefined()
   })
+
+  it('falls back to the session cwd for local entries', () => {
+    const local = normalizeOpencodeServer('local', { type: 'local', command: ['npx', 'server'], enabled: true }, 120_000, fx('proj'))
+    if (local?.config.transport === 'stdio') expect(local.config.cwd).toBe(fx('proj'))
+  })
 })
 
 describe('opencode MCP manager', () => {
@@ -157,5 +167,17 @@ describe('opencode MCP manager', () => {
     const manager = new OpencodeMcpManager(fakeCtx(pluginCalls), silent, new TreeFs(files), { toolCallTimeoutMs: 120_000 }, loader)
     await manager.reconcile(fx('proj'))
     expect((pluginCalls as { serverName: string }[]).map((config) => config.serverName)).toEqual(['opencode__mydb'])
+  })
+
+  it('does not restart unchanged servers on re-reconcile', async () => {
+    const pluginCalls: unknown[] = []
+    const files = new Map<string, string>([
+      [fx('proj', 'opencode.json'), JSON.stringify({ mcp: { mydb: { type: 'local', command: ['mdb-server'], enabled: true } } })],
+    ])
+    const loader = new OpencodeSettingsLoader(silent, new TreeFs(files), { userOpencodeDir: fx('home', 'u', '.config', 'opencode') })
+    const manager = new OpencodeMcpManager(fakeCtx(pluginCalls), silent, new TreeFs(files), { toolCallTimeoutMs: 120_000 }, loader)
+    await manager.reconcile(fx('proj'))
+    await manager.reconcile(fx('proj'))
+    expect(pluginCalls).toHaveLength(1) // an unchanged config must not restart the server
   })
 })

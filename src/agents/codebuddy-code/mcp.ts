@@ -36,8 +36,6 @@ export class CodebuddyMcpManager {
   constructor(ctx: Context, logger: BridgeLogger, fs: FsAdapter, config: CodebuddyMcpConfig, settingsLoader: CodebuddySettingsLoader) {
     const userDir = expandHome(config.userCodebuddyDir)
     const userFiles = [join(userDir, '.mcp.json'), join(userDir, 'mcp.json'), join(dirname(userDir), '.codebuddy.json')]
-    const normalize = (name: string, entry: Record<string, unknown>, baseEnv?: Readonly<Record<string, string>>) =>
-      normalizeClaudeStyleEntry(name, entry, 'codebuddy', config.toolCallTimeoutMs, baseEnv)
     const options: McpBridgeOptions = {
       prefix: 'codebuddy',
       toolCallTimeoutMs: config.toolCallTimeoutMs,
@@ -45,11 +43,11 @@ export class CodebuddyMcpManager {
         // settings.json `env` applies to every session upstream; the bridge
         // merges it under MCP server child env.
         const env = (await settingsLoader.load(cwd)).env
+        const normalize = (name: string, entry: Record<string, unknown>) =>
+          normalizeClaudeStyleEntry(name, entry, 'codebuddy', config.toolCallTimeoutMs, env, cwd)
         return {
-          user: await readJsonServerFiles(fs, logger, userFiles, (name, entry) => normalize(name, entry, env)),
-          project: await readJsonServerFiles(fs, logger, [join(cwd, '.mcp.json'), join(cwd, 'mcp.json')], (name, entry) =>
-            normalize(name, entry, env),
-          ),
+          user: await readJsonServerFiles(fs, logger, userFiles, normalize),
+          project: await readJsonServerFiles(fs, logger, [join(cwd, '.mcp.json'), join(cwd, 'mcp.json')], normalize),
         }
       },
       readPolicy: async (cwd) => (await settingsLoader.load(cwd)).mcpjsonServers,

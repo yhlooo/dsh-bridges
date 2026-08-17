@@ -29,13 +29,24 @@ class TreeFs implements FsAdapter {
 
 describe('normalizeServer', () => {
   it('maps a stdio entry onto the stdio transport', () => {
-    const server = normalizeServer('notion', { command: 'npx', args: ['-y', 'server'], env: { TOKEN: '${NOTION_TOKEN}' } }, 120_000)
+    const server = normalizeServer(
+      'notion',
+      { command: 'npx', args: ['-y', 'server'], env: { TOKEN: '${NOTION_TOKEN}' } },
+      120_000,
+      fx('proj'),
+    )
     expect(server?.config.transport).toBe('stdio')
     if (server?.config.transport === 'stdio') {
       expect(server.config.serverName).toBe('claude__notion')
       expect(server.config.command).toBe('npx')
       expect(server.config.args).toEqual(['-y', 'server'])
+      expect(server.config.cwd).toBe(fx('proj')) // session cwd fallback
     }
+  })
+
+  it('keeps an explicit entry cwd over the session cwd', () => {
+    const server = normalizeServer('notion', { command: 'npx', cwd: '/explicit' }, 120_000, fx('proj'))
+    if (server?.config.transport === 'stdio') expect(server.config.cwd).toBe('/explicit')
   })
 
   it('maps http/sse entries onto the streamable-http transport', () => {
