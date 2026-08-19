@@ -38,13 +38,15 @@ CodeBuddy……）。在本仓库的所有工作中请遵守以下约定。
 - `bridges` 行上的配置段以工具命名（`claudeCode`、`codebuddyCode`、`opencode`、
   `codex`、`pi`、`geminiCli`、`cursor`），各自带 `enabled` 总开关和每桥接的
   具体参数。
-- 注入消息的 `source.plugin` id 按子系统区分：记忆注入用 `<tool>-memory`
-  （如 `claude-code-memory`）；hook 注入用
-  `dsh-bridges/<tool>-hook/<事件名>`（如
-  `dsh-bridges/claude-code-hook/UserPromptSubmit`，事件名取上游 hook 事件名，
-  如 `UserPromptSubmit`、`PreToolUse`、`sessionStart`）。Web GUI 会把
-  `source.plugin` 原样显示在「上下文注入」标签旁。hook 的 `tool_name` 载荷
-  携带上游工具的名字（`Bash`、`Edit`……），绝不携带 dsh 的名字。
+- 注入消息的 `source.plugin` id 一律以 `dsh-bridges:` 开头，Web GUI 会把它
+  原样显示在「上下文注入」标签旁。记忆注入用 `dsh-bridges:<资产名>`（如
+  `dsh-bridges:CLAUDE.md`、`dsh-bridges:AGENTS.md`、
+  `dsh-bridges:CODEBUDDY.md`、`dsh-bridges:GEMINI.md`、
+  `dsh-bridges:.cursor/rules`、`dsh-bridges:references`）；hook 注入用
+  `dsh-bridges:<tool>-hooks/<事件名>`（如
+  `dsh-bridges:claude-code-hooks/UserPromptSubmit`，事件名取上游 hook 事件名，
+  如 `UserPromptSubmit`、`PreToolUse`、`sessionStart`）。hook 的 `tool_name`
+  载荷携带上游工具的名字（`Bash`、`Edit`……），绝不携带 dsh 的名字。
 
 ## 文档约定
 

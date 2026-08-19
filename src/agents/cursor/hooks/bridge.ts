@@ -37,9 +37,9 @@ import { cursorToolName } from './names.js'
 import { runEventHooks } from './run.js'
 import type { BridgedHookEvent, HookOutcome } from './types.js'
 
-/** Durable source id for hook-injected messages: `dsh-bridges/cursor-hook/<event>`. */
+/** Durable source id for hook-injected messages: `dsh-bridges:cursor-hooks/<event>`. */
 function hookSource(event: BridgedHookEvent): string {
-  return `dsh-bridges/cursor-hook/${event}`
+  return `dsh-bridges:cursor-hooks/${event}`
 }
 /** Cursor's default per-script loop cap for stop/subagentStop followups. */
 const DEFAULT_LOOP_LIMIT = 5

@@ -35,7 +35,7 @@ export interface MemoryConfig {
   maxBytes: number
 }
 
-const PLUGIN_SOURCE = 'pi-memory'
+const PLUGIN_SOURCE = 'dsh-bridges:AGENTS.md'
 const MAX_READ_CHARS = 1024 * 1024
 /** Cap on the upward context-file walk (also breaks symlink cycles). */
 const MAX_WALK_DEPTH = 32

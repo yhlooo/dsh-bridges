@@ -16,7 +16,7 @@ describe('e2e: claude-code memory injection', () => {
     try {
       sessionStart(harness)
       const message = await waitFor(() => harness.agent.injected[0])
-      expect(message.source).toEqual({ kind: 'plugin', plugin: 'claude-code-memory' })
+      expect(message.source).toEqual({ kind: 'plugin', plugin: 'dsh-bridges:CLAUDE.md' })
       const text = message.content.map((block) => (block.type === 'text' ? block.text : '')).join('')
       expect(text).toContain('Instructions from:')
       expect(text).toContain('.claude/CLAUDE.md')

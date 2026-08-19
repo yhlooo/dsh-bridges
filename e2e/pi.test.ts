@@ -105,7 +105,7 @@ describe('e2e: pi bridge through the real registry', () => {
     })
     sessionStart(harness)
     const message = await waitFor(() => harness!.agent.injected[0])
-    expect(message.source).toEqual({ kind: 'plugin', plugin: 'pi-memory' })
+    expect(message.source).toEqual({ kind: 'plugin', plugin: 'dsh-bridges:AGENTS.md' })
     const texts = harness.agent.injected.map((entry) => entry.content.map((part) => (part.type === 'text' ? part.text : '')).join('\n'))
     expect(texts.join('\n')).toContain('Global rules.')
     expect(texts.join('\n')).toContain('Sub rules.')

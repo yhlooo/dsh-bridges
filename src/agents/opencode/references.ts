@@ -16,7 +16,7 @@ import type { BridgeLogger } from '../../util.js'
 import { escapeReminderClose } from '../../util.js'
 import type { OpencodeSettingsLoader } from './settings.js'
 
-const PLUGIN_SOURCE = 'opencode-references'
+const PLUGIN_SOURCE = 'dsh-bridges:references'
 const MAX_LINES = 64
 const MAX_LINE_CHARS = 512
 

@@ -25,7 +25,7 @@ export interface MemoryConfig {
   settingsLoader?: SettingsLoader
 }
 
-const PLUGIN_SOURCE = 'claude-code-memory'
+const PLUGIN_SOURCE = 'dsh-bridges:CLAUDE.md'
 const MAX_READ_CHARS = 1024 * 1024
 /** Cap on the upward hierarchy walk (also breaks symlink cycles). */
 const MAX_WALK_DEPTH = 32

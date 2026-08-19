@@ -66,7 +66,7 @@ describe('e2e: cursor bridge through the real registry', () => {
     })
     sessionStart(harness)
     const message = await waitFor(() => harness!.agent.injected[0])
-    expect(message.source).toEqual({ kind: 'plugin', plugin: 'cursor-memory' })
+    expect(message.source).toEqual({ kind: 'plugin', plugin: 'dsh-bridges:.cursor/rules' })
     const text = message.content.map((part) => (part.type === 'text' ? part.text : '')).join('\n')
     expect(text).toContain('Always rules.')
     expect(text).toContain('Sub rules.')
@@ -106,7 +106,7 @@ describe('e2e: cursor bridge through the real registry', () => {
     sessionStart(harness)
     const message = await waitFor(() =>
       harness!.agent.injected.find(
-        (entry) => entry.source?.kind === 'plugin' && entry.source.plugin === 'dsh-bridges/cursor-hook/sessionStart',
+        (entry) => entry.source?.kind === 'plugin' && entry.source.plugin === 'dsh-bridges:cursor-hooks/sessionStart',
       ),
     )
     const text = message.content.map((part) => (part.type === 'text' ? part.text : '')).join('\n')

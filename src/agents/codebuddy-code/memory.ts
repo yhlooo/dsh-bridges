@@ -33,7 +33,7 @@ export interface MemoryConfig {
   maxBytes: number
 }
 
-const PLUGIN_SOURCE = 'codebuddy-code-memory'
+const PLUGIN_SOURCE = 'dsh-bridges:CODEBUDDY.md'
 const MAX_READ_CHARS = 1024 * 1024
 /** Recursion bound for rule-directory walks (also breaks symlink cycles). */
 const MAX_RULE_DEPTH = 16
