@@ -47,15 +47,15 @@ dsh --profile headless "list the skills available in your catalog"
       enabled: false
 ```
 
-| 工具 | Skills / commands | 记忆 | Hooks | 权限 | MCP | 指南 |
-| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| Claude Code | ✓ | ✓ | ✓ | ✓ | ✓ | [`claude-code`](docs/guides/claude-code.zh.md) |
-| CodeBuddy Code | ✓ | ✓ | ✓ | ✓ | ✓ | [`codebuddy-code`](docs/guides/codebuddy-code.zh.md) |
-| OpenCode | ✓ | ✓ | — | ✓ | ✓ | [`opencode`](docs/guides/opencode.zh.md) |
-| Codex | ✓ | ✓ | ✓ | ✓ | ✓ | [`codex`](docs/guides/codex.zh.md) |
-| Pi | ✓ | ✓ | — | — | — | [`pi`](docs/guides/pi.zh.md) |
-| Gemini CLI | ✓ | ✓ | ✓ | ✓ | ✓ | [`gemini-cli`](docs/guides/gemini-cli.zh.md) |
-| Cursor | ✓ | ✓ | ✓ | ✓ | ✓ | [`cursor`](docs/guides/cursor.zh.md) |
+| 工具           | Skills / commands | 记忆 | Hooks | 权限 | MCP | 指南                                                 |
+| :------------- | :---------------: | :--: | :---: | :--: | :-: | :--------------------------------------------------- |
+| Claude Code    |         ✓         |  ✓   |   ✓   |  ✓   |  ✓  | [`claude-code`](docs/guides/claude-code.zh.md)       |
+| CodeBuddy Code |         ✓         |  ✓   |   ✓   |  ✓   |  ✓  | [`codebuddy-code`](docs/guides/codebuddy-code.zh.md) |
+| OpenCode       |         ✓         |  ✓   |   —   |  ✓   |  ✓  | [`opencode`](docs/guides/opencode.zh.md)             |
+| Codex          |         ✓         |  ✓   |   ✓   |  ✓   |  ✓  | [`codex`](docs/guides/codex.zh.md)                   |
+| Pi             |         ✓         |  ✓   |   —   |  —   |  —  | [`pi`](docs/guides/pi.zh.md)                         |
+| Gemini CLI     |         ✓         |  ✓   |   ✓   |  ✓   |  ✓  | [`gemini-cli`](docs/guides/gemini-cli.zh.md)         |
+| Cursor         |         ✓         |  ✓   |   ✓   |  ✓   |  ✓  | [`cursor`](docs/guides/cursor.zh.md)                 |
 
 ## 资源
 
