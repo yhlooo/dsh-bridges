@@ -31,7 +31,7 @@ export interface MemoryConfig {
   maxBytes: number
 }
 
-const PLUGIN_SOURCE = 'gemini-cli-memory'
+const PLUGIN_SOURCE = 'dsh-bridges:GEMINI.md'
 const MAX_READ_CHARS = 1024 * 1024
 /** Cap on the upward context-file walk and the import expansion depth. */
 const MAX_WALK_DEPTH = 32

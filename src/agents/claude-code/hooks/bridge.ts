@@ -43,9 +43,9 @@ const MAX_STOP_CONTINUATIONS = 8
 /** Claude Code gives SessionEnd hooks a shared 1.5-second budget. */
 const SESSION_END_BUDGET_MS = 1500
 
-/** Durable source id for hook-injected messages: `dsh-bridges/claude-code-hook/<event>`. */
+/** Durable source id for hook-injected messages: `dsh-bridges:claude-code-hooks/<event>`. */
 function hookSource(event: BridgedHookEvent): string {
-  return `dsh-bridges/claude-code-hook/${event}`
+  return `dsh-bridges:claude-code-hooks/${event}`
 }
 
 interface StopState {

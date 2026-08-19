@@ -22,7 +22,7 @@ describe('e2e: claude-code UserPromptSubmit blocking', () => {
       if (decision.kind !== 'enter') return
       const messages = decision.messages
       expect(messages).toHaveLength(1)
-      expect(messages[0]!.source).toEqual({ kind: 'plugin', plugin: 'dsh-bridges/claude-code-hook/UserPromptSubmit' })
+      expect(messages[0]!.source).toEqual({ kind: 'plugin', plugin: 'dsh-bridges:claude-code-hooks/UserPromptSubmit' })
       const text = messages[0]!.content.map((block) => (block.type === 'text' ? block.text : '')).join('')
       expect(text).toContain('blocked by prompt policy')
       // The original prompt was erased, not replaced alongside.
@@ -51,7 +51,7 @@ describe('e2e: claude-code PostToolUse context injection', () => {
       if (decision.kind !== 'accept') return
       const contexts = decision.additionalContexts ?? []
       expect(contexts).toHaveLength(1)
-      expect(contexts[0]!.source).toEqual({ kind: 'plugin', plugin: 'dsh-bridges/claude-code-hook/PostToolUse' })
+      expect(contexts[0]!.source).toEqual({ kind: 'plugin', plugin: 'dsh-bridges:claude-code-hooks/PostToolUse' })
       const text = contexts[0]!.content.map((block) => (block.type === 'text' ? block.text : '')).join('')
       expect(text).toContain('extra context from fixture')
     } finally {

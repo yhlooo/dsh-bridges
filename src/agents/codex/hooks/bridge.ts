@@ -46,9 +46,9 @@ const MAX_STOP_CONTINUATIONS = 8
 /** Codex gives SessionEnd hooks a 1-second default budget (3 s max). */
 const SESSION_END_BUDGET_MS = 1000
 
-/** Durable source id for hook-injected messages: `dsh-bridges/codex-hook/<event>`. */
+/** Durable source id for hook-injected messages: `dsh-bridges:codex-hooks/<event>`. */
 function hookSource(event: BridgedHookEvent): string {
-  return `dsh-bridges/codex-hook/${event}`
+  return `dsh-bridges:codex-hooks/${event}`
 }
 
 interface StopState {

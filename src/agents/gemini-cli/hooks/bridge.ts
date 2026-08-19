@@ -34,9 +34,9 @@ import { geminiToolName } from './names.js'
 import { runEventHooks } from './run.js'
 import type { BridgedHookEvent, HookOutcome } from './types.js'
 
-/** Durable source id for hook-injected messages: `dsh-bridges/gemini-cli-hook/<event>`. */
+/** Durable source id for hook-injected messages: `dsh-bridges:gemini-cli-hooks/<event>`. */
 function hookSource(event: BridgedHookEvent): string {
-  return `dsh-bridges/gemini-cli-hook/${event}`
+  return `dsh-bridges:gemini-cli-hooks/${event}`
 }
 /** Gemini caps AfterAgent retry hooks via stop_hook_active; DSH steers cap at 8. */
 const MAX_CONTINUATIONS = 8

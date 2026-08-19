@@ -37,7 +37,7 @@ export interface MemoryConfig {
   maxBytes: number
 }
 
-const PLUGIN_SOURCE = 'opencode-memory'
+const PLUGIN_SOURCE = 'dsh-bridges:AGENTS.md'
 const MAX_READ_CHARS = 1024 * 1024
 /** Recursion bound for the upward project walk (also breaks symlink cycles). */
 const MAX_WALK_DEPTH = 32

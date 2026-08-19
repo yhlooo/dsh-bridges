@@ -48,9 +48,9 @@ const MAX_STOP_CONTINUATIONS = 8
 /** SessionEnd hooks run under a short shared budget because `agent/disposed` allows little work. */
 const SESSION_END_BUDGET_MS = 1500
 
-/** Durable source id for hook-injected messages: `dsh-bridges/codebuddy-code-hook/<event>`. */
+/** Durable source id for hook-injected messages: `dsh-bridges:codebuddy-code-hooks/<event>`. */
 function hookSource(event: BridgedHookEvent): string {
-  return `dsh-bridges/codebuddy-code-hook/${event}`
+  return `dsh-bridges:codebuddy-code-hooks/${event}`
 }
 
 interface StopState {

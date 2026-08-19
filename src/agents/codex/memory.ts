@@ -30,7 +30,7 @@ export interface MemoryConfig {
   maxBytes: number
 }
 
-const PLUGIN_SOURCE = 'codex-memory'
+const PLUGIN_SOURCE = 'dsh-bridges:AGENTS.md'
 const MAX_READ_CHARS = 1024 * 1024
 /** Cap on the upward repository-root walk (also breaks symlink cycles). */
 const MAX_WALK_DEPTH = 32

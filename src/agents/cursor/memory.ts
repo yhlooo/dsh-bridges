@@ -34,7 +34,7 @@ export interface MemoryConfig {
   maxBytes: number
 }
 
-const PLUGIN_SOURCE = 'cursor-memory'
+const PLUGIN_SOURCE = 'dsh-bridges:.cursor/rules'
 const MAX_READ_CHARS = 1024 * 1024
 /** Cap on the upward repository-root walk and the rules subtree walk. */
 const MAX_WALK_DEPTH = 32
