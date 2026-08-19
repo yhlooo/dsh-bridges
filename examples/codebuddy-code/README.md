@@ -55,7 +55,9 @@ dsh --profile web
 - **Memory**：会话开始后能看到 `CODEBUDDY.md`、`.codebuddy/CODEBUDDY.md`
   与 `rules/conventional-commits.md` 的内容被注入；`frontend-only.md`
   （条件规则）不会被注入。
-- **Hooks**：会话开始注入 "Session started …"；每次 Bash 调用后
-  `.codebuddy/hook-logs/tools.jsonl` 追加一行、`prompts.jsonl` 记录提示词；
-  让模型运行 `rm -rf /tmp/xxx` 会被 guard 以退出码 2 拒绝（stdout JSON
-  reason 优先展示）；回合结束 `stops.log` 追加一行。
+- **Hooks**：会话开始注入 "Session started …"；每次提交提示词后，
+  `prompts.jsonl` 记录提示词，且提示词旁会注入一行 hook 输出的上下文
+  （"This …-character prompt was recorded …"，system-reminder 块）；每次
+  Bash 调用后 `.codebuddy/hook-logs/tools.jsonl` 追加一行；让模型运行
+  `rm -rf /tmp/xxx` 会被 guard 以退出码 2 拒绝（stdout JSON reason 优先
+  展示）；回合结束 `stops.log` 追加一行。
