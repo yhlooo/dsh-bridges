@@ -47,6 +47,7 @@ Each tool page lists its full config block with defaults.
 All bridges share the rules below; tool pages note only deviations.
 
 - **Native skills win on name conflicts.** Native DeepSeek Harness skills (`.dsh/skills`, `.agents/skills`, runtime skills) shadow bridged assets of the same name — bridges register on the global skills layer, which nearer preset layers shadow.
+- **Core-loaded instruction files are not injected twice.** DeepSeek Harness's own loader reads `AGENTS.md` / `CLAUDE.md` and their `.local` variants at every directory from the project root down to the cwd; bridges inject only upstream-specific assets the core does not cover (`~/.claude/CLAUDE.md`, `.claude/CLAUDE.md`, `CODEBUDDY.md`, `GEMINI.md`, `.cursor/rules`, …).
 - **Memory budget.** Session-start memory injection is capped at 32 KiB per bridge: broader user-level sections are dropped first, then the most specific sections are truncated.
 - **Live reload.** Skill roots and settings files are watched; edits appear in the running session without a restart.
 - **Tool-name translation.** Hooks key on upstream tool names; each bridge translates them to DeepSeek Harness names (mapping table on each tool page), so hooks written for the upstream tool run unchanged.

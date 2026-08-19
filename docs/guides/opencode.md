@@ -57,10 +57,10 @@ Mapping rules:
 
 ## AGENTS.md / CLAUDE.md rules and instructions memory
 
-DeepSeek Harness's own loader reads the workspace-root `AGENTS.md` and `CLAUDE.md`. The bridge additionally injects at session start, in the same system-reminder framing:
+DeepSeek Harness's own loader reads `AGENTS.md` and `CLAUDE.md` at every directory from the project root down to the working directory. The bridge additionally injects at session start, in the same system-reminder framing:
 
 - `~/.config/opencode/AGENTS.md` (global rules; `~/.claude/CLAUDE.md` is the fallback when absent, as OpenCode does)
-- the closest `AGENTS.md` walking up from the working directory to the git root, with the closest `CLAUDE.md` as the compatibility fallback (first match wins per category); the cwd-level `AGENTS.md`/`CLAUDE.md` DeepSeek Harness already loads are skipped
+- the closest `AGENTS.md` walking up from the working directory to the git root, with the closest `CLAUDE.md` as the compatibility fallback (first match wins per category); inside a repository this file always sits on DeepSeek Harness's instruction chain and is skipped — without a git root, files above the cwd are still injected
 - `instructions` entries from `opencode.json(c)`: local file paths and `*`/`**` glob patterns resolved against the config file's directory (remote URLs are skipped — the bridge does not fetch them)
 - local `references` from `opencode.json(c)`: `@alias` → resolved absolute path + description, injected the way OpenCode advertises references in agent context; git `repository` references need a clone and are skipped with a warning (same no-fetch policy)
 

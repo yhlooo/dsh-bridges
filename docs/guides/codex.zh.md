@@ -49,12 +49,12 @@
 
 ## AGENTS.md 指令链记忆
 
-DeepSeek Harness 核心自行加载工作区根 `AGENTS.md`。本桥接在会话开始时额外注入 Codex 的指令链（system-reminder 框架）：
+DeepSeek Harness 核心自行加载项目根到工作目录每层目录的 `AGENTS.md`（及 `CLAUDE.md`）。本桥接在会话开始时额外注入 Codex 的指令链（system-reminder 框架）：
 
 - 最具体配置层的 `developer_instructions`（最先注入，与 Codex 一致）
 - `$CODEX_HOME/AGENTS.override.md`（存在时），否则 `$CODEX_HOME/AGENTS.md`（先非空先胜；`CODEX_HOME` 会被遵守）
 - 从仓库根向下到工作目录，每目录一个文件：`AGENTS.override.md` > `AGENTS.md` > `project_doc_fallback_filenames`；越靠工作目录越靠后、越优先
-- 根目录的普通 `AGENTS.md` 跳过（DeepSeek Harness 已加载）；空文件跳过；项目累计达到 `project_doc_max_bytes`（默认 32 KiB）即停止追加
+- 各层目录的普通 `AGENTS.md` 一律跳过（DeepSeek Harness 已加载）；空文件跳过；项目累计达到 `project_doc_max_bytes`（默认 32 KiB）即停止追加
 
 注入块预算 32 KiB：超限先丢弃全部用户级、再截断最具体的项目级。
 

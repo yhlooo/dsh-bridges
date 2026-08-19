@@ -1,3 +1,4 @@
+import { sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { fx } from './fixture-paths.js'
 import type { BridgeDirEntry, FsAdapter } from '../fs-adapter.js'
@@ -22,8 +23,8 @@ class TreeFs implements FsAdapter {
   async stamp(path: string): Promise<string | undefined> {
     return this.files.has(path) ? `v:${this.files.get(path)}` : undefined
   }
-  async dirExists(): Promise<boolean> {
-    return false
+  async dirExists(path: string): Promise<boolean> {
+    return [...this.files.keys()].some((key) => key.startsWith(`${path}${sep}`))
   }
 }
 
@@ -45,7 +46,7 @@ describe('collectMemorySections', () => {
     expect(style?.content).toBe('Be extra explanatory.')
   })
 
-  it('collects user, project, hierarchy, and local files in order', async () => {
+  it('collects user and hierarchy files in order, skipping DSH-loaded ones', async () => {
     const files = new Map<string, string>([
       [fx('home', 'u', '.claude', 'CLAUDE.md'), 'user memory'],
       [fx('repo', 'CLAUDE.md'), 'repo memory'],
@@ -60,7 +61,6 @@ describe('collectMemorySections', () => {
       fx('repo', 'CLAUDE.md'),
       fx('repo', 'CLAUDE.local.md'),
       fx('repo', 'apps', 'CLAUDE.md'),
-      'CLAUDE.local.md',
     ])
     expect(sections[0]?.kind).toBe('user')
     expect(sections[3]?.kind).toBe('hierarchy')
@@ -73,6 +73,18 @@ describe('collectMemorySections', () => {
     ])
     const sections = await collectMemorySections(fx('repo', 'apps', 'api'), silent, new TreeFs(files), config)
     expect(sections.map((section) => section.label)).toEqual([])
+  })
+
+  it('skips chain-level CLAUDE.md and CLAUDE.local.md that DSH already loads', async () => {
+    const files = new Map<string, string>([
+      [fx('repo', '.git', 'HEAD'), 'x'],
+      [fx('repo', 'CLAUDE.md'), 'repo memory'],
+      [fx('repo', 'CLAUDE.local.md'), 'repo local memory'],
+      [fx('repo', 'apps', 'CLAUDE.md'), 'app memory'],
+      [fx('CLAUDE.md'), 'fs memory'],
+    ])
+    const sections = await collectMemorySections(fx('repo', 'apps'), silent, new TreeFs(files), config)
+    expect(sections.map((section) => section.label)).toEqual([fx('CLAUDE.md')])
   })
 
   it('rejects path-like outputStyle names instead of reading outside the style roots', async () => {

@@ -54,10 +54,10 @@ API 不在范围内。安装步骤与各桥接的公共行为见[指南索引](R
 
 ## AGENTS.md / CLAUDE.md 规则与 instructions 记忆
 
-DeepSeek Harness 核心自行加载工作区根 `AGENTS.md` 与 `CLAUDE.md`。本桥接在会话开始时额外注入（system-reminder 框架）：
+DeepSeek Harness 核心自行加载项目根到工作目录每层目录的 `AGENTS.md` 与 `CLAUDE.md`。本桥接在会话开始时额外注入（system-reminder 框架）：
 
 - `~/.config/opencode/AGENTS.md`（全局规则；缺失时回退 `~/.claude/CLAUDE.md`，与 OpenCode 一致）
-- 从工作目录向上到 git 根最近的一个 `AGENTS.md`，缺失时回退最近的 `CLAUDE.md`（每类先匹配先胜）；cwd 层的 `AGENTS.md`/`CLAUDE.md` 是 DeepSeek Harness 已加载的文件，跳过
+- 从工作目录向上到 git 根最近的一个 `AGENTS.md`，缺失时回退最近的 `CLAUDE.md`（每类先匹配先胜）；仓库内该文件必落在 DeepSeek Harness 的指令链上，一律跳过——没有 git 根时 cwd 以上的文件仍会注入
 - `opencode.json(c)` 的 `instructions` 条目：本地文件路径与 `*`/`**` glob（相对配置文件目录解析；远程 URL 跳过，桥接不做网络抓取）
 - `opencode.json(c)` 的本地 `references`：`@alias` → 解析后的绝对路径 + 描述，按 OpenCode 在 agent 上下文里公示引用的方式注入；git `repository` 引用需要克隆，跳过 + 告警（同样的不抓取策略）
 

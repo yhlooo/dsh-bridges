@@ -1,15 +1,16 @@
 /**
  * CLAUDE.md memory bridging.
  *
- * DSH's own instruction loader reads `AGENTS.md` and root-level `CLAUDE.md`.
- * Claude Code additionally reads `~/.claude/CLAUDE.md` (user),
- * `./.claude/CLAUDE.md` (project), `CLAUDE.local.md` files, the directory
- * hierarchy above the working directory, and the
+ * DSH's own instruction loader reads `AGENTS.md`, `CLAUDE.md`, and their
+ * `.local` variants at every directory from the project root down to the
+ * working directory. Claude Code additionally reads `~/.claude/CLAUDE.md`
+ * (user), `./.claude/CLAUDE.md` (project), `CLAUDE.local.md` files in the
+ * directory hierarchy above the project root, and the
  * `permissions.additionalDirectories` memory files; this module injects those
  * at session start with the same framing DSH uses for workspace instructions.
  * @module dsh-bridges/agents/claude-code/memory
  */
-import { dirname, join } from 'node:path'
+import { dirname, join, normalize, sep } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
@@ -74,10 +75,12 @@ async function injectMemory(agent: Agent, logger: BridgeLogger, fs: FsAdapter, c
 
 /**
  * Collect the memory sections for one workspace, broadest first: the user
- * `~/.claude/CLAUDE.md`, then the ancestor hierarchy (filesystem-root first,
- * `CLAUDE.md` then `CLAUDE.local.md` per directory), then the
- * `permissions.additionalDirectories` files, then the project
- * `.claude/CLAUDE.md`, then the cwd-level `CLAUDE.local.md`.
+ * `~/.claude/CLAUDE.md`, then the ancestor hierarchy above DSH's project
+ * root (filesystem-root first, `CLAUDE.md` then `CLAUDE.local.md` per
+ * directory), then the `permissions.additionalDirectories` files, then the
+ * project `.claude/CLAUDE.md`. `CLAUDE.md` / `CLAUDE.local.md` files DSH's
+ * own loader reads (every directory from the project root down to the cwd)
+ * are skipped.
  */
 export async function collectMemorySections(
   cwd: string | undefined,
@@ -96,11 +99,19 @@ export async function collectMemorySections(
   const isRootDuplicate = (text: string | undefined): boolean =>
     text !== undefined && rootText !== undefined && text.trim() === rootText.trim()
 
+  // DSH's own instruction loader reads AGENTS.md / CLAUDE.md (plus the
+  // `.local` variants) at every directory from its project root down to the
+  // cwd; skip those files instead of injecting the same block twice.
+  const dshRoot = await findRepositoryRoot(cwd, fs)
+  const dshLoaded = (dir: string, name: string): boolean =>
+    (name === 'CLAUDE.md' || name === 'CLAUDE.local.md') && isWithinChain(dir, dshRoot)
+
   // Ancestors above the working directory, filesystem-root first.
   for (const dir of ancestorDirs(cwd)) {
     for (const name of ['CLAUDE.md', 'CLAUDE.local.md']) {
       const text = await readOptional(fs, join(dir, name))
       if (text === undefined) continue
+      if (dshLoaded(dir, name)) continue
       if (name === 'CLAUDE.md' && isRootDuplicate(text)) continue // core already loaded identical content
       sections.push({ kind: 'hierarchy', label: join(dir, name), content: text })
     }
@@ -121,15 +132,15 @@ export async function collectMemorySections(
       for (const name of ['CLAUDE.md', 'CLAUDE.local.md']) {
         const text = await readOptional(fs, join(base, name))
         if (text === undefined) continue
+        if (dshLoaded(base, name)) continue
         if (name === 'CLAUDE.md' && isRootDuplicate(text)) continue
         sections.push({ kind: 'additional', label: join(base, name), content: text })
       }
     }
   }
 
-  // The cwd-level CLAUDE.local.md (DSH does not load it).
-  const cwdLocal = await readOptional(fs, join(cwd, 'CLAUDE.local.md'))
-  if (cwdLocal !== undefined) sections.push({ kind: 'hierarchy', label: 'CLAUDE.local.md', content: cwdLocal })
+  // The cwd-level CLAUDE.local.md: DSH's own loader reads it, so the bridge
+  // never re-injects it.
 
   // `outputStyle`: the named style's prompt section (project file first, then
   // user file — the upstream lookup order).
@@ -174,6 +185,25 @@ function ancestorDirs(cwd: string): string[] {
     dir = parent
   }
   return dirs
+}
+
+/** The dsh project root: the first directory on the upward walk containing `.git`. */
+async function findRepositoryRoot(cwd: string, fs: FsAdapter): Promise<string> {
+  let dir: string = cwd
+  for (let depth = 0; depth < MAX_WALK_DEPTH; depth++) {
+    if (await fs.dirExists(join(dir, '.git'))) return dir
+    const parent = dirname(dir)
+    if (parent === dir) break
+    dir = parent
+  }
+  return cwd // no repository root: DSH's chain starts at the cwd
+}
+
+/** True when `dir` sits on DSH's instruction chain (`root` down to `cwd`). */
+function isWithinChain(dir: string, root: string): boolean {
+  const d = normalize(dir)
+  const r = normalize(root)
+  return d === r || d.startsWith(`${r}${sep}`)
 }
 
 function renderSections(sections: MemorySection[]): string {

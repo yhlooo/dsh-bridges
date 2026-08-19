@@ -19,7 +19,7 @@
  * DSH's workspace-instruction `<system-reminder>` style.
  * @module dsh-bridges/agents/opencode/memory
  */
-import { dirname, isAbsolute, join, normalize } from 'node:path'
+import { dirname, isAbsolute, join, normalize, sep } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
@@ -129,10 +129,14 @@ export async function collectMemorySections(
       (await findClosestRuleFile(fs, cwd, 'AGENTS.md')) ??
       (config.claudeCompat ? await findClosestRuleFile(fs, cwd, 'CLAUDE.md') : undefined)
     if (projectFile !== undefined) {
-      // DSH's own instruction loader reads the workspace root's AGENTS.md
-      // and CLAUDE.md (the session cwd), so skip exactly those two files.
-      const dshLoaded = projectFile.path === join(cwd, 'AGENTS.md') || projectFile.path === join(cwd, 'CLAUDE.md')
-      if (!dshLoaded) sections.push({ kind: 'project', label: relativeLabel(cwd, projectFile.path), content: projectFile.content })
+      // DSH's own instruction loader reads AGENTS.md and CLAUDE.md at every
+      // directory from its project root down to the cwd; skip files it
+      // already loads. The walk stops at the git root, so inside a repository
+      // this is always skipped; without one, files above the cwd remain.
+      const dshRoot = await findRepositoryRoot(cwd, fs)
+      if (!isWithinChain(dirname(projectFile.path), dshRoot)) {
+        sections.push({ kind: 'project', label: relativeLabel(cwd, projectFile.path), content: projectFile.content })
+      }
     }
 
     // Extra instruction files from opencode.json(c), in listed order.
@@ -166,6 +170,25 @@ async function findClosestRuleFile(fs: FsAdapter, start: string, name: string): 
 
 async function isGitRoot(fs: FsAdapter, dir: string): Promise<boolean> {
   return fs.dirExists(join(dir, '.git'))
+}
+
+/** The dsh project root: the first directory on the upward walk containing `.git`. */
+async function findRepositoryRoot(cwd: string, fs: FsAdapter): Promise<string> {
+  let dir: string = cwd
+  for (let depth = 0; depth < MAX_WALK_DEPTH; depth++) {
+    if (await fs.dirExists(join(dir, '.git'))) return dir
+    const parent = dirname(dir)
+    if (parent === dir) break
+    dir = parent
+  }
+  return cwd // no repository root: DSH's chain starts at the cwd
+}
+
+/** True when `dir` sits on DSH's instruction chain (`root` down to `cwd`). */
+function isWithinChain(dir: string, root: string): boolean {
+  const d = normalize(dir)
+  const r = normalize(root)
+  return d === r || d.startsWith(`${r}${sep}`)
 }
 
 /** Expand the `instructions` entries into readable local files; URLs are skipped. */

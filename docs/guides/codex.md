@@ -51,12 +51,12 @@ Mapping rules:
 
 ## AGENTS.md instruction-chain memory
 
-DeepSeek Harness's own loader reads the workspace-root `AGENTS.md`. The bridge additionally injects Codex's instruction chain at session start, in the same system-reminder framing:
+DeepSeek Harness's own loader reads `AGENTS.md` (and `CLAUDE.md`) at every directory from the project root down to the working directory. The bridge additionally injects Codex's instruction chain at session start, in the same system-reminder framing:
 
 - `developer_instructions` from the most specific config layer (injected first, as Codex does)
 - `$CODEX_HOME/AGENTS.override.md` if present, else `$CODEX_HOME/AGENTS.md` (first non-empty wins; `CODEX_HOME` is honored)
 - one file per directory walking from the repository root down to the working directory: `AGENTS.override.md` > `AGENTS.md` > `project_doc_fallback_filenames`; files closer to the working directory come later and override earlier guidance
-- the root-level plain `AGENTS.md` is skipped (DeepSeek Harness already loads it); empty files are skipped; project accumulation stops at `project_doc_max_bytes` (32 KiB default)
+- plain `AGENTS.md` files are skipped at every level (DeepSeek Harness already loads them); empty files are skipped; project accumulation stops at `project_doc_max_bytes` (32 KiB default)
 
 Budget 32 KiB for the injected block: broader user-level sections are dropped first, then the most specific ones are truncated.
 

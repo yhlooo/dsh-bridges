@@ -69,7 +69,7 @@ describe('codex memory', () => {
     ])
   })
 
-  it('injects the global AGENTS.md plus the root-to-cwd instruction chain', async () => {
+  it('injects the global AGENTS.md plus the non-DSH chain files', async () => {
     const files = new Map<string, string>([
       [fx('home', 'u', '.codex', 'AGENTS.md'), 'Global guidance.\n'],
       [fx('proj', '.git', 'HEAD'), 'x'],
@@ -80,7 +80,6 @@ describe('codex memory', () => {
     expect(sections.map((section) => [section.kind, section.content])).toEqual([
       ['user', 'Global guidance.\n'],
       ['project', 'Root override.\n'],
-      ['project', 'Nested guidance.\n'],
     ])
   })
 
@@ -104,18 +103,15 @@ describe('codex memory', () => {
     expect(sections).toHaveLength(0) // root AGENTS.md is DSH-loaded; global was empty
   })
 
-  it('skips the root plain AGENTS.md that DSH already loads, keeping overrides and nested files', async () => {
+  it('skips the plain AGENTS.md files DSH already loads at every chain level, keeping overrides', async () => {
     const files = new Map<string, string>([
       [fx('home', 'u', '.codex', 'AGENTS.md'), 'Global.\n'],
       [fx('proj', '.git', 'HEAD'), 'x'],
       [fx('proj', 'AGENTS.md'), 'Root dsh loads.\n'],
-      [fx('proj', 'sub', 'AGENTS.md'), 'Nested.\n'],
+      [fx('proj', 'sub', 'AGENTS.md'), 'Nested dsh loads.\n'],
     ])
     const sections = await collect(files)
-    expect(sections.map((section) => [section.kind, section.content])).toEqual([
-      ['user', 'Global.\n'],
-      ['project', 'Nested.\n'],
-    ])
+    expect(sections.map((section) => [section.kind, section.content])).toEqual([['user', 'Global.\n']])
   })
 
   it('honors project_doc_fallback_filenames for extra instruction filenames', async () => {

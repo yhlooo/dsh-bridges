@@ -41,7 +41,7 @@ async function collect(files: Map<string, string>, cwd = fx('proj')) {
 }
 
 describe('pi context-file memory', () => {
-  it('collects the global file and the per-directory chain, root first', async () => {
+  it('collects the global file and skips the chain files DSH already loads', async () => {
     const files = new Map<string, string>([
       [fx('home', 'u', '.pi', 'agent', 'AGENTS.md'), '# global'],
       [fx('proj', '.git', 'HEAD'), 'x'],
@@ -49,9 +49,8 @@ describe('pi context-file memory', () => {
       [fx('proj', 'sub', 'AGENTS.md'), '# sub'],
     ])
     const sections = await collect(files, fx('proj', 'sub'))
-    expect(sections.map((section) => section.kind)).toEqual(['user', 'project', 'project'])
-    // Order: global, then ancestors root-first, then cwd.
-    expect(sections.map((section) => section.content.trim())).toEqual(['# global', '# proj claude', '# sub'])
+    expect(sections.map((section) => section.kind)).toEqual(['user'])
+    expect(sections.map((section) => section.content.trim())).toEqual(['# global'])
   })
 
   it('uses AGENTS.override.md instead of AGENTS.md/CLAUDE.md per directory', async () => {
@@ -74,14 +73,15 @@ describe('pi context-file memory', () => {
     expect(sections.map((section) => section.content.trim())).toEqual(['# upper agents'])
   })
 
-  it('skips the repository-root AGENTS.md that DSH already loads', async () => {
+  it('skips the chain-level AGENTS.md and CLAUDE.md files that DSH already loads', async () => {
     const files = new Map<string, string>([
       [fx('proj', '.git', 'HEAD'), 'x'],
       [fx('proj', 'AGENTS.md'), '# root agents'],
       [fx('proj', 'sub', 'AGENTS.md'), '# sub agents'],
+      [fx('proj', 'CLAUDE.md'), '# root claude'],
     ])
     const sections = await collect(files, fx('proj', 'sub'))
-    expect(sections.map((section) => section.content.trim())).toEqual(['# sub agents'])
+    expect(sections).toHaveLength(0)
   })
 
   it('deduplicates by canonical path across the walk', async () => {
@@ -115,15 +115,17 @@ describe('pi context-file memory', () => {
     expect(sections).toHaveLength(0)
   })
 
-  it('walks above the repository root toward the filesystem root', async () => {
-    // cwd is /proj/sub/deep: ancestors /proj/sub, /proj, and / are all walked.
+  it('walks above the repository root, skipping chain files DSH loads', async () => {
+    // cwd is /proj/sub/deep: the root CLAUDE.md and the cwd AGENTS.md sit on
+    // DSH's chain (skipped); a file above the repository root is kept.
     const files = new Map<string, string>([
       [fx('proj', '.git', 'HEAD'), 'x'],
-      [fx('proj', 'sub', 'deep', 'AGENTS.md'), '# deep'],
       [fx('proj', 'CLAUDE.md'), '# proj claude'],
+      [fx('proj', 'sub', 'deep', 'AGENTS.md'), '# deep'],
+      [fx('CLAUDE.md'), '# fs claude'],
     ])
     const sections = await collect(files, fx('proj', 'sub', 'deep'))
-    expect(sections.map((section) => section.content.trim())).toEqual(['# proj claude', '# deep'])
+    expect(sections.map((section) => section.content.trim())).toEqual(['# fs claude'])
   })
 
   it('treats the cwd AGENTS.md as DSH-loaded when no repository root exists', async () => {
