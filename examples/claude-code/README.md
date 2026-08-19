@@ -24,7 +24,7 @@ claude-code 桥接如何将 Claude Code 的资产桥接进来。
 ├── .mcp.json                   项目级 MCP 服务器（桥接为 mcp__claude__* 工具）
 └── hooks/                       每个 hook 事件一个处理器
     ├── session-start.sh         SessionStart：纯文本 stdout → 首条提示词前注入
-    ├── log-prompt.mjs            UserPromptSubmit：将提示词写入 hook-logs/
+    ├── log-prompt.mjs            UserPromptSubmit：写入 hook-logs/ 并向该回合注入一行上下文
     ├── log-tool.mjs              PreToolUse（matcher: Bash）：记录每次 Bash 调用
     ├── guard-destructive.js     PreToolUse（if: "Bash(rm *)"）：退出码 2 拒绝 rm -rf
     ├── bash-context.js          PostToolUse（matcher: Bash）：additionalContext 附加到结果旁
@@ -63,10 +63,12 @@ dsh --profile web
   `scripts/draft-release-notes.sh` 作为资源按需可读。
 - **Memory**：会话开始后能看到 `.claude/CLAUDE.md` 的内容被注入
   （system-reminder 块）。
-- **Hooks**：会话开始时注入 "Session started …"；每次 Bash 调用后
-  `.claude/hook-logs/tools.jsonl` 追加一行、`prompts.jsonl` 记录提示词；
-  让模型运行 `rm -rf /tmp/xxx` 会被 guard 以退出码 2 拒绝；
-  回合结束 `stops.log` 追加一行。
+- **Hooks**：会话开始时注入 "Session started …"；每次提交提示词后，
+  `prompts.jsonl` 记录提示词，且提示词旁会注入一行 hook 输出的上下文
+  （"This …-character prompt was recorded …"，system-reminder 块）；每次
+  Bash 调用后 `.claude/hook-logs/tools.jsonl` 追加一行；让模型运行
+  `rm -rf /tmp/xxx` 会被 guard 以退出码 2 拒绝；回合结束 `stops.log`
+  追加一行。
 - **Permissions**：让模型运行 `rm -rf /tmp/xxx` 会被 deny 规则直接拒绝
   （无需 hook）；`git push` 触发审批；`Read(./README.md)` 免审批。
 - **Subagents**：`skill code-reviewer` 后模型会按委派规格用 `subagent`
