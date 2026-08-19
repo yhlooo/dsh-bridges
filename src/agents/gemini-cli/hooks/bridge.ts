@@ -34,7 +34,10 @@ import { geminiToolName } from './names.js'
 import { runEventHooks } from './run.js'
 import type { BridgedHookEvent, HookOutcome } from './types.js'
 
-const HOOK_SOURCE = 'gemini-cli-hooks'
+/** Durable source id for hook-injected messages: `dsh-bridges/gemini-cli-hook/<event>`. */
+function hookSource(event: BridgedHookEvent): string {
+  return `dsh-bridges/gemini-cli-hook/${event}`
+}
 /** Gemini caps AfterAgent retry hooks via stop_hook_active; DSH steers cap at 8. */
 const MAX_CONTINUATIONS = 8
 
@@ -532,7 +535,7 @@ function makeBlockNotice(event: BridgedHookEvent, reason: string, maxChars: numb
         text: `<system-reminder>\nA Gemini CLI ${event} hook blocked this prompt: ${escapeReminderClose(capString(reason, maxChars))}\n</system-reminder>`,
       },
     ],
-    source: { kind: 'plugin', plugin: HOOK_SOURCE },
+    source: { kind: 'plugin', plugin: hookSource(event) },
   })
 }
 
@@ -544,7 +547,7 @@ function makeContinueMessage(event: BridgedHookEvent, feedback: string, maxChars
         text: `<system-reminder>\nA Gemini CLI ${event} hook asked to continue: ${escapeReminderClose(capString(feedback, maxChars))}\n</system-reminder>`,
       },
     ],
-    source: { kind: 'plugin', plugin: HOOK_SOURCE },
+    source: { kind: 'plugin', plugin: hookSource(event) },
   })
 }
 
@@ -554,6 +557,6 @@ function makeContextMessage(event: BridgedHookEvent, texts: string[], maxChars: 
     .join('\n\n')
   return createUserMessage({
     content: [{ type: 'text', text: `<system-reminder>\n${body}\n</system-reminder>` }],
-    source: { kind: 'plugin', plugin: HOOK_SOURCE },
+    source: { kind: 'plugin', plugin: hookSource(event) },
   })
 }
