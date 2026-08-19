@@ -1,6 +1,6 @@
 # dsh-bridges
 
-English | [中文](README_CN.md)
+English | [中文](README.zh.md)
 
 > This project is implemented by DeepSeek Harness.
 

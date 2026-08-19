@@ -64,8 +64,8 @@ CodeBuddy……）。在本仓库的所有工作中请遵守以下约定。
 - 详细使用说明（安装与验证、完整配置参考、各桥接 skills/memory/hooks 行为、
   限制）放在 `docs/guides/`；README 链接过去。开发细节（构建/测试命令、冒烟
   测试、目录结构）绝不进 README——链接到 `docs/development/`。
-- `README.md`（英文）与 `README_CN.md`（中文）必须保持同步：任何改动两版都要
-  做，且都以语言切换头开头（`English | [中文](README_CN.md)` /
+- `README.md`（英文）与 `README.zh.md`（中文）必须保持同步：任何改动两版都要
+  做，且都以语言切换头开头（`English | [中文](README.zh.md)` /
   `[English](README.md) | 中文`），紧跟备注
   `> This project is implemented by DeepSeek Harness.`（中文版：
   `> 该项目由 DeepSeek Harness 实现。`）。
