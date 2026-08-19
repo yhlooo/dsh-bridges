@@ -62,17 +62,14 @@ function collect(files: Map<string, string>, cwd = fx('proj')) {
 }
 
 describe('opencode memory', () => {
-  it('injects the global AGENTS.md and a project AGENTS.md above the cwd', async () => {
+  it('injects the global AGENTS.md and skips the chain-level project rules DSH already loads', async () => {
     const files = new Map<string, string>([
       [fx('home', 'u', '.config', 'opencode', 'AGENTS.md'), 'Global rules.\n'],
       [fx('proj', '.git', 'HEAD'), 'x'],
       [fx('proj', 'AGENTS.md'), 'Project rules.\n'],
     ])
     const sections = await collect(files, fx('proj', 'sub'))
-    expect(sections.map((section) => [section.kind, section.content])).toEqual([
-      ['user', 'Global rules.\n'],
-      ['project', 'Project rules.\n'],
-    ])
+    expect(sections.map((section) => [section.kind, section.content])).toEqual([['user', 'Global rules.\n']])
   })
 
   it('falls back to ~/.claude/CLAUDE.md when no global AGENTS.md exists', async () => {
@@ -82,7 +79,7 @@ describe('opencode memory', () => {
       [fx('proj', 'CLAUDE.md'), 'Claude project.\n'],
     ])
     const sections = await collect(files, fx('proj', 'sub'))
-    expect(sections.map((section) => section.content)).toEqual(['Claude global.\n', 'Claude project.\n'])
+    expect(sections.map((section) => section.content)).toEqual(['Claude global.\n'])
   })
 
   it('prefers AGENTS.md over CLAUDE.md per category (first match wins)', async () => {
@@ -96,14 +93,20 @@ describe('opencode memory', () => {
     const sections = await collect(files, fx('proj', 'sub'))
     const project = sections.filter((section) => section.kind === 'project')
     expect(sections[0]!.content).toBe('opencode global.\n')
-    expect(project.map((section) => section.content)).toEqual(['opencode parent.\n'])
+    expect(project.map((section) => section.content)).toEqual([])
   })
 
-  it('walks up to the git root for the closest project rules file', async () => {
+  it('skips the closest project rules file inside the repository (DSH already loads it)', async () => {
     const files = new Map<string, string>([
       [fx('proj', '.git', 'HEAD'), 'x'],
       [fx('proj', 'AGENTS.md'), 'Parent rules.\n'],
     ])
+    const sections = await collect(files, fx('proj', 'sub'))
+    expect(sections.map((section) => section.content)).toEqual([])
+  })
+
+  it('keeps the closest AGENTS.md above the cwd when no repository root exists', async () => {
+    const files = new Map<string, string>([[fx('proj', 'AGENTS.md'), 'Parent rules.\n']])
     const sections = await collect(files, fx('proj', 'sub'))
     expect(sections.map((section) => section.content)).toEqual(['Parent rules.\n'])
   })

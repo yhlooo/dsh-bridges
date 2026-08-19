@@ -16,7 +16,7 @@
  * The framing matches DSH's workspace-instruction `<system-reminder>` style.
  * @module dsh-bridges/agents/codex/memory
  */
-import { dirname, join, normalize } from 'node:path'
+import { dirname, join, normalize, sep } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
@@ -112,13 +112,14 @@ export async function collectMemorySections(
 
   if (cwd) {
     const chain = await collectProjectChain(cwd, settings.projectRootMarkers, settings.projectDocFallbackFilenames, fs)
-    // DSH's own instruction loader reads the repository root's AGENTS.md.
-    const rootAgents = await readOptional(fs, join(chain.rootDir, 'AGENTS.md'))
+    // DSH's own instruction loader reads AGENTS.md (and CLAUDE.md) at every
+    // directory from its project root down to the cwd; skip those files so
+    // the block is not injected twice. The dedup boundary assumes DSH's
+    // default `.git` root marker.
+    const dshRoot = await findRepositoryRoot(cwd, ['.git'], fs)
     let budget = settings.projectDocMaxBytes
     for (const entry of chain.entries) {
-      // The repository root's plain AGENTS.md is the file DSH already
-      // injects; skip it to avoid duplicating the block.
-      if (entry.isRootAgents && rootAgents !== undefined && rootAgents.trim() === entry.content.trim()) continue
+      if (entry.name === 'AGENTS.md' && isWithinChain(dirname(entry.path), dshRoot)) continue
       const bytes = entry.content.length
       if (budget <= 0) break // Codex stops adding files once the combined size reaches the limit
       sections.push({ kind: 'project', label: relativeLabel(cwd, entry.path), content: entry.content.slice(0, budget) })
@@ -132,8 +133,8 @@ export async function collectMemorySections(
 interface ChainEntry {
   path: string
   content: string
-  /** True when the entry is the repository root's plain `AGENTS.md`. */
-  isRootAgents: boolean
+  /** The file's basename (used for the DSH-native skip). */
+  name: string
 }
 
 /**
@@ -157,7 +158,7 @@ async function collectProjectChain(
       const path = join(dir, name)
       const content = await readOptional(fs, path)
       if (content === undefined || content.trim() === '') continue // Codex skips empty files
-      entries.push({ path, content, isRootAgents: i === 0 && name === 'AGENTS.md' })
+      entries.push({ path, content, name })
       break // at most one file per directory
     }
   }
@@ -176,6 +177,13 @@ async function findRepositoryRoot(cwd: string, markers: readonly string[], fs: F
     dir = parent
   }
   return cwd // no project root found: Codex only checks the current directory
+}
+
+/** True when `dir` sits on DSH's instruction chain (`root` down to `cwd`). */
+function isWithinChain(dir: string, root: string): boolean {
+  const d = normalize(dir)
+  const r = normalize(root)
+  return d === r || d.startsWith(`${r}${sep}`)
 }
 
 /** The directory list from `root` down to `cwd` (both inclusive), root first. */

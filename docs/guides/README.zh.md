@@ -45,6 +45,7 @@ dsh --profile <profile-name> --dump-config   # 应能看到 "dsh-bridges" 这一
 所有桥接共享以下规则；工具页只记录差异。
 
 - **原生技能在同名冲突时胜出。** DeepSeek Harness 原生技能（`.dsh/skills`、`.agents/skills`、运行时技能）遮蔽同名桥接资产——桥接注册在全局技能层，会被更近的 preset 层遮蔽。
+- **核心已加载的指令文件不重复注入。** DeepSeek Harness 核心自行读取项目根到 cwd 每层目录的 `AGENTS.md` / `CLAUDE.md` 及 `.local` 变体；桥接只注入上游工具特有、核心不覆盖的资产（`~/.claude/CLAUDE.md`、`.claude/CLAUDE.md`、`CODEBUDDY.md`、`GEMINI.md`、`.cursor/rules` 等）。
 - **记忆预算。** 会话开始的记忆注入每个桥接上限 32 KiB：先丢弃较宽泛的用户级片段，再截断最具体的片段。
 - **热更新。** 技能根目录与 settings 文件被监听，编辑即刻出现在运行中的会话，无需重启。
 - **工具名翻译。** hooks 以上游工具名寻址；各桥接把它们翻译为 DeepSeek Harness 工具名（映射表见各工具页），为上游工具写好的 hooks 原样可用。

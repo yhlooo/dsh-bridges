@@ -89,10 +89,10 @@ describe('e2e: pi bridge through the real registry', () => {
     }
   })
 
-  it('injects the global context file, the per-directory chain, and APPEND_SYSTEM.md', async () => {
-    // cwd sits in the sub directory: the chain walks root → sub, the root
-    // AGENTS.md is the file DSH's own loader already injects (skipped), and
-    // the sub AGENTS.md arrives as a project section.
+  it('injects the global context file and APPEND_SYSTEM.md, skipping DSH-loaded chain files', async () => {
+    // cwd sits in the sub directory: the chain walks root → sub, and both the
+    // root and the sub AGENTS.md sit on DSH's own instruction chain (skipped);
+    // only the global file and the APPEND_SYSTEM.md files remain.
     project = await fixtureCopy('pi/memory')
     await markRepoRoot(project.dir)
     user = await fixtureCopy('pi/user')
@@ -108,19 +108,19 @@ describe('e2e: pi bridge through the real registry', () => {
     expect(message.source).toEqual({ kind: 'plugin', plugin: 'dsh-bridges:AGENTS.md' })
     const texts = harness.agent.injected.map((entry) => entry.content.map((part) => (part.type === 'text' ? part.text : '')).join('\n'))
     expect(texts.join('\n')).toContain('Global rules.')
-    expect(texts.join('\n')).toContain('Sub rules.')
+    expect(texts.join('\n')).not.toContain('Sub rules.')
     expect(texts.join('\n')).not.toContain('Project rules.')
     // APPEND_SYSTEM.md: global then the trusted project file.
     expect(texts.join('\n')).toContain('Append rules.')
     expect(texts.join('\n')).toContain('Project append rules.')
   })
 
-  it('injects a CLAUDE.md project context file (pi candidate order)', async () => {
+  it('skips a root CLAUDE.md that DSH already loads (pi candidate order)', async () => {
     harness = await setup('pi/memory-claude')
     sessionStart(harness)
     const message = await waitFor(() => harness!.agent.injected[0])
     const text = message.content.map((part) => (part.type === 'text' ? part.text : '')).join('\n')
-    expect(text).toContain('Claude rules.')
+    expect(text).not.toContain('Claude rules.')
     expect(text).toContain('Project append rules.')
   })
 

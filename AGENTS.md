@@ -47,6 +47,12 @@ CodeBuddy……）。在本仓库的所有工作中请遵守以下约定。
   `dsh-bridges:claude-code-hooks/UserPromptSubmit`，事件名取上游 hook 事件名，
   如 `UserPromptSubmit`、`PreToolUse`、`sessionStart`）。hook 的 `tool_name`
   载荷携带上游工具的名字（`Bash`、`Edit`……），绝不携带 dsh 的名字。
+- DeepSeek Harness 核心自行加载的指令文件绝不重复注入：项目根到 cwd 每层
+  目录的 `AGENTS.md` / `CLAUDE.md` / `AGENTS.local.md` / `CLAUDE.local.md`
+  由核心负责（`~/.dsh/AGENTS.md` 同理）；桥接只注入上游工具特有、核心不
+  覆盖的资产（`~/.claude/CLAUDE.md`、`.claude/CLAUDE.md`、`CODEBUDDY.md`、
+  `GEMINI.md`、`.cursor/rules` 等）。去重边界用 `.git` 根（无 `.git` 时以
+  cwd 为界），与核心默认 project-root 标记一致。
 
 ## 文档约定
 

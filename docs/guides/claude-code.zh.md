@@ -57,16 +57,15 @@ commands 与 subagent 定义、`CLAUDE.md` 记忆、`settings.json` 的 hooks �
 
 ## CLAUDE.md 记忆
 
-根目录 `CLAUDE.md` 由 DeepSeek Harness 核心自行加载。本桥接在会话开始时以相同的 system-reminder 框架额外注入，按宽到具体的顺序：
+DeepSeek Harness 核心自行加载项目根到工作目录每层目录的 `AGENTS.md`、`CLAUDE.md` 及其 `.local` 变体。本桥接在会话开始时以相同的 system-reminder 框架额外注入，按宽到具体的顺序：
 
 - `~/.claude/CLAUDE.md`（用户级）
-- 工作目录以上每个祖先目录的 `CLAUDE.md` 与 `CLAUDE.local.md`（文件系统根在前，同目录内 `CLAUDE.local.md` 排在 `CLAUDE.md` 之后——Claude Code 的层级顺序）
+- DeepSeek Harness 项目根以上的每个祖先目录的 `CLAUDE.md` 与 `CLAUDE.local.md`（文件系统根在前，同目录内 `CLAUDE.local.md` 排在 `CLAUDE.md` 之后——Claude Code 的层级顺序）
 - `permissions.additionalDirectories` 下的 `CLAUDE.md` / `CLAUDE.local.md`
 - `.claude/CLAUDE.md`（项目级）
 - `outputStyle` 文件（`.claude/output-styles/<name>.md`，缺失时回退 `~/.claude/output-styles/<name>.md`——降级映射，把样式的提示片段作为上下文注入）
-- cwd 层的 `CLAUDE.local.md`（个人私有、gitignore）
 
-预算 32 KiB：超限先丢弃更宽的用户级文件，再截断最具体的部分。与核心已加载的根 `CLAUDE.md` 内容一致的文件跳过，避免重复块。
+预算 32 KiB：超限先丢弃更宽的用户级文件，再截断最具体的部分。DeepSeek Harness 核心已读取的文件跳过，避免重复块：项目根到 cwd 链上每层目录的 `CLAUDE.md` 与 `CLAUDE.local.md`（含 cwd 层的 `CLAUDE.local.md`），以及与根 `CLAUDE.md` 内容一致的层级文件。
 
 ## Hooks
 

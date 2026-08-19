@@ -21,7 +21,7 @@
  * `<system-reminder>` style.
  * @module dsh-bridges/agents/pi/memory
  */
-import { dirname, join, normalize } from 'node:path'
+import { dirname, join, normalize, sep } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
@@ -52,8 +52,8 @@ interface MemorySection {
 interface ChainEntry {
   path: string
   content: string
-  /** True when the entry is the repository root's plain `AGENTS.md`. */
-  isRootAgents: boolean
+  /** The file's basename (used for the DSH-native skip). */
+  name: string
 }
 
 export function registerMemory(ctx: Context, logger: BridgeLogger, fs: FsAdapter, loader: PiSettingsLoader, config: MemoryConfig): void {
@@ -120,14 +120,14 @@ export async function collectMemorySections(
 
   if (cwd) {
     const chain = await collectContextChain(cwd, fs)
-    const rootAgents = await readOptional(fs, join(chain.rootDir, 'AGENTS.md'))
     const seenPaths = new Set<string>()
     for (const entry of chain.entries) {
       if (seenPaths.has(normalize(entry.path))) continue // canonical-path dedup (pi)
       seenPaths.add(normalize(entry.path))
-      // The repository root's plain AGENTS.md is the file DSH already
-      // injects; skip it to avoid duplicating the block.
-      if (entry.isRootAgents && rootAgents !== undefined && rootAgents.trim() === entry.content.trim()) continue
+      // DSH's own instruction loader reads AGENTS.md and CLAUDE.md at every
+      // directory from its project root down to the cwd; skip those files.
+      // The uppercase variants and AGENTS.override.md are not DSH-native.
+      if ((entry.name === 'AGENTS.md' || entry.name === 'CLAUDE.md') && isWithinChain(dirname(entry.path), chain.rootDir)) continue
       sections.push({ kind: 'project', label: relativeLabel(cwd, entry.path), content: entry.content })
     }
   }
@@ -170,7 +170,7 @@ async function collectContextChain(cwd: string, fs: FsAdapter): Promise<{ rootDi
       const path = join(dir, name)
       const content = await readOptional(fs, path)
       if (content === undefined || content.trim() === '') continue // pi skips empty files
-      entries.push({ path, content, isRootAgents: name === 'AGENTS.md' && normalize(dir) === normalize(repoRoot) })
+      entries.push({ path, content, name })
       break // at most one file per directory
     }
   }
@@ -200,6 +200,13 @@ async function findRepositoryRoot(cwd: string, fs: FsAdapter): Promise<string> {
     dir = parent
   }
   return cwd // no repository root found: nothing to dedup against DSH's loader
+}
+
+/** True when `dir` sits on DSH's instruction chain (`root` down to `cwd`). */
+function isWithinChain(dir: string, root: string): boolean {
+  const d = normalize(dir)
+  const r = normalize(root)
+  return d === r || d.startsWith(`${r}${sep}`)
 }
 
 function relativeLabel(cwd: string, path: string): string {

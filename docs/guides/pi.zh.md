@@ -47,13 +47,13 @@
 
 ## 上下文文件记忆
 
-DeepSeek Harness 自身已加载仓库根的 `AGENTS.md`。桥接在会话开始时额外注入（同样的 system-reminder 框架）：
+DeepSeek Harness 核心自行加载项目根到工作目录每层目录的 `AGENTS.md` 与 `CLAUDE.md`。桥接在会话开始时额外注入（同样的 system-reminder 框架）：
 
 - `$PI_DIR/AGENTS.md`（全局，不受项目信任限制）
-- 从文件系统根向下走到工作目录的每层一个文件——每目录取第一个非空的 `AGENTS.override.md` > `AGENTS.md` > `AGENTS.MD` > `CLAUDE.md` > `CLAUDE.MD`（Pi 源码确认的候选顺序；`AGENTS.override.md` 整体替代该目录的 `AGENTS.md`/`CLAUDE.md`）；按规范路径去重
+- 从文件系统根向下走到工作目录的每层一个文件——每目录取第一个非空的 `AGENTS.override.md` > `AGENTS.md` > `AGENTS.MD` > `CLAUDE.md` > `CLAUDE.MD`（Pi 源码确认的候选顺序；`AGENTS.override.md` 整体替代该目录的 `AGENTS.md`/`CLAUDE.md`）；按规范路径去重；仓库根到 cwd 链上的普通 `AGENTS.md` / `CLAUDE.md` 跳过（DeepSeek Harness 已加载），大写变体、override 与仓库根以上的文件保留
 - `$PI_DIR/APPEND_SYSTEM.md`，然后是受信任项目的 `.pi/APPEND_SYSTEM.md`（Pi 把两者追加到系统提示）
 
-仓库根的普通 `AGENTS.md` 与 DeepSeek Harness 已加载的文件一致时跳过，避免重复。预算 32 KiB：先丢更宽的全局文件，再截断最具体的段。
+预算 32 KiB：先丢更宽的全局文件，再截断最具体的段。
 
 ## 限制
 

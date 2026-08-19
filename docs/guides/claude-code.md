@@ -59,16 +59,15 @@ Mapping rules:
 
 ## CLAUDE.md memory
 
-DeepSeek Harness already loads root-level `CLAUDE.md`. The bridge additionally injects at session start, in the same system-reminder framing DeepSeek Harness uses for workspace instructions, broadest first:
+DeepSeek Harness's own loader already reads `AGENTS.md`, `CLAUDE.md`, and their `.local` variants at every directory from the project root down to the working directory. The bridge additionally injects at session start, in the same system-reminder framing DeepSeek Harness uses for workspace instructions, broadest first:
 
 - `~/.claude/CLAUDE.md` (user)
-- every ancestor directory's `CLAUDE.md` and `CLAUDE.local.md` above the working directory (filesystem-root first, `CLAUDE.local.md` after `CLAUDE.md` per directory — Claude Code's hierarchy order)
+- every ancestor directory's `CLAUDE.md` and `CLAUDE.local.md` above DeepSeek Harness's project root (filesystem-root first, `CLAUDE.local.md` after `CLAUDE.md` per directory — Claude Code's hierarchy order)
 - the `CLAUDE.md` / `CLAUDE.local.md` files under `permissions.additionalDirectories`
 - `.claude/CLAUDE.md` (project)
 - the `outputStyle` file (`.claude/output-styles/<name>.md`, falling back to `~/.claude/output-styles/<name>.md` — a degraded mapping that injects the style's prompt section as context)
-- the cwd-level `CLAUDE.local.md` (personal, gitignored)
 
-Budget 32 KiB: the broader user-level file is dropped first, then the most specific sections are truncated. Files identical to the root `CLAUDE.md` DeepSeek Harness already loaded are skipped to avoid duplicate blocks.
+Budget 32 KiB: the broader user-level file is dropped first, then the most specific sections are truncated. Files DeepSeek Harness's own loader already reads are skipped to avoid duplicate blocks: `CLAUDE.md` and `CLAUDE.local.md` at every directory on the project-root-to-cwd chain (including the cwd-level `CLAUDE.local.md`), plus any hierarchy file identical to the root `CLAUDE.md`.
 
 ## Hooks
 

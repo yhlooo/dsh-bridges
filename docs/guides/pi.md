@@ -50,13 +50,13 @@ Mapping rules:
 
 ## Context-file memory
 
-DeepSeek Harness already loads the repository-root `AGENTS.md`. The bridge additionally injects at session start, in the same system-reminder framing DeepSeek Harness uses for workspace instructions:
+DeepSeek Harness's own loader reads `AGENTS.md` and `CLAUDE.md` at every directory from the project root down to the working directory. The bridge additionally injects at session start, in the same system-reminder framing DeepSeek Harness uses for workspace instructions:
 
 - `$PI_DIR/AGENTS.md` (global, loaded regardless of project trust)
-- one file per directory walking from the filesystem root down to the working directory — per directory the first non-empty of `AGENTS.override.md` > `AGENTS.md` > `AGENTS.MD` > `CLAUDE.md` > `CLAUDE.MD` (Pi's source-verified candidate order; `AGENTS.override.md` replaces that directory's `AGENTS.md`/`CLAUDE.md`); files deduplicate by canonical path
+- one file per directory walking from the filesystem root down to the working directory — per directory the first non-empty of `AGENTS.override.md` > `AGENTS.md` > `AGENTS.MD` > `CLAUDE.md` > `CLAUDE.MD` (Pi's source-verified candidate order; `AGENTS.override.md` replaces that directory's `AGENTS.md`/`CLAUDE.md`); files deduplicate by canonical path; plain `AGENTS.md` / `CLAUDE.md` files on the repository-root-to-cwd chain are skipped (DeepSeek Harness already loads them), while the uppercase variants, overrides, and files above the repository root stay
 - `$PI_DIR/APPEND_SYSTEM.md`, then the trusted project `.pi/APPEND_SYSTEM.md` (Pi appends both to the system prompt)
 
-The repository root's plain `AGENTS.md` is skipped when it is exactly the file DeepSeek Harness already loaded. Budget 32 KiB: the broader global file is dropped first, then the most specific sections are truncated.
+Budget 32 KiB: the broader global file is dropped first, then the most specific sections are truncated.
 
 ## Limitations
 
