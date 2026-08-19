@@ -49,7 +49,7 @@ L1–L3 是"对不对"的主力防线；L4–L6 守住单元测试覆盖不到�
 
 ## 5. CI 门禁与指标
 
-- 保留原有四连；已接入：lint（`pnpm lint`）、format 检查（`pnpm format:check`）、依赖审计（`pnpm audit`）、L4 集成 job（`typecheck:e2e` + `test:e2e`）、覆盖率门槛（`pnpm test:coverage`，合并 unit+e2e 报告，行与语句 60 / 分支与函数 70，当前基线 70/78/79——低于 §4 的 80/90 目标值，随用例补齐逐步上调）、**双平台矩阵（ubuntu + windows）**、L6 打包冒烟（`pnpm smoke`，固定版本 `@deepseek-ai/dsh@0.1.0-rc.6`）、L5 上游漂移哨兵（weekly `conformance.yml`）。
+- 保留原有四连；已接入：lint（`pnpm lint`）、format 检查（`pnpm format:check`）、依赖审计（`pnpm audit`）、L4 集成 job（`typecheck:e2e` + `test:e2e`）、覆盖率门槛（`pnpm test:coverage`，合并 unit+e2e 报告，行与语句 60 / 分支与函数 70，当前基线 70/78/79——低于 §4 的 80/90 目标值，随用例补齐逐步上调）、**双平台矩阵（ubuntu + windows）**、L6 打包冒烟（`pnpm smoke`，固定版本 `@deepseek-ai/dsh@0.1.0-rc.7`）、L5 上游漂移哨兵（weekly `conformance.yml`）。
 - L5 依赖外部 CLI，做成**固定版本 + weekly scheduled 漂移检测**：上游工具升级或输出格式变化时，CI 在发布前报警，而不是用户先踩到。
 - 指标红线：单元测试 <30s（当前约 2s）、集成 <10min、测试不得残留子进程/句柄（open-handle 检测）。
 
