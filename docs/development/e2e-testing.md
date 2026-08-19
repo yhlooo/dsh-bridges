@@ -60,7 +60,7 @@ devDependencies 已备齐全套 `@deepseek-ai/dsh-*`，可以在测试里启动�
 
 1. ~~先搭环 A 骨架：boot helper + 3 个场景（技能发现、记忆注入、hook 阻断）进 CI~~ ✅
 2. ~~补全 7 类场景矩阵~~ ✅；Windows job 已接入（fixtures 用 `node <脚本>.cjs` 跨平台驱动），teardown 组杀断言在 Windows 跳过（无进程组 kill，见 [pitfalls.md](pitfalls.md) #23）。
-3. ~~环 B 打包冒烟挂 main push~~ ✅：`scripts/pack-smoke.mjs`（`pnpm smoke`）——npm pack → 装进 scratch profile → `dsh --dump-config` 断言 `bridges` 行；CI 固定安装 `@deepseek-ai/dsh@0.1.0-rc.6`，本机无 dsh CLI 时自动跳过。
+3. ~~环 B 打包冒烟挂 main push~~ ✅：`scripts/pack-smoke.mjs`（`pnpm smoke`）——npm pack → 装进 scratch profile → `dsh --dump-config` 断言 `bridges` 行；CI 固定安装 `@deepseek-ai/dsh@0.1.0-rc.7`，本机无 dsh CLI 时自动跳过。
 4. ~~环 C 上游对标哨兵~~ ✅（weekly `conformance.yml` + 手动触发；深层行为对标仍需凭据，见 §4）。
 
 ## 7. 实施状态
