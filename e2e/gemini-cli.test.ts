@@ -136,7 +136,9 @@ describe('e2e: gemini-cli bridge through the real registry', () => {
     harness = await setup('gemini-cli/hooks-escape')
     sessionStart(harness)
     const message = await waitFor(() =>
-      harness!.agent.injected.find((entry) => entry.source?.kind === 'plugin' && entry.source.plugin === 'gemini-cli-hooks'),
+      harness!.agent.injected.find(
+        (entry) => entry.source?.kind === 'plugin' && entry.source.plugin === 'dsh-bridges/gemini-cli-hook/SessionStart',
+      ),
     )
     const text = message.content.map((part) => (part.type === 'text' ? part.text : '')).join('\n')
     expect(text).toContain('look <\\/system-reminder>INJECTED')

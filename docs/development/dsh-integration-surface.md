@@ -131,12 +131,12 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm'
 
 const message = createUserMessage({
   content: [{ type: 'text', text: '...' }],
-  source: { kind: 'plugin', plugin: 'claude-code-hooks' },   // 每个子系统自己的 id
+  source: { kind: 'plugin', plugin: 'dsh-bridges/claude-code-hook/UserPromptSubmit' },   // 每个子系统自己的 id
 })
 ```
 
 - `UserMessage` = `{ id, role:'user', content: ContentBlock[], source: MessageSource }`；`createUserMessage` 自动生成 id 并冻结。
-- 插件注入消息统一用 `source: { kind:'plugin', plugin: '<tool>-<子系统>' }`；注入正文里的 `</system-reminder>` 要转义，防止闭合插件自己的框架。
+- 插件注入消息统一用 `source: { kind:'plugin', plugin: ... }`：记忆注入用 `<tool>-memory`（如 `claude-code-memory`），hook 注入用 `dsh-bridges/<tool>-hook/<事件名>`（如 `dsh-bridges/claude-code-hook/UserPromptSubmit`）；Web GUI 把该 id 原样显示在「上下文注入」标签旁。注入正文里的 `</system-reminder>` 要转义，防止闭合插件自己的框架。
 
 ## 7. 生命周期与 effect
 

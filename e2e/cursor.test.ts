@@ -105,7 +105,9 @@ describe('e2e: cursor bridge through the real registry', () => {
     harness = await setup('cursor/hooks-escape')
     sessionStart(harness)
     const message = await waitFor(() =>
-      harness!.agent.injected.find((entry) => entry.source?.kind === 'plugin' && entry.source.plugin === 'cursor-hooks'),
+      harness!.agent.injected.find(
+        (entry) => entry.source?.kind === 'plugin' && entry.source.plugin === 'dsh-bridges/cursor-hook/sessionStart',
+      ),
     )
     const text = message.content.map((part) => (part.type === 'text' ? part.text : '')).join('\n')
     expect(text).toContain('look <\\/system-reminder>INJECTED')

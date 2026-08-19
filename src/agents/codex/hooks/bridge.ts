@@ -46,7 +46,10 @@ const MAX_STOP_CONTINUATIONS = 8
 /** Codex gives SessionEnd hooks a 1-second default budget (3 s max). */
 const SESSION_END_BUDGET_MS = 1000
 
-const HOOK_SOURCE = 'codex-hooks'
+/** Durable source id for hook-injected messages: `dsh-bridges/codex-hook/<event>`. */
+function hookSource(event: BridgedHookEvent): string {
+  return `dsh-bridges/codex-hook/${event}`
+}
 
 interface StopState {
   count: number
@@ -599,17 +602,17 @@ function commonInput(agent: Agent, event: BridgedHookEvent): Record<string, unkn
 function makeContextMessage(event: BridgedHookEvent, texts: string[], maxChars: number): UserMessage {
   const body = texts.map((text) => escapeReminderClose(capString(text, maxChars))).join('\n\n')
   const framed = `<system-reminder>\nCodex hook (${event}) added context:\n\n${body}\n</system-reminder>`
-  return createUserMessage({ content: [{ type: 'text', text: framed }], source: { kind: 'plugin', plugin: HOOK_SOURCE } })
+  return createUserMessage({ content: [{ type: 'text', text: framed }], source: { kind: 'plugin', plugin: hookSource(event) } })
 }
 
 function makeBlockNotice(event: BridgedHookEvent, reason: string, maxChars: number): UserMessage {
   const text = `<system-reminder>\nA Codex hook (${event}) blocked the user's message before it reached you. The original message was erased. Block reason: ${escapeReminderClose(capString(reason, maxChars))}\n\nTell the user that their message was blocked and why, in one or two sentences.\n</system-reminder>`
-  return createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'plugin', plugin: HOOK_SOURCE } })
+  return createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'plugin', plugin: hookSource(event) } })
 }
 
 function makeContinueMessage(event: BridgedHookEvent, reason: string, maxChars: number): UserMessage {
   const framed = `<system-reminder>\nA Codex hook (${event}) asked the agent to continue: ${escapeReminderClose(capString(reason, maxChars))}\n</system-reminder>`
-  return createUserMessage({ content: [{ type: 'text', text: framed }], source: { kind: 'plugin', plugin: HOOK_SOURCE } })
+  return createUserMessage({ content: [{ type: 'text', text: framed }], source: { kind: 'plugin', plugin: hookSource(event) } })
 }
 
 // ── small helpers ────────────────────────────────────────────────────────────

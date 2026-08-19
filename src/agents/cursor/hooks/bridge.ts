@@ -37,7 +37,10 @@ import { cursorToolName } from './names.js'
 import { runEventHooks } from './run.js'
 import type { BridgedHookEvent, HookOutcome } from './types.js'
 
-const HOOK_SOURCE = 'cursor-hooks'
+/** Durable source id for hook-injected messages: `dsh-bridges/cursor-hook/<event>`. */
+function hookSource(event: BridgedHookEvent): string {
+  return `dsh-bridges/cursor-hook/${event}`
+}
 /** Cursor's default per-script loop cap for stop/subagentStop followups. */
 const DEFAULT_LOOP_LIMIT = 5
 /** Session end side-effect budget (ms). */
@@ -664,7 +667,7 @@ function makeBlockNotice(event: BridgedHookEvent, reason: string, maxChars: numb
         text: `<system-reminder>\nA Cursor ${event} hook blocked this prompt: ${escapeReminderClose(capString(reason, maxChars))}\n</system-reminder>`,
       },
     ],
-    source: { kind: 'plugin', plugin: HOOK_SOURCE },
+    source: { kind: 'plugin', plugin: hookSource(event) },
   })
 }
 
@@ -676,7 +679,7 @@ function makeContinueMessage(event: BridgedHookEvent, followup: string, maxChars
         text: `<system-reminder>\nA Cursor ${event} hook submitted a follow-up: ${escapeReminderClose(capString(followup, maxChars))}\n</system-reminder>`,
       },
     ],
-    source: { kind: 'plugin', plugin: HOOK_SOURCE },
+    source: { kind: 'plugin', plugin: hookSource(event) },
   })
 }
 
@@ -684,6 +687,6 @@ function makeContextMessage(event: BridgedHookEvent, texts: string[], maxChars: 
   const body = texts.map((text) => `Context from a Cursor ${event} hook:\n\n${escapeReminderClose(capString(text, maxChars))}`).join('\n\n')
   return createUserMessage({
     content: [{ type: 'text', text: `<system-reminder>\n${body}\n</system-reminder>` }],
-    source: { kind: 'plugin', plugin: HOOK_SOURCE },
+    source: { kind: 'plugin', plugin: hookSource(event) },
   })
 }
