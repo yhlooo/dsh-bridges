@@ -53,6 +53,8 @@ All bridges share the rules below; tool pages note only deviations.
 - **Tool-name translation.** Hooks key on upstream tool names; each bridge translates them to DeepSeek Harness names (mapping table on each tool page), so hooks written for the upstream tool run unchanged.
 - **Fail open.** Hook timeouts and handler failures never block the action, matching the upstream contracts (Cursor's `failClosed: true` is the opt-in exception).
 
+The specific deviations from the target platforms (which fields are unsupported and what they degrade to) are collected per tool on the [compatibility details](compatibility.md) page.
+
 ## Bridges
 
 | Agent tool | What it covers | Guide |

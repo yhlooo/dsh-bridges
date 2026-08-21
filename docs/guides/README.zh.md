@@ -51,6 +51,8 @@ dsh --profile <profile-name> --dump-config   # 应能看到 "dsh-bridges" 这一
 - **工具名翻译。** hooks 以上游工具名寻址；各桥接把它们翻译为 DeepSeek Harness 工具名（映射表见各工具页），为上游工具写好的 hooks 原样可用。
 - **失败放行（fail open）。** hook 超时与 handler 失败绝不阻塞动作，与上游契约一致（Cursor 的 `failClosed: true` 是可选例外）。
 
+与目标平台的具体差异（哪些字段不支持、降级成什么）按工具汇总在[兼容性细节](compatibility.zh.md)页。
+
 ## 各桥接
 
 | 工具 | 覆盖内容 | 指南 |
