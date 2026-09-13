@@ -13,6 +13,8 @@ A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin tha
 
 ## Quick start
 
+Requires DeepSeek Harness 0.1.5-rc.1 or newer.
+
 ```sh
 # the general form:
 #   dsh plugin --profile <profile-name> add dsh-bridges

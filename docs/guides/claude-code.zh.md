@@ -92,6 +92,7 @@ DeepSeek Harness 核心自行加载项目根到工作目录每层目录的 `AGEN
 - `if` 过滤器支持常见的 `ToolName(glob)` 形态，对已映射的工具各对应一个主参数字段（`Bash(rm *)`、`Edit(*.ts)`……）；无法解析的规则以及没有映射字段的工具一律放行，与 Claude Code 的 best-effort 约定一致（不复制其更深的 Bash 子命令分析）。
 - 超时与 handler 失败一律放行（绝不因此阻断动作），同 Claude Code。
 - 子代理：`UserPromptSubmit`、`Stop`、`SessionStart`、`SessionEnd` 仅对主会话生效，`SubagentStart`/`SubagentStop` 仅对子代理会话生效——与 Claude Code 的作用域一致。`PreToolUse`/`PostToolUse` 也会在子代理的工具调用上触发。
+- DeepSeek Harness 0.1.5 起自带 `@deepseek-ai/dsh-hooks-claude-code`，读取同一份 hook 配置。它需显式挂载才生效（随附 profile 都不挂载它，且要指定 `configPath`），因此默认只由本桥接触发。若两边都挂载，请关掉其中一个，否则每个 hook 会触发两次：在 `bridges` 行把 `claudeCode.hooks` 设为 `false`。
 
 ## Permissions（权限规则）
 

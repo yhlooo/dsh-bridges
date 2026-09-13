@@ -94,6 +94,7 @@ Compatibility details:
 - The `if` filter supports the common `ToolName(glob)` form against one primary argument field for the mapped tools (`Bash(rm *)`, `Edit(*.ts)`, …); uninterpretable rules and tools without a mapped field fail open, matching Claude Code's best-effort contract (its deeper Bash subcommand analysis is not replicated).
 - Timeouts and handler failures fail open (never block the action), as in Claude Code.
 - Subagents: `UserPromptSubmit`, `Stop`, `SessionStart`, and `SessionEnd` run only for the main conversation, and `SubagentStart`/`SubagentStop` run only for subagent sessions — matching Claude Code's scoping. `PreToolUse`/`PostToolUse` also run for subagent tool calls.
+- DeepSeek Harness 0.1.5 also ships its own `@deepseek-ai/dsh-hooks-claude-code` bridge over the same hook config. It is opt-in (no shipped profile mounts it, and it needs an explicit `configPath`), so the default setup uses this bridge only. If you do mount it, disable one of the two — otherwise every hook runs twice: set `claudeCode.hooks: false` under the `bridges` row.
 
 ## Permissions
 

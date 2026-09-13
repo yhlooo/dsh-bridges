@@ -1,6 +1,6 @@
 # DSH 侧接缝 API 速查
 
-本文件汇总 dsh-bridges 各子系统会用到的 DeepSeek Harness 接缝（基于 v0.1.0-rc.6 实测）。实现映射与代码时对照这里，不必再翻 dsh 安装包。签名按运行时行为描述，完整类型以安装包内 `lib/types` 为准。
+本文件汇总 dsh-bridges 各子系统会用到的 DeepSeek Harness 接缝（基于 v0.1.5-rc.1 实测；该 CLI 的 `^0.1.5-rc.1` 依赖实际解析到核心包 `0.1.5-rc.2`，本表按实测行为记录，两者在本项目用到的声明上完全一致）。实现映射与代码时对照这里，不必再翻 dsh 安装包。签名按运行时行为描述，完整类型以安装包内 `lib/types` 为准。
 
 ## 1. 插件打包与加载
 
@@ -164,7 +164,11 @@ ctx.on('event', handler)                              // 随 fiber 自动解绑
 - `@deepseek-ai/dsh-user-approval` 导出 `setApprovalPolicy(session, policy)`：`ApprovalPolicy =
   'ask' | 'never'`，同样走会话日志事件 `approval/policy`。Codex `approval_policy: "never"` →
   `'never'`；`untrusted`/`on-request`/`granular` → `'ask'`。
-- 两个包均为 `0.1.0-rc.6`，插件以 dependencies 引入（纯函数 + session.append，无副作用）。
+- 两个包均为 `^0.1.5-rc.1`，插件以 dependencies 引入（纯函数 + session.append，无副作用）。
+  `0.1.5` 起两个包的 fold 从导出函数改为**会话投影单元**（`sandboxMode` / `approvalPolicy`），
+  `effectiveSandboxMode` / `effectiveApprovalPolicy` 不再导出——本项目只用写入路径
+  `setSandboxMode` / `setApprovalPolicy`，事件名与载荷（`sandbox/mode` `{mode}`、`approval/policy`
+  `{policy}`）未变，投影由宿主服务折叠，因此旧副本写入的事件仍被新宿主识别。
 - 权限规则引擎（claude/codebuddy 的 settings `permissions`）走 `tools/pre-execute`，与 hooks
   的 `permissionDecision` 在 `src/permissions/compose.ts` 的 `composePreToolDecision` 中组合
   （deny 规则恒胜、ask 规则压过 hook allow，对照上游 hooks 文档）。
@@ -177,4 +181,57 @@ ctx.on('event', handler)                              // 随 fiber 自动解绑
   实例化；`serverName` 必须 `[A-Za-z0-9_-]{1,32}` 且全局唯一（建议工具前缀，如 `claude__github`）。
 - stdio 传输：`{ transport: 'stdio', serverName, command, args, env, cwd, toolCallTimeoutMs,
   failOnStartupError, reconnect? }`；HTTP：`{ transport: 'streamable-http', serverName, url,
-  headers, … }`。
+  headers, … }`。`0.1.5` 起 stdio 的 `args` / `env` / `cwd` / `toolCallTimeoutMs` /
+  `failOnStartupError` 与 HTTP 的 `headers` / `toolCallTimeoutMs` / `failOnStartupError`
+  在 schema 层可选（有默认值），`apply` 仍为 async；工具命名与 `ctx.tools.register(definition)`
+  签名未变。
+
+## 11. rc.7 → 0.1.5 的接缝变化（升级对照）
+
+升级到 `0.1.5-rc.1` 时逐包核对的结果，供下次升级复用同一套核对方法（提取各包
+`lib/types/**/*.d.ts` 的**声明行**再 diff，注释噪音会淹没真实变化）：
+
+- **`@deepseek-ai/dsh-skill`**：导出清单与实现**逐字节相同**——provider 契约、rank 段、
+  冲突规则都无需改动。
+- **改名（唯一会让本项目编译失败的变化）**：`@deepseek-ai/dsh-llm` 的 `CallId` →
+  `ToolCallId`（`@deepseek-ai/dsh-tools` 同步跟改）。仅 `e2e/harness.ts` 引用。
+- **删除**：`effectiveSandboxMode`（dsh-sandbox-policy）、`effectiveApprovalPolicy`
+  （dsh-user-approval）——本项目的写入路径不受影响，见 §9。
+- **重命名事件（本项目未用）**：`tools/code-dispatch-log` → `tools/ptc-dispatch-log`、
+  `tool/code-dispatch*` → `tool/ptc-dispatch*`，`CodeDispatch*` → `PtcDispatch*`；
+  `ToolPresentationMode` 的 `'code'` → `'ptc'`。
+- **纯增量**：`PreStepDecision.startsRequestSeries?`、`AgentOptions.reasoningEffort?`、
+  `ContentBlock` 新增 `'file'`（`FileBlock`）、`SystemMessage` / `createSystemMessage`、
+  `SessionHeader.isSeeded` 取代 `seedLength`、`ToolExecution` 的 `JsonValue` 来源变化、
+  `dsh-fs` 抽象类新增 `processPathFromHostPath` / `readByteRange`（本项目只消费不实现）。
+- **原样保留的接缝**：`agent/session-start|pre-step|turn-stopping|disposed` 事件与载荷、
+  `SessionStartSource`、`agent.session.header.delegationDepth`（子代理判定仍有效）、
+  `tools/pre-execute|execute|post-execute|result` 与 `PreToolDecision` / `PostToolDecision`、
+  `createUserMessage` 与 `source: {kind:'plugin', plugin}`、`mcp__<server>__<tool>` 命名、
+  核心指令文件集合（仅 `AGENTS.md` / `CLAUDE.md` 及 `.local` 变体）、
+  `dsh-skill-filesystem` 的 rank 点 100/200/300/400/500。
+- **新增同域包（注意重叠）**：`0.1.5` 自带 `@deepseek-ai/dsh-hooks-claude-code` /
+  `dsh-hooks-codex`（与 `dsh-hook-protocol` 共用 hook 线协议）。两者都是**显式挂载**才生效
+  （不在任何随附 profile 里，且需要 `configPath` 指向 hook 配置），默认与本项目的 hooks 桥
+  不冲突；同时挂载会对同一批 hook 触发两次，二选一。
+
+### 升级核对清单
+
+1. `pnpm install && pnpm typecheck && pnpm typecheck:e2e`：类型层漂移（改名/删除）第一步就会暴露。
+2. `pnpm test && pnpm test:e2e`：行为层漂移（事件载荷、注册表语义）。
+3. `pnpm smoke`：真实 CLI 装进 scratch profile 并组合——**注意它只做 `--dump-config`，不导入插件模块**，
+   所以还要单独验证模块真的能加载（见第 4 条）。
+4. 真实 profile 启动探针：`dsh plugin --profile web add <tarball>` 后在插件 `apply()` 里插一行
+   `console.error`，`dsh web --no-open` 启动并确认该行出现、无 `ERR_MODULE_NOT_FOUND`。
+   这条能覆盖 `--dump-config` 覆盖不到的运行期解析（插件在 profile 里的宿主包来自
+   `$DSH_HOME/profiles/node_modules` 镜像，见下）。
+5. `.github/workflows/ci.yml` 的 `npm i -g @deepseek-ai/dsh@<版本>` 与本文档记录的版本一起 bump。
+
+### profile 内插件如何解析宿主包
+
+`dsh` 会把自身安装树镜像到 `$DSH_HOME/profiles/node_modules`，profile 自己的
+`node_modules/<plugin>` 因此能沿目录向上解析到**宿主那一份** `@deepseek-ai/*`。
+profile 的 `pnpm-workspace.yaml` 固定 `autoInstallPeers: false`，所以插件的
+`peerDependencies` 不会被装第二份；而 `dependencies` 里的 `@deepseek-ai/*` 一定会在
+profile 内再装一份**独立副本**——版本区间要跟着宿主线走，否则就是新旧混跑。
+
