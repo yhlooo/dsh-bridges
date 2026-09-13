@@ -522,15 +522,17 @@
 
 ### 中危（待办）
 
-- [ ] **插件 `dependencies` 里的 `@deepseek-ai/dsh-*` 会在 profile 内再装一份独立
+- [x] **插件 `dependencies` 里的 `@deepseek-ai/dsh-*` 会在 profile 内再装一份独立
   副本**：profile 的 `pnpm-workspace.yaml` 固定 `autoInstallPeers: false`，宿主安装
   树镜像在 `$DSH_HOME/profiles/node_modules`，所以 `peerDependencies`（cordis、
   dsh-llm、dsh-skill、schemastery）用的是宿主那一份，而
   `dependencies`（dsh-mcp-client、dsh-sandbox-policy、dsh-user-approval）一定装
-  第二份，插件的 lib 优先解析到自己那份。区间已随宿主线走（`^0.1.5-rc.1`），
-  当前两份版本一致、行为无差；彻底消除重复需把这三个也改成 peerDependencies
-  （插件本就无法脱离 dsh 运行，语义上成立），但会改变安装契约，需先确认
-  `dsh plugin add` 在无宿主镜像的场景仍可用（2026-09-13 兼容核对）。
+  第二份，插件的 lib 优先解析到自己那份。**已修复**（2026-09-13，commit 见本条目
+  所在提交）：这三个包改为 peerDependencies；`dependencies` 只剩自有第三方库
+  （chokidar / smol-toml / yaml）。实测 profile 内安装由 104 个包降到 5 个、不再有
+  任何 `@deepseek-ai/*` 副本，`apply()` 里 `import.meta.resolve` 对四个宿主包
+  （mcp-client / sandbox-policy / user-approval / skill）全部指向宿主安装目录。
+  新增桥接若引入新的 `@deepseek-ai/dsh-*` 依赖，照此 peer + dev 各一份。
 - [ ] **`scripts/pack-smoke.mjs` 只断言 `--dump-config` 里存在 `bridges` 行，不导入
   插件模块**：因此运行期解析回归（peer 缺失、包名/导出破坏）不会被 L6 抓到——
   本轮靠手工"真实 profile 启动 + `apply()` 探针"才发现 profile 的解析机制。

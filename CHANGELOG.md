@@ -7,6 +7,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 
 - The plugin now targets DeepSeek Harness **0.1.5-rc.1 or newer**: every `@deepseek-ai/dsh-*` dependency and peer range moved to the `^0.1.5-rc.1` line (plus `@deepseek-ai/cordis` `^4.0.2` and `@deepseek-ai/schemastery` `^3.18.2`). Before this, `dsh plugin add` installed a second, five-releases-old copy of `dsh-mcp-client` / `dsh-sandbox-policy` / `dsh-user-approval` next to the host's packages, and the declared peer ranges did not match the host version at all.
+- Every harness package the plugin uses is now a **peer dependency** (`cordis`, `schemastery`, `dsh-llm`, `dsh-skill`, `dsh-mcp-client`, `dsh-sandbox-policy`, `dsh-user-approval`), so the bridges run on the harness's own copies of the DeepSeek Harness services they hook into instead of a second set installed beside them. `dsh plugin add` now installs 5 packages into a profile instead of 104, with no `@deepseek-ai/*` copy of its own; the plugin's remaining dependencies are only its own third-party libraries (`chokidar`, `smol-toml`, `yaml`). No behavior change for users.
 - `e2e/harness.ts` follows the `CallId` → `ToolCallId` rename in `@deepseek-ai/dsh-llm` 0.1.5 (the only compile break this upgrade caused).
 - The pack smoke in CI installs `@deepseek-ai/dsh@0.1.5-rc.1` instead of `0.1.0-rc.7`.
 
