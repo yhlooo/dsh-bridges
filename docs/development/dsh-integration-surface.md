@@ -164,7 +164,8 @@ ctx.on('event', handler)                              // 随 fiber 自动解绑
 - `@deepseek-ai/dsh-user-approval` 导出 `setApprovalPolicy(session, policy)`：`ApprovalPolicy =
   'ask' | 'never'`，同样走会话日志事件 `approval/policy`。Codex `approval_policy: "never"` →
   `'never'`；`untrusted`/`on-request`/`granular` → `'ask'`。
-- 两个包均为 `^0.1.5-rc.1`，插件以 dependencies 引入（纯函数 + session.append，无副作用）。
+- 两个包均为 `^0.1.5-rc.1`，插件以 peerDependencies 引入（纯函数 + session.append，无副作用；
+  用宿主那一份，见 §11 的解析说明）。
   `0.1.5` 起两个包的 fold 从导出函数改为**会话投影单元**（`sandboxMode` / `approvalPolicy`），
   `effectiveSandboxMode` / `effectiveApprovalPolicy` 不再导出——本项目只用写入路径
   `setSandboxMode` / `setApprovalPolicy`，事件名与载荷（`sandbox/mode` `{mode}`、`approval/policy`
@@ -234,4 +235,22 @@ ctx.on('event', handler)                              // 随 fiber 自动解绑
 profile 的 `pnpm-workspace.yaml` 固定 `autoInstallPeers: false`，所以插件的
 `peerDependencies` 不会被装第二份；而 `dependencies` 里的 `@deepseek-ai/*` 一定会在
 profile 内再装一份**独立副本**——版本区间要跟着宿主线走，否则就是新旧混跑。
+
+因此**每一个宿主包都声明为 `peerDependencies`**：`cordis`、`schemastery`、
+`dsh-llm`、`dsh-skill`、`dsh-mcp-client`、`dsh-sandbox-policy`、`dsh-user-approval`。
+插件的 `dependencies` 只剩真正自有的第三方库（`chokidar`、`smol-toml`、`yaml`），
+于是 profile 里只装这几个包（实测由 104 个降到 5 个），宿主包全部来自宿主安装。
+代价是插件无法脱离 dsh 安装运行——但它本来就做不到（`cordis` / `dsh-skill` /
+`dsh-llm` 一直是 peer），所以这不是新增约束。新增桥接时若要用某个 `@deepseek-ai/dsh-*`
+包，照此加入 peerDependencies 与 devDependencies 各一份（dev 那份供本仓 typecheck
+与测试使用）。
+
+实测命令（装完直接打印解析结果，确认用的是宿主那一份）：
+
+```sh
+# 在插件 lib 的 apply() 里插一行后启动 profile
+console.error(import.meta.resolve('@deepseek-ai/dsh-mcp-client'))
+# → file:///<dsh 安装目录>/node_modules/@deepseek-ai/dsh-mcp-client/lib/index.js
+```
+
 

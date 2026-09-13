@@ -6,9 +6,10 @@
 
 ## 安装
 
-要求 DeepSeek Harness **0.1.5-rc.1 或更新**。插件按该版本的接缝编译，其 peer 范围
-（`@deepseek-ai/dsh-skill`、`@deepseek-ai/dsh-llm`、`@deepseek-ai/cordis`、
-`@deepseek-ai/schemastery`）也指向同一版本线；更旧的 harness 会报 unmet peer
+要求 DeepSeek Harness **0.1.5-rc.1 或更新**。插件按该版本的接缝编译，并把用到的每个
+harness 包（`@deepseek-ai/cordis`、`dsh-llm`、`dsh-skill`、`dsh-mcp-client`、
+`dsh-sandbox-policy`、`dsh-user-approval`、`schemastery`）声明为 peer dependency，
+因此直接使用 harness 自带的那一份、不会再装第二套；更旧的 harness 会报 unmet peer
 dependency，且可能缺少桥接使用的接缝。
 
 插件通过 profile 的插件管理器（pnpm）安装到某个 DeepSeek Harness profile；`<profile-name>` 取 `web`（Web GUI）或 `headless`（一次性 CLI 运行），每个 profile 独立安装插件：

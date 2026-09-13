@@ -7,6 +7,7 @@
 ### 变更
 
 - 插件目标版本提升到 DeepSeek Harness **0.1.5-rc.1 及以上**：所有 `@deepseek-ai/dsh-*` 依赖与 peer 区间移到 `^0.1.5-rc.1` 线（另含 `@deepseek-ai/cordis` `^4.0.2`、`@deepseek-ai/schemastery` `^3.18.2`）。此前 `dsh plugin add` 会在宿主的包旁边再装一份**落后五个版本**的 `dsh-mcp-client` / `dsh-sandbox-policy` / `dsh-user-approval`，而且声明的 peer 区间根本匹配不上宿主版本。
+- 插件用到的每个 harness 包现在都是 **peer dependency**（`cordis`、`schemastery`、`dsh-llm`、`dsh-skill`、`dsh-mcp-client`、`dsh-sandbox-policy`、`dsh-user-approval`）：桥接直接跑在 harness 自带的那一份上，而不是在旁边再装一套。`dsh plugin add` 装进 profile 的包从 104 个降到 5 个，且不含任何 `@deepseek-ai/*` 副本；插件剩余依赖只有自己的第三方库（`chokidar`、`smol-toml`、`yaml`）。对使用者无行为变化。
 - `e2e/harness.ts` 跟进 `@deepseek-ai/dsh-llm` 0.1.5 的 `CallId` → `ToolCallId` 改名（本次升级唯一的编译中断）。
 - CI 打包冒烟安装的 CLI 由 `0.1.0-rc.7` 改为 `@deepseek-ai/dsh@0.1.5-rc.1`。
 
