@@ -8,6 +8,12 @@ open the page for your agent tool. For a quick start, see the
 
 ## Install
 
+Requires DeepSeek Harness **0.1.5-rc.1 or newer**. The plugin is built against
+that release's seams, and its peer ranges (`@deepseek-ai/dsh-skill`,
+`@deepseek-ai/dsh-llm`, `@deepseek-ai/cordis`, `@deepseek-ai/schemastery`) name
+the same version line; an older harness reports an unmet peer dependency and may
+be missing seams the bridges use.
+
 Plugins install into a DeepSeek Harness profile with the profile plugin manager (pnpm); `<profile-name>` is `web` (the Web UI) or `headless` (one-shot CLI runs), and each profile installs its own plugins:
 
 ```sh

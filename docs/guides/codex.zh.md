@@ -81,6 +81,7 @@ DeepSeek Harness 核心自行加载项目根到工作目录每层目录的 `AGEN
 - matcher 语义遵循 Codex 规范：`*` / 空 / 缺省匹配全部；其余按 JavaScript 正则（不可解析的 matcher 直接不运行）。Codex hooks 没有 `if` 过滤器。
 - 超时与 handler 失败一律放行，同 Codex。
 - 子代理：`SessionStart`/`SessionEnd`/`UserPromptSubmit`/`Stop` 仅主会话，`SubagentStart`/`SubagentStop` 仅子代理，`PreToolUse`/`PostToolUse` 两者皆触发——与 Codex 的事件作用域一致。
+- DeepSeek Harness 0.1.5 起自带 `@deepseek-ai/dsh-hooks-codex`，读取同一份 hook 配置。它需显式挂载才生效（随附 profile 都不挂载它，且要指定 `configPath`），因此默认只由本桥接触发。若两边都挂载，请关掉其中一个，否则每个 hook 会触发两次：在 `bridges` 行把 `codex.hooks` 设为 `false`。
 
 ## Permissions（审批 / 沙箱策略）
 

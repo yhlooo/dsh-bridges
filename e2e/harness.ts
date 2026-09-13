@@ -21,7 +21,7 @@ import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import SkillRegistry from '@deepseek-ai/dsh-skill'
 import type { Agent, PreStepDecision, SessionStartSource } from '@deepseek-ai/dsh-agent'
-import type { UserMessage } from '@deepseek-ai/dsh-llm'
+import type { ToolCallId, UserMessage } from '@deepseek-ai/dsh-llm'
 import type { PostToolDecision, PreToolDecision, ToolExecution, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 import * as bridges from '../src/index.js'
 import type { BridgesConfig } from '../src/index.js'
@@ -194,7 +194,7 @@ export async function markRepoRoot(dir: string): Promise<void> {
 
 /** Minimal `ToolExecution` stand-in for a `bash` call, as the registry would hand it to the waterfall. */
 export function bashExec(harness: Harness, command: string): ToolExecution {
-  const callId = 'call-1' as import('@deepseek-ai/dsh-llm').CallId
+  const callId = 'call-1' as ToolCallId
   return {
     callId,
     rootCallId: callId,

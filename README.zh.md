@@ -13,6 +13,8 @@
 
 ## 快速上手
 
+要求 DeepSeek Harness 0.1.5-rc.1 或更新。
+
 ```sh
 # 一般形式：
 #   dsh plugin --profile <profile-name> add dsh-bridges

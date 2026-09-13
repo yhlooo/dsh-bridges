@@ -511,3 +511,48 @@
   codex、gemini-cli、cursor），与 AGENTS.md 新定的官方大小写约定（Claude Code、
   CodeBuddy Code、Codex、Gemini CLI、Cursor）不一致，待统一（2026-08-17
   大小写修正；opencode/pi 已改）。
+
+## 2026-09-13 dsh 0.1.5 兼容升级遗留
+
+来源：2026-09-13 对 dsh `0.1.5-rc.1`（CLI 版本；其 `^0.1.5-rc.1` 依赖实际解析到核心包
+`0.1.5-rc.2`）的兼容性核对。核对方法与逐包结论见
+[dsh-integration-surface.md](dsh-integration-surface.md) §11。本轮已修：`CallId` →
+`ToolCallId`（`e2e/harness.ts`）、依赖区间从 `0.1.0-rc.6/rc.7` 提到 `^0.1.5-rc.1`
+线、CI 打包冒烟的 CLI pin 提到 `0.1.5-rc.1`。以下为本轮发现但不立即做的项：
+
+### 中危（待办）
+
+- [ ] **插件 `dependencies` 里的 `@deepseek-ai/dsh-*` 会在 profile 内再装一份独立
+  副本**：profile 的 `pnpm-workspace.yaml` 固定 `autoInstallPeers: false`，宿主安装
+  树镜像在 `$DSH_HOME/profiles/node_modules`，所以 `peerDependencies`（cordis、
+  dsh-llm、dsh-skill、schemastery）用的是宿主那一份，而
+  `dependencies`（dsh-mcp-client、dsh-sandbox-policy、dsh-user-approval）一定装
+  第二份，插件的 lib 优先解析到自己那份。区间已随宿主线走（`^0.1.5-rc.1`），
+  当前两份版本一致、行为无差；彻底消除重复需把这三个也改成 peerDependencies
+  （插件本就无法脱离 dsh 运行，语义上成立），但会改变安装契约，需先确认
+  `dsh plugin add` 在无宿主镜像的场景仍可用（2026-09-13 兼容核对）。
+- [ ] **`scripts/pack-smoke.mjs` 只断言 `--dump-config` 里存在 `bridges` 行，不导入
+  插件模块**：因此运行期解析回归（peer 缺失、包名/导出破坏）不会被 L6 抓到——
+  本轮靠手工"真实 profile 启动 + `apply()` 探针"才发现 profile 的解析机制。
+  建议把探针固化成脚本（装进 scratch profile → 启动 → 断言无
+  `ERR_MODULE_NOT_FOUND` 且 `apply` 跑过），接入 CI（2026-09-13 兼容核对）。
+
+### 低危（待办）
+
+- [ ] **`pnpm audit` 当前为红（11 项：7 moderate / 4 high），与本次升级无关**：全部来自
+  传递依赖——`@deepseek-ai/dsh-mcp-client > @modelcontextprotocol/sdk > qs / fast-uri /
+  hono`（运行时）与 `vitest > @vitest/mocker`（仅开发）。已用 `git worktree` 在升级前的
+  HEAD（rc.7 lock）复跑，同样 11 项，属上游 advisory 随时间新增，非本次依赖 bump 引入。
+  CI 的 `pnpm audit` 步骤会因此变红，需单独处理（等上游 `dsh-mcp-client` 带上新版
+  `@modelcontextprotocol/sdk`，或加 overrides）（2026-09-13 兼容核对）。
+- [ ] `.devcontainer/Dockerfile` 全局安装 dsh 不带版本（`npm install -g
+  @deepseek-ai/dsh`），开发环境自动跟最新 prerelease，而 CI 的 L6 冒烟固定在
+  `0.1.5-rc.1`：两者不一致时"本地能跑、CI 红"或反之。评估是否在 devcontainer
+  也钉版本，或把 CI 冒烟改为矩阵跟两条线（2026-09-13 兼容核对）。
+- [ ] 上游 `0.1.5` 起自带 `@deepseek-ai/dsh-hooks-claude-code` /
+  `dsh-hooks-codex`（与 `dsh-hook-protocol` 共用线协议）。二者需显式挂载
+  （不在随附 profile 中，且需 `configPath`），默认与本项目 hooks 桥不冲突；
+  若用户同时挂载，同一批 hook 会触发两次。guides 已加提示，可再评估：检测到
+  同域上游插件时告警，或提供 `hooks: false` 的一键降级说明（2026-09-13
+  兼容核对）。
+

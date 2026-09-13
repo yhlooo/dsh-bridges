@@ -2,6 +2,19 @@
 
 本项目的所有重要变更都记录在此文件中。
 
+## 未发布
+
+### 变更
+
+- 插件目标版本提升到 DeepSeek Harness **0.1.5-rc.1 及以上**：所有 `@deepseek-ai/dsh-*` 依赖与 peer 区间移到 `^0.1.5-rc.1` 线（另含 `@deepseek-ai/cordis` `^4.0.2`、`@deepseek-ai/schemastery` `^3.18.2`）。此前 `dsh plugin add` 会在宿主的包旁边再装一份**落后五个版本**的 `dsh-mcp-client` / `dsh-sandbox-policy` / `dsh-user-approval`，而且声明的 peer 区间根本匹配不上宿主版本。
+- `e2e/harness.ts` 跟进 `@deepseek-ai/dsh-llm` 0.1.5 的 `CallId` → `ToolCallId` 改名（本次升级唯一的编译中断）。
+- CI 打包冒烟安装的 CLI 由 `0.1.0-rc.7` 改为 `@deepseek-ai/dsh@0.1.5-rc.1`。
+
+### 新增
+
+- Claude Code 与 Codex 指南注明：DeepSeek Harness 0.1.5 自带可选的 `dsh-hooks-claude-code` / `dsh-hooks-codex`，读取同一份 hook 配置；与插件同时挂载会让每个 hook 触发两次，必须关掉其中一侧。
+- 开发文档新增 rc.7 → 0.1.5 接缝核对记录（逐包声明 diff、升级核对清单，以及 profile 内插件如何解析宿主包）。
+
 ## 0.2.4 - 2026-08-19
 
 ### 新增

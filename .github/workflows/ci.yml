@@ -64,5 +64,5 @@ jobs:
       - run: npm pack --dry-run
 
       - name: Install the dsh CLI for the pack smoke
-        run: npm i -g @deepseek-ai/dsh@0.1.0-rc.7
+        run: npm i -g @deepseek-ai/dsh@0.1.5-rc.1
       - run: pnpm smoke

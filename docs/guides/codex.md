@@ -83,6 +83,7 @@ Compatibility details:
 - Matcher semantics follow the Codex spec: `*`/empty/omitted matches all; anything else is a JavaScript regular expression (unparseable matchers fail closed). There is no `if` filter in Codex hooks.
 - Timeouts and handler failures fail open (never block the action), as in Codex.
 - Subagents: `SessionStart`/`SessionEnd`/`UserPromptSubmit`/`Stop` run only for the main conversation, `SubagentStart`/`SubagentStop` only for subagents, and `PreToolUse`/`PostToolUse` for both — matching Codex's event scoping.
+- DeepSeek Harness 0.1.5 also ships its own `@deepseek-ai/dsh-hooks-codex` bridge over the same hook config. It is opt-in (no shipped profile mounts it, and it needs an explicit `configPath`), so the default setup uses this bridge only. If you do mount it, disable one of the two — otherwise every hook runs twice: set `codex.hooks: false` under the `bridges` row.
 
 ## Permissions (approval / sandbox policy)
 
